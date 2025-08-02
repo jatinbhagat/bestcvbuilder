@@ -3,15 +3,15 @@
  * Handles authentication, database operations, and file storage
  */
 
+
 import { createClient } from '@supabase/supabase-js';
 
-// Supabase configuration
-// TODO: Replace with your actual Supabase URL and publishable key
-const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-const SUPABASE_PUBLISHABLE_KEY = 'YOUR_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY';
+// Supabase configuration - Always use production instance
+const SUPABASE_URL = 'https://rletapisdadphfdmqdxu.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJsZXRhcGlzZGFkcGhmZG1xZHh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQxMTUzOTAsImV4cCI6MjA2OTY5MTM5MH0.oXw8UtxIQDSt-aWyHKEmX20DGYGrzcovoOtl5dOqVHA';
 
 // Create Supabase client
-export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /**
  * User authentication functions
@@ -192,18 +192,31 @@ export class StorageService {
             const fileName = `${Date.now()}_${file.name}`;
             const filePath = userId ? `users/${userId}/${fileName}` : `uploads/${fileName}`;
             
+            console.log('Uploading file:', fileName, 'to path:', filePath);
+            console.log('File info:', { name: file.name, type: file.type, size: file.size });
+            
             const { data, error } = await supabase.storage
                 .from('resumes')
-                .upload(filePath, file);
+                .upload(filePath, file, {
+                    cacheControl: '3600',
+                    upsert: true
+                });
             
-            if (error) throw error;
+            if (error) {
+                console.error('❌ Upload failed:', error);
+                throw new Error(`File upload failed: ${error.message}`);
+            }
+            
+            console.log('✅ Upload successful:', data);
             
             // Get public URL
             const { data: urlData } = supabase.storage
                 .from('resumes')
                 .getPublicUrl(filePath);
             
+            console.log('📁 Public URL generated:', urlData.publicUrl);
             return urlData.publicUrl;
+            
         } catch (error) {
             console.error('Upload file error:', error);
             throw error;

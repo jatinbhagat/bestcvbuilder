@@ -5,7 +5,7 @@
 
 import { supabase } from './supabase.js';
 import { uploadFile } from './fileUpload.js';
-import { analyzeResume } from './atsAnalysis.js';
+import { analyzeResumeWithFallback } from './atsAnalysis.js';
 
 // DOM Elements
 const uploadForm = document.getElementById('uploadForm');
@@ -87,7 +87,29 @@ function validateAndProcessFile(file) {
         return false;
     }
     
+    // Update file display (optional enhancement)
+    updateFileDisplay(file);
+    
     return true;
+}
+
+/**
+ * Update file display to show selected file
+ */
+function updateFileDisplay(file) {
+    const fileInfo = `${file.name} (${formatFileSize(file.size)})`;
+    console.log('File selected:', fileInfo);
+}
+
+/**
+ * Format file size for display
+ */
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
 /**
@@ -95,26 +117,46 @@ function validateAndProcessFile(file) {
  */
 async function processResumeUpload(file) {
     try {
+        console.log('🚀 Starting resume processing for:', file.name);
+        
         // Show loading state
         setLoadingState(true);
         
         // Upload file to Supabase storage
+        console.log('📤 Step 1: Uploading file to storage...');
         const fileUrl = await uploadFile(file);
-        console.log('File uploaded:', fileUrl);
+        console.log('✅ File uploaded successfully:', fileUrl);
         
         // Analyze resume with ATS engine
-        const analysisResult = await analyzeResume(fileUrl);
-        console.log('Analysis result:', analysisResult);
+        console.log('🔍 Step 2: Starting ATS analysis...');
+        const analysisResult = await analyzeResumeWithFallback(fileUrl);
+        console.log('✅ Analysis completed:', analysisResult);
+        
+        // Validate analysis result
+        if (!analysisResult || !analysisResult.score) {
+            throw new Error('Invalid analysis result received');
+        }
         
         // Store analysis result in session storage
+        console.log('💾 Step 3: Storing results...');
         sessionStorage.setItem('atsAnalysis', JSON.stringify(analysisResult));
         
         // Redirect to results page
+        console.log('🔀 Step 4: Redirecting to results...');
         window.location.href = './result.html';
         
     } catch (error) {
         console.error('Error processing resume:', error);
-        showError('Failed to analyze resume. Please try again.');
+        
+        // Show more specific error message based on error type
+        let errorMessage = 'Failed to analyze resume. Please try again.';
+        if (error.message.includes('upload')) {
+            errorMessage = 'File upload failed. Please check your connection and try again.';
+        } else if (error.message.includes('analysis') || error.message.includes('analyze')) {
+            errorMessage = 'Resume analysis failed. Please try again in a moment.';
+        }
+        
+        showError(errorMessage);
     } finally {
         setLoadingState(false);
     }

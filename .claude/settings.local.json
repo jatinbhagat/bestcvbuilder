@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(supabase status:*)",
+      "Bash(curl:*)",
+      "Bash(node:*)",
+      "Bash(rm:*)",
+      "Bash(pkill:*)",
+      "Bash(npm run dev:*)",
+      "Bash(supabase migration new:*)",
+      "Bash(supabase db:*)",
+      "Bash(pip install:*)",
+      "Bash(python test_ats_parser.py:*)",
+      "Bash(python test:*)",
+      "Bash(true)",
+      "Bash(vercel dev:*)",
+      "Bash(ls:*)",
+      "Bash(supabase stop:*)"
+    ],
+    "deny": []
+  }
+}

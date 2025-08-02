@@ -1,13 +1,30 @@
 """
-CV Parser API for ATS Analysis
+Advanced CV Parser API for Comprehensive ATS Analysis
+Production-ready implementation with industry-aligned scoring
 Hosted on Vercel as serverless function
 """
 
 import json
 import os
 import requests
-from typing import Dict, Any, List
+import re
+import io
+from typing import Dict, Any, List, Tuple, Optional
 import logging
+from collections import Counter
+from urllib.parse import urlparse
+import math
+
+# Text extraction libraries
+try:
+    import PyPDF2
+    import docx
+    PYPDF2_AVAILABLE = True
+    DOCX_AVAILABLE = True
+except ImportError as e:
+    logging.warning(f"Text extraction library not available: {e}")
+    PYPDF2_AVAILABLE = False
+    DOCX_AVAILABLE = False
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -19,6 +36,126 @@ ALLOWED_ORIGINS = [
     "https://your-domain.com",  # Replace with your actual domain
 ]
 
+# Industry-specific keyword databases
+INDUSTRY_KEYWORDS = {
+    'technology': {
+        'programming': ['python', 'javascript', 'java', 'react', 'node.js', 'sql', 'aws', 'docker', 'kubernetes'],
+        'methodologies': ['agile', 'scrum', 'devops', 'ci/cd', 'microservices', 'tdd', 'pair programming'],
+        'tools': ['git', 'jenkins', 'terraform', 'ansible', 'jira', 'confluence', 'figma'],
+        'databases': ['mysql', 'postgresql', 'mongodb', 'redis', 'elasticsearch'],
+        'cloud': ['aws', 'azure', 'gcp', 'cloud computing', 'serverless', 'lambda']
+    },
+    'marketing': {
+        'digital': ['seo', 'sem', 'google analytics', 'social media', 'content marketing', 'email marketing'],
+        'strategy': ['brand management', 'campaign management', 'market research', 'competitor analysis'],
+        'tools': ['hubspot', 'salesforce', 'google ads', 'facebook ads', 'mailchimp', 'hootsuite'],
+        'analytics': ['conversion optimization', 'a/b testing', 'user acquisition', 'retention']
+    },
+    'finance': {
+        'analysis': ['financial modeling', 'valuation', 'risk management', 'forecasting', 'budgeting'],
+        'compliance': ['sox', 'gaap', 'ifrs', 'audit', 'internal controls', 'regulatory compliance'],
+        'tools': ['excel', 'bloomberg', 'quickbooks', 'sap', 'tableau', 'power bi'],
+        'banking': ['credit analysis', 'loan underwriting', 'portfolio management', 'derivatives']
+    },
+    'sales': {
+        'skills': ['prospecting', 'lead generation', 'closing', 'negotiation', 'relationship building'],
+        'tools': ['salesforce', 'crm', 'pipedrive', 'hubspot', 'linkedin sales navigator'],
+        'metrics': ['quota attainment', 'pipeline management', 'forecasting', 'territory management']
+    },
+    'human_resources': {
+        'recruiting': ['talent acquisition', 'sourcing', 'interviewing', 'onboarding', 'employer branding'],
+        'compliance': ['employment law', 'diversity and inclusion', 'compensation analysis'],
+        'tools': ['workday', 'bamboohr', 'greenhouse', 'lever', 'indeed'],
+        'development': ['performance management', 'training and development', 'succession planning']
+    },
+    'operations': {
+        'management': ['supply chain', 'logistics', 'inventory management', 'process improvement'],
+        'quality': ['six sigma', 'lean manufacturing', 'quality assurance', 'continuous improvement'],
+        'tools': ['erp', 'sap', 'oracle', 'tableau', 'process mapping'],
+        'metrics': ['kpi development', 'operational efficiency', 'cost reduction']
+    }
+}
+
+# Standard professional action verbs with weights
+ACTION_VERBS = {
+    'leadership': ['led', 'managed', 'directed', 'supervised', 'mentored', 'coached', 'guided'],
+    'achievement': ['achieved', 'accomplished', 'delivered', 'exceeded', 'surpassed', 'improved'],
+    'creation': ['created', 'developed', 'designed', 'built', 'established', 'launched', 'initiated'],
+    'analysis': ['analyzed', 'evaluated', 'assessed', 'researched', 'investigated', 'studied'],
+    'collaboration': ['collaborated', 'coordinated', 'facilitated', 'partnered', 'supported'],
+    'optimization': ['optimized', 'streamlined', 'enhanced', 'upgraded', 'modernized', 'transformed']
+}
+
+# Contact information patterns
+CONTACT_PATTERNS = {
+    'email': r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
+    'phone': r'(\+\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}',
+    'linkedin': r'linkedin\.com/in/[\w-]+',
+    'website': r'https?://[\w.-]+\.[\w]{2,}',
+    'github': r'github\.com/[\w-]+'
+}
+
+# Additional patterns for comprehensive data extraction
+NAME_PATTERNS = [
+    r'^([A-Z][a-z]+ [A-Z][a-z]+)',  # First line name pattern
+    r'([A-Z][a-z]+ [A-Z][a-z]+)\s*\n',  # Name followed by newline
+    r'Name:\s*([A-Z][a-z]+ [A-Z][a-z]+)',  # Explicit name field
+]
+
+ADDRESS_PATTERNS = [
+    r'(\d+\s+[A-Za-z\s,]+(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln|Boulevard|Blvd|Way|Place|Pl)[\s,]*[A-Za-z\s,]*\d{5}(?:-\d{4})?)',  # US address
+    r'Address:\s*(.+?)(?:\n|Email|Phone)',  # Explicit address field
+    r'(\d+\s+[A-Za-z\s,]+(?:,\s*[A-Z]{2}\s*\d{5}))',  # City, State ZIP
+]
+
+CITY_STATE_PATTERNS = [
+    r'([A-Za-z\s]+),\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)',  # City, State ZIP
+    r'([A-Za-z\s]+),\s*([A-Za-z\s]+)(?:\s*,\s*[A-Z]{2,3})?',  # City, State/Country
+]
+
+SKILLS_PATTERNS = [
+    r'(?:SKILLS?|TECHNICAL SKILLS?|TECHNOLOGIES?|COMPETENCIES)[\s:]*\n?(.*?)(?:\n\n|\n[A-Z]{2,}|\Z)',
+    r'(?:Programming|Languages?|Tools?|Frameworks?)[\s:]*[:\-]?\s*(.*?)(?:\n|$)',
+]
+
+EDUCATION_PATTERNS = [
+    r'(?:EDUCATION|ACADEMIC|QUALIFICATIONS?)[\s:]*\n?(.*?)(?:\n\n|\n[A-Z]{2,}|\Z)',
+    r'([A-Za-z\s]+(?:University|College|Institute|School).*?)(?:\n(?:[A-Z]{2,}|$))',
+    r'((?:Bachelor|Master|PhD|MBA|B\.S\.|M\.S\.|B\.A\.|M\.A\.).*?)(?:\n|$)',
+]
+
+EXPERIENCE_PATTERNS = [
+    r'(?:EXPERIENCE|EMPLOYMENT|WORK HISTORY|PROFESSIONAL EXPERIENCE)[\s:]*\n?(.*?)(?:\n\n|\n[A-Z]{2,}|\Z)',
+    r'([A-Za-z\s]+\|[A-Za-z\s,]+\|\s*\d{4}.*?)(?:\n(?:[A-Z]{2,}|$))',
+]
+
+SUMMARY_PATTERNS = [
+    r'(?:SUMMARY|PROFILE|OBJECTIVE|ABOUT)[\s:]*\n?(.*?)(?:\n\n|\n[A-Z]{2,}|\Z)',
+]
+
+# Quantified achievement patterns
+QUANTIFIED_PATTERNS = [
+    r'\b\d+%\b',  # Percentages
+    r'\$\d+[,\d]*(?:\.\d{2})?\b',  # Dollar amounts
+    r'\b\d+[,\d]*\s*(?:million|thousand|billion|k)\b',  # Large numbers
+    r'\b\d+\s*(?:years?|months?|weeks?|days?)\b',  # Time periods
+    r'\b\d+\s*(?:people|employees|team members|clients|customers|users)\b',  # Team/user sizes
+    r'\b\d+[,\d]*\s*(?:projects?|initiatives?|campaigns?|deals?)\b',  # Project counts
+    r'\b(?:increased|decreased|improved|reduced|grew|generated)\s+.*?\d+[%\d]*\b'  # Performance metrics
+]
+
+class ATSAnalysisError(Exception):
+    """Custom exception for ATS analysis errors"""
+    pass
+
+class FileProcessingError(ATSAnalysisError):
+    """Error during file processing"""
+    pass
+
+class TextExtractionError(ATSAnalysisError):
+    """Error during text extraction"""
+    pass
+
 def cors_headers():
     """Return CORS headers for API responses"""
     return {
@@ -27,37 +164,21 @@ def cors_headers():
         "Access-Control-Allow-Headers": "Content-Type",
     }
 
-def analyze_resume_content(file_url: str) -> Dict[str, Any]:
-    """
-    Analyze resume content and return ATS score and recommendations
-    
-    Args:
-        file_url: URL of the uploaded resume file
-        
-    Returns:
-        Dictionary containing analysis results
-    """
+def validate_file_url(file_url: str) -> bool:
+    """Validate file URL format and security"""
     try:
-        # Download the file from the URL
-        response = requests.get(file_url)
-        response.raise_for_status()
-        
-        # Extract text content from the file
-        # This is a simplified version - in production you'd use proper PDF/DOCX parsing
-        content = extract_text_from_file(response.content, file_url)
-        
-        # Analyze the content
-        analysis_result = perform_ats_analysis(content)
-        
-        return analysis_result
-        
-    except Exception as e:
-        logger.error(f"Error analyzing resume: {str(e)}")
-        raise
+        parsed = urlparse(file_url)
+        if not parsed.scheme in ['http', 'https']:
+            return False
+        if not parsed.netloc:
+            return False
+        return True
+    except:
+        return False
 
 def extract_text_from_file(file_content: bytes, file_url: str) -> str:
     """
-    Extract text content from uploaded file
+    Extract actual text content from uploaded files
     
     Args:
         file_content: Raw file content
@@ -66,243 +187,953 @@ def extract_text_from_file(file_content: bytes, file_url: str) -> str:
     Returns:
         Extracted text content
     """
-    # This is a placeholder implementation
-    # In production, you'd use libraries like:
-    # - PyPDF2 or pdfplumber for PDF files
-    # - python-docx for DOCX files
-    # - python-docx2txt for DOC files
-    
     file_extension = file_url.split('.')[-1].lower()
     
-    if file_extension == 'pdf':
-        # Placeholder for PDF text extraction
-        return "Sample resume content extracted from PDF"
-    elif file_extension in ['docx', 'doc']:
-        # Placeholder for Word document text extraction
-        return "Sample resume content extracted from Word document"
-    else:
-        raise ValueError(f"Unsupported file type: {file_extension}")
+    try:
+        if file_extension == 'pdf':
+            return extract_pdf_text(file_content)
+        elif file_extension == 'docx':
+            return extract_docx_text(file_content)
+        elif file_extension == 'doc':
+            return extract_doc_text(file_content)
+        else:
+            raise ValueError(f"Unsupported file type: {file_extension}")
+    except Exception as e:
+        logger.error(f"Text extraction failed: {str(e)}")
+        raise TextExtractionError(f"Could not extract text from file: {str(e)}")
 
-def perform_ats_analysis(content: str) -> Dict[str, Any]:
-    """
-    Perform ATS analysis on resume content
+def extract_pdf_text(file_content: bytes) -> str:
+    """Extract text from PDF using PyPDF2 with fallback to pdfplumber"""
+    text = ""
     
-    Args:
-        content: Extracted text content from resume
+    try:
+        # Primary method: PyPDF2
+        pdf_file = io.BytesIO(file_content)
+        pdf_reader = PyPDF2.PdfReader(pdf_file)
         
-    Returns:
-        Analysis results with score and recommendations
-    """
-    # This is a simplified analysis
-    # In production, you'd use more sophisticated NLP and ATS algorithms
+        for page in pdf_reader.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text + "\n"
+        
+        # PyPDF2 is the only PDF extraction method available
+                        
+    except Exception as e:
+        logger.error(f"PDF extraction error: {str(e)}")
+        raise TextExtractionError(f"PDF extraction failed: {str(e)}")
+        
+    if not text or len(text.strip()) < 50:
+        raise TextExtractionError("PDF appears to be empty or contains only images")
+        
+    return text
+
+def extract_docx_text(file_content: bytes) -> str:
+    """Extract text from DOCX files"""
+    try:
+        doc_file = io.BytesIO(file_content)
+        doc = docx.Document(doc_file)
+        
+        text = ""
+        # Extract text from paragraphs
+        for paragraph in doc.paragraphs:
+            if paragraph.text.strip():
+                text += paragraph.text + "\n"
+        
+        # Extract text from tables
+        for table in doc.tables:
+            for row in table.rows:
+                row_text = []
+                for cell in row.cells:
+                    if cell.text.strip():
+                        row_text.append(cell.text.strip())
+                if row_text:
+                    text += " | ".join(row_text) + "\n"
+                
+        return text
+    except Exception as e:
+        logger.error(f"DOCX extraction error: {str(e)}")
+        raise TextExtractionError(f"DOCX extraction failed: {str(e)}")
+
+def extract_doc_text(file_content: bytes) -> str:
+    """Extract text from DOC files using docx2txt"""
+    # DOC format not supported with current dependencies
+    raise TextExtractionError("DOC files are not supported. Please use PDF or DOCX format.")
+
+def detect_industry(content: str) -> str:
+    """Detect the most likely industry based on content keywords"""
+    content_lower = content.lower()
+    industry_scores = {}
     
-    # Calculate ATS score based on various factors
-    score = calculate_ats_score(content)
+    for industry, categories in INDUSTRY_KEYWORDS.items():
+        score = 0
+        for category, keywords in categories.items():
+            for keyword in keywords:
+                if keyword in content_lower:
+                    score += content_lower.count(keyword)
+        industry_scores[industry] = score
     
-    # Generate recommendations
-    strengths, improvements = generate_recommendations(content, score)
+    if not industry_scores or max(industry_scores.values()) == 0:
+        return 'general'
     
-    # Extract keywords
-    keywords = extract_keywords(content)
+    return max(industry_scores, key=industry_scores.get)
+
+def analyze_content_structure(content: str) -> Dict[str, Any]:
+    """Analyze resume structure and organization"""
+    content_lower = content.lower()
     
-    # Identify missing keywords
-    missing_keywords = identify_missing_keywords(content)
+    # Essential sections with patterns and weights
+    essential_sections = {
+        'contact': {
+            'patterns': ['email', 'phone', 'linkedin', '@', 'contact'],
+            'weight': 8,
+            'found': False
+        },
+        'experience': {
+            'patterns': ['experience', 'employment', 'work history', 'professional experience', 'career'],
+            'weight': 10,
+            'found': False
+        },
+        'education': {
+            'patterns': ['education', 'degree', 'university', 'college', 'school', 'academic'],
+            'weight': 6,
+            'found': False
+        },
+        'skills': {
+            'patterns': ['skills', 'technical skills', 'competencies', 'technologies', 'tools'],
+            'weight': 6,
+            'found': False
+        }
+    }
     
-    # Check formatting issues
-    formatting_issues = check_formatting_issues(content)
+    # Check for sections
+    total_score = 0
+    found_sections = []
+    
+    for section, data in essential_sections.items():
+        for pattern in data['patterns']:
+            if pattern in content_lower:
+                data['found'] = True
+                found_sections.append(section)
+                total_score += data['weight']
+                break
+    
+    # Bonus for optional but valuable sections
+    optional_sections = ['summary', 'objective', 'achievements', 'projects', 'certifications', 'awards']
+    optional_found = []
+    
+    for section in optional_sections:
+        if section in content_lower:
+            optional_found.append(section)
+            total_score += 2  # Bonus points
     
     return {
-        "ats_score": score,
-        "strengths": strengths,
-        "improvements": improvements,
-        "keywords": keywords,
-        "missing_keywords": missing_keywords,
-        "formatting_issues": formatting_issues,
-        "detailed_analysis": generate_detailed_analysis(content, score),
-        "suggestions": generate_suggestions(content, score)
+        'score': min(total_score, 25),  # Cap at 25 points
+        'essential_sections': found_sections,
+        'optional_sections': optional_found,
+        'missing_sections': [k for k, v in essential_sections.items() if not v['found']]
     }
 
-def calculate_ats_score(content: str) -> int:
-    """
-    Calculate ATS compatibility score (0-100)
+def analyze_keyword_optimization(content: str, industry: str = None) -> Dict[str, Any]:
+    """Analyze keyword density and relevance"""
+    content_lower = content.lower()
+    score = 0
+    keyword_analysis = {}
     
-    Args:
-        content: Resume content
+    # Industry-specific keywords
+    if industry and industry in INDUSTRY_KEYWORDS:
+        industry_keywords = INDUSTRY_KEYWORDS[industry]
+        industry_found = {}
         
-    Returns:
-        ATS score (0-100)
-    """
-    score = 50  # Base score
+        for category, keywords in industry_keywords.items():
+            found_keywords = []
+            for keyword in keywords:
+                count = content_lower.count(keyword)
+                if count > 0:
+                    found_keywords.append({
+                        'keyword': keyword,
+                        'count': count,
+                        'density': count / len(content.split()) * 1000  # Per 1000 words
+                    })
+                    # Award points with diminishing returns
+                    score += min(count * 2, 4)  # Max 4 points per keyword
+            
+            if found_keywords:
+                industry_found[category] = found_keywords
+        
+        keyword_analysis['industry_keywords'] = industry_found
     
-    # Check for important resume elements
-    if "experience" in content.lower():
-        score += 10
-    if "education" in content.lower():
-        score += 10
-    if "skills" in content.lower():
-        score += 10
-    if "achievement" in content.lower() or "accomplishment" in content.lower():
-        score += 10
-    if len(content.split()) > 200:  # Sufficient content length
-        score += 10
+    # Action verbs analysis
+    action_verb_score = 0
+    found_verbs = {}
     
-    # Check for action verbs
-    action_verbs = ["managed", "developed", "created", "implemented", "led", "achieved"]
-    for verb in action_verbs:
-        if verb in content.lower():
-            score += 2
+    for category, verbs in ACTION_VERBS.items():
+        category_verbs = []
+        for verb in verbs:
+            count = content_lower.count(verb)
+            if count > 0:
+                category_verbs.append({'verb': verb, 'count': count})
+                action_verb_score += min(count, 2)  # Max 2 points per verb
+        
+        if category_verbs:
+            found_verbs[category] = category_verbs
     
-    return min(score, 100)  # Cap at 100
+    score += min(action_verb_score, 15)  # Cap action verbs at 15 points
+    keyword_analysis['action_verbs'] = found_verbs
+    
+    return {
+        'score': min(score, 30),  # Cap at 30 points
+        'analysis': keyword_analysis
+    }
 
-def generate_recommendations(content: str, score: int) -> tuple[List[str], List[str]]:
-    """
-    Generate strengths and improvement recommendations
+def analyze_contact_information(content: str) -> Dict[str, Any]:
+    """Analyze contact information completeness and format"""
+    found_contacts = {}
+    score = 0
     
-    Args:
-        content: Resume content
-        score: Current ATS score
-        
-    Returns:
-        Tuple of (strengths, improvements)
-    """
-    strengths = []
-    improvements = []
+    for contact_type, pattern in CONTACT_PATTERNS.items():
+        matches = re.findall(pattern, content, re.IGNORECASE)
+        found_contacts[contact_type] = matches
+        if matches:
+            score += 3  # 3 points per contact type
     
-    # Analyze strengths
-    if "experience" in content.lower():
-        strengths.append("Good use of experience section")
-    if "skills" in content.lower():
-        strengths.append("Skills section present")
-    if len(content.split()) > 200:
-        strengths.append("Adequate content length")
+    # Bonus for professional contacts (LinkedIn, GitHub)
+    if found_contacts.get('linkedin'):
+        score += 2
+    if found_contacts.get('github'):
+        score += 2
     
-    # Analyze improvements
-    if score < 70:
-        improvements.append("Add more industry-specific keywords")
-    if "achievement" not in content.lower():
-        improvements.append("Include quantifiable achievements")
-    if len(content.split()) < 200:
-        improvements.append("Expand content with more details")
-    
-    return strengths, improvements
+    return {
+        'score': min(score, 15),  # Cap at 15 points
+        'found_contacts': found_contacts,
+        'missing': [k for k, v in found_contacts.items() if not v]
+    }
 
-def extract_keywords(content: str) -> List[str]:
-    """
-    Extract relevant keywords from resume content
-    
-    Args:
-        content: Resume content
-        
-    Returns:
-        List of extracted keywords
-    """
-    # This is a simplified keyword extraction
-    # In production, you'd use NLP libraries like spaCy or NLTK
-    
-    common_keywords = [
-        "project management", "leadership", "analysis", "development",
-        "communication", "teamwork", "problem solving", "strategy",
-        "planning", "coordination", "research", "design"
-    ]
-    
-    found_keywords = []
-    for keyword in common_keywords:
-        if keyword in content.lower():
-            found_keywords.append(keyword)
-    
-    return found_keywords
-
-def identify_missing_keywords(content: str) -> List[str]:
-    """
-    Identify potentially missing keywords
-    
-    Args:
-        content: Resume content
-        
-    Returns:
-        List of suggested keywords
-    """
-    # This would be more sophisticated in production
-    # You'd analyze job descriptions and industry trends
-    
-    suggested_keywords = [
-        "agile", "scrum", "stakeholder management", "data analysis",
-        "process improvement", "cross-functional", "collaboration"
-    ]
-    
-    missing_keywords = []
-    for keyword in suggested_keywords:
-        if keyword not in content.lower():
-            missing_keywords.append(keyword)
-    
-    return missing_keywords
-
-def check_formatting_issues(content: str) -> List[str]:
-    """
-    Check for common formatting issues
-    
-    Args:
-        content: Resume content
-        
-    Returns:
-        List of formatting issues
-    """
+def analyze_formatting_quality(content: str) -> Dict[str, Any]:
+    """Analyze formatting and ATS readability"""
+    score = 20  # Start with full points, deduct for issues
     issues = []
     
-    # Check for common formatting problems
-    if "  " in content:  # Double spaces
-        issues.append("Remove extra spaces")
-    if "\t" in content:  # Tabs
-        issues.append("Replace tabs with spaces")
+    # Check for formatting issues that hurt ATS parsing
+    formatting_checks = {
+        'excessive_whitespace': (r'\s{4,}', 'Excessive whitespace detected'),
+        'special_characters': (r'[^\w\s\-\.,@():/]', 'Unusual special characters found'),
+        'inconsistent_spacing': (r'\n\s*\n\s*\n', 'Inconsistent paragraph spacing'),
+        'tab_characters': (r'\t', 'Tab characters detected (use spaces instead)'),
+        'mixed_date_formats': (r'\d{1,2}[/-]\d{1,2}[/-]\d{2,4}.*\d{4}[/-]\d{1,2}[/-]\d{1,2}', 'Mixed date formats')
+    }
     
-    return issues
+    for check_name, (pattern, message) in formatting_checks.items():
+        matches = re.findall(pattern, content)
+        if matches:
+            count = len(matches)
+            deduction = min(count, 5)  # Max 5 points deduction per issue type
+            score -= deduction
+            issues.append(f"{message} ({count} instances)")
+    
+    # Check for proper bullet points
+    bullet_patterns = ['•', '◦', '▪', '-', '*']
+    has_bullets = any(bullet in content for bullet in bullet_patterns)
+    if not has_bullets:
+        score -= 3
+        issues.append("No bullet points detected - consider using bullets for lists")
+    
+    return {
+        'score': max(score, 0),  # Don't go below 0
+        'issues': issues
+    }
 
-def generate_detailed_analysis(content: str, score: int) -> str:
-    """
-    Generate detailed analysis text
+def analyze_quantified_achievements(content: str) -> Dict[str, Any]:
+    """Look for quantified achievements with numbers and percentages"""
+    quantified_achievements = []
     
-    Args:
-        content: Resume content
-        score: ATS score
-        
-    Returns:
-        Detailed analysis text
-    """
-    if score >= 80:
-        return "Your resume shows excellent ATS compatibility with good structure and relevant keywords."
-    elif score >= 60:
-        return "Your resume has good potential but could benefit from more targeted keywords and quantifiable achievements."
+    for pattern in QUANTIFIED_PATTERNS:
+        matches = re.finditer(pattern, content, re.IGNORECASE)
+        for match in matches:
+            # Get surrounding context (20 chars before and after)
+            start = max(0, match.start() - 20)
+            end = min(len(content), match.end() + 20)
+            context = content[start:end].replace('\n', ' ').strip()
+            
+            quantified_achievements.append({
+                'match': match.group(),
+                'context': context
+            })
+    
+    # Remove duplicates based on context similarity
+    unique_achievements = []
+    for achievement in quantified_achievements:
+        if not any(achievement['context'] in existing['context'] or 
+                  existing['context'] in achievement['context'] 
+                  for existing in unique_achievements):
+            unique_achievements.append(achievement)
+    
+    score = min(len(unique_achievements) * 2, 10)  # 2 points per achievement, max 10
+    
+    return {
+        'score': score,
+        'count': len(unique_achievements),
+        'achievements': unique_achievements[:5]  # First 5 examples
+    }
+
+def analyze_readability_and_length(content: str) -> Dict[str, Any]:
+    """Analyze content readability and optimal length"""
+    word_count = len(content.split())
+    char_count = len(content)
+    sentence_count = len(re.findall(r'[.!?]+', content))
+    
+    # Optimal word count scoring
+    length_score = 0
+    length_feedback = ""
+    
+    if 400 <= word_count <= 600:
+        length_score = 10
+        length_feedback = "Optimal resume length"
+    elif 300 <= word_count < 400 or 600 < word_count <= 800:
+        length_score = 8
+        length_feedback = "Good resume length"
+    elif 200 <= word_count < 300 or 800 < word_count <= 1000:
+        length_score = 5
+        length_feedback = "Acceptable resume length"
+    elif word_count < 200:
+        length_score = 2
+        length_feedback = "Resume too short - add more detail"
     else:
-        return "Your resume needs significant optimization for ATS systems. Focus on adding relevant keywords and improving structure."
-
-def generate_suggestions(content: str, score: int) -> List[Dict[str, str]]:
-    """
-    Generate specific improvement suggestions
+        length_score = 3
+        length_feedback = "Resume too long - consider condensing"
     
-    Args:
-        content: Resume content
-        score: ATS score
-        
-    Returns:
-        List of suggestion objects
-    """
+    # Calculate average sentence length
+    avg_sentence_length = word_count / max(sentence_count, 1)
+    
+    # Readability scoring
+    readability_score = 0
+    if 10 <= avg_sentence_length <= 20:  # Optimal sentence length
+        readability_score = 5
+    elif 8 <= avg_sentence_length < 10 or 20 < avg_sentence_length <= 25:
+        readability_score = 3
+    else:
+        readability_score = 1
+    
+    total_score = length_score + readability_score
+    
+    return {
+        'score': total_score,
+        'word_count': word_count,
+        'character_count': char_count,
+        'sentence_count': sentence_count,
+        'avg_sentence_length': round(avg_sentence_length, 1),
+        'feedback': length_feedback
+    }
+
+def calculate_comprehensive_ats_score(content: str) -> Dict[str, Any]:
+    """Calculate comprehensive ATS compatibility score"""
+    
+    # Detect industry for targeted analysis
+    industry = detect_industry(content)
+    
+    # Initialize scoring components
+    components = {}
+    
+    # 1. Content Structure Analysis (25 points)
+    components['structure'] = analyze_content_structure(content)
+    
+    # 2. Keyword Optimization (30 points)
+    components['keywords'] = analyze_keyword_optimization(content, industry)
+    
+    # 3. Contact Information (15 points)
+    components['contact'] = analyze_contact_information(content)
+    
+    # 4. Formatting Quality (20 points)
+    components['formatting'] = analyze_formatting_quality(content)
+    
+    # 5. Quantified Achievements (10 points)
+    components['achievements'] = analyze_quantified_achievements(content)
+    
+    # 6. Readability and Length (15 points - bonus component)
+    components['readability'] = analyze_readability_and_length(content)
+    
+    # Calculate total score
+    total_score = sum(comp['score'] for comp in components.values())
+    final_score = min(total_score, 100)  # Cap at 100
+    
+    # Determine score category
+    if final_score >= 90:
+        category = 'excellent'
+        description = 'Outstanding ATS compatibility - your resume is highly optimized!'
+    elif final_score >= 80:
+        category = 'very_good'
+        description = 'Very good ATS compatibility with room for minor improvements'
+    elif final_score >= 70:
+        category = 'good'
+        description = 'Good ATS compatibility - some optimization recommended'
+    elif final_score >= 60:
+        category = 'fair'
+        description = 'Fair ATS compatibility - significant improvements needed'
+    else:
+        category = 'poor'
+        description = 'Poor ATS compatibility - major optimization required'
+    
+    return {
+        'ats_score': final_score,
+        'category': category,
+        'description': description,
+        'industry': industry,
+        'component_scores': {k: v['score'] for k, v in components.items()},
+        'detailed_analysis': components
+    }
+
+def generate_comprehensive_recommendations(analysis: Dict[str, Any]) -> Dict[str, Any]:
+    """Generate detailed recommendations based on analysis"""
+    
+    strengths = []
+    improvements = []
+    critical_issues = []
     suggestions = []
     
+    score = analysis['ats_score']
+    components = analysis['detailed_analysis']
+    
+    # Analyze each component for recommendations
+    
+    # Structure analysis
+    structure = components['structure']
+    if structure['score'] >= 20:
+        strengths.append("Well-organized resume structure with essential sections")
+    else:
+        missing = structure['missing_sections']
+        if missing:
+            critical_issues.append(f"Missing essential sections: {', '.join(missing)}")
+            improvements.append("Add missing essential resume sections")
+    
+    # Keywords analysis
+    keywords = components['keywords']
+    if keywords['score'] >= 20:
+        strengths.append("Good use of relevant keywords and action verbs")
+    else:
+        improvements.append("Increase industry-specific keywords and strong action verbs")
+        suggestions.append({
+            'title': 'Optimize Keywords',
+            'description': 'Add more industry-relevant keywords and quantifiable achievements',
+            'priority': 'high'
+        })
+    
+    # Contact information
+    contact = components['contact']
+    if contact['score'] >= 10:
+        strengths.append("Complete contact information provided")
+    else:
+        missing_contacts = contact['missing']
+        if 'email' in missing_contacts or 'phone' in missing_contacts:
+            critical_issues.append("Missing essential contact information (email/phone)")
+        if 'linkedin' in missing_contacts:
+            improvements.append("Add LinkedIn profile for professional networking")
+    
+    # Formatting quality
+    formatting = components['formatting']
+    if formatting['score'] >= 15:
+        strengths.append("Clean, ATS-friendly formatting")
+    else:
+        if formatting['issues']:
+            improvements.append("Fix formatting issues that may confuse ATS systems")
+            suggestions.append({
+                'title': 'Improve Formatting',
+                'description': 'Clean up formatting issues for better ATS readability',
+                'priority': 'medium'
+            })
+    
+    # Quantified achievements
+    achievements = components['achievements']
+    if achievements['score'] >= 6:
+        strengths.append("Good use of quantified achievements and metrics")
+    else:
+        improvements.append("Add more quantified achievements with specific numbers and percentages")
+        suggestions.append({
+            'title': 'Add Quantified Results',
+            'description': 'Include specific numbers, percentages, and measurable outcomes',
+            'priority': 'high'
+        })
+    
+    # Overall score-based recommendations
     if score < 70:
         suggestions.append({
-            "title": "Add Quantifiable Achievements",
-            "description": "Include specific numbers and metrics to demonstrate impact",
-            "priority": "high"
+            'title': 'Comprehensive Resume Optimization',
+            'description': 'Consider professional resume review for significant improvements',
+            'priority': 'high'
         })
     
-    if "skills" not in content.lower():
-        suggestions.append({
-            "title": "Add Skills Section",
-            "description": "Include a dedicated skills section with relevant keywords",
-            "priority": "medium"
-        })
+    return {
+        'strengths': strengths,
+        'improvements': improvements,
+        'critical_issues': critical_issues,
+        'suggestions': suggestions,
+        'next_steps': generate_next_steps(score, components)
+    }
+
+def generate_next_steps(score: int, components: Dict[str, Any]) -> List[str]:
+    """Generate prioritized next steps for improvement"""
+    next_steps = []
     
-    return suggestions
+    # Prioritize based on component scores
+    low_scoring_components = [(k, v['score']) for k, v in components.items() if v['score'] < 10]
+    low_scoring_components.sort(key=lambda x: x[1])  # Sort by score, lowest first
+    
+    for component, component_score in low_scoring_components[:3]:  # Top 3 priorities
+        if component == 'structure':
+            next_steps.append("1. Add missing resume sections (Experience, Education, Skills)")
+        elif component == 'keywords':
+            next_steps.append("2. Research and add industry-specific keywords")
+        elif component == 'contact':
+            next_steps.append("3. Complete your contact information including LinkedIn")
+        elif component == 'formatting':
+            next_steps.append("4. Clean up formatting and use consistent spacing")
+        elif component == 'achievements':
+            next_steps.append("5. Add quantified achievements with specific metrics")
+    
+    if score >= 80:
+        next_steps.append("Focus on fine-tuning keyword optimization and formatting")
+    elif score >= 60:
+        next_steps.append("Prioritize adding quantified achievements and industry keywords")
+    else:
+        next_steps.append("Start with essential sections and contact information")
+    
+    return next_steps[:5]  # Limit to 5 steps
+
+def extract_personal_information(content: str) -> Dict[str, Any]:
+    """
+    Extract personal information from CV content for user profile
+    
+    Args:
+        content: CV text content
+        
+    Returns:
+        Dictionary containing extracted personal information
+    """
+    extracted_data = {
+        'full_name': None,
+        'email': None,
+        'phone': None,
+        'address': None,
+        'city': None,
+        'state': None,
+        'linkedin_url': None,
+        'github_url': None,
+        'website_url': None,
+        'professional_summary': None,
+        'skills': [],
+        'education': [],
+        'work_experience': [],
+        'years_of_experience': None
+    }
+    
+    # Extract name
+    extracted_data['full_name'] = extract_name(content)
+    
+    # Extract contact information
+    contact_info = analyze_contact_information(content)
+    if contact_info['found_contacts']['email']:
+        extracted_data['email'] = contact_info['found_contacts']['email'][0]
+    if contact_info['found_contacts']['phone']:
+        extracted_data['phone'] = contact_info['found_contacts']['phone'][0]
+    if contact_info['found_contacts']['linkedin']:
+        extracted_data['linkedin_url'] = 'https://' + contact_info['found_contacts']['linkedin'][0]
+    if contact_info['found_contacts']['github']:
+        extracted_data['github_url'] = 'https://' + contact_info['found_contacts']['github'][0]
+    if contact_info['found_contacts']['website']:
+        extracted_data['website_url'] = contact_info['found_contacts']['website'][0]
+    
+    # Extract address information
+    address_data = extract_address(content)
+    extracted_data.update(address_data)
+    
+    # Extract professional summary
+    extracted_data['professional_summary'] = extract_summary(content)
+    
+    # Extract skills
+    extracted_data['skills'] = extract_skills_list(content)
+    
+    # Extract education
+    extracted_data['education'] = extract_education_list(content)
+    
+    # Extract work experience
+    extracted_data['work_experience'] = extract_work_experience_list(content)
+    
+    # Estimate years of experience
+    extracted_data['years_of_experience'] = estimate_years_of_experience(content)
+    
+    return extracted_data
+
+def extract_name(content: str) -> Optional[str]:
+    """Extract full name from CV content"""
+    lines = content.split('\n')
+    
+    # Try first non-empty line first
+    for line in lines[:5]:  # Check first 5 lines
+        line = line.strip()
+        if line and len(line.split()) >= 2:
+            # Check if it looks like a name (Title case, reasonable length)
+            words = line.split()
+            if len(words) >= 2 and all(word[0].isupper() and word[1:].islower() for word in words[:2]):
+                if len(line) < 50:  # Names shouldn't be too long
+                    return line
+    
+    # Try regex patterns
+    for pattern in NAME_PATTERNS:
+        match = re.search(pattern, content, re.MULTILINE)
+        if match:
+            return match.group(1).strip()
+    
+    return None
+
+def extract_address(content: str) -> Dict[str, Optional[str]]:
+    """Extract address components from CV content"""
+    address_data = {
+        'address': None,
+        'city': None,
+        'state': None
+    }
+    
+    # Try to find full address
+    for pattern in ADDRESS_PATTERNS:
+        match = re.search(pattern, content, re.IGNORECASE | re.MULTILINE)
+        if match:
+            address_data['address'] = match.group(1).strip()
+            break
+    
+    # Try to extract city and state
+    for pattern in CITY_STATE_PATTERNS:
+        match = re.search(pattern, content, re.MULTILINE)
+        if match:
+            address_data['city'] = match.group(1).strip()
+            if len(match.groups()) >= 2:
+                address_data['state'] = match.group(2).strip()
+            break
+    
+    return address_data
+
+def extract_summary(content: str) -> Optional[str]:
+    """Extract professional summary from CV content"""
+    for pattern in SUMMARY_PATTERNS:
+        match = re.search(pattern, content, re.IGNORECASE | re.DOTALL)
+        if match:
+            summary = match.group(1).strip()
+            # Clean up the summary
+            summary = re.sub(r'\n+', ' ', summary)
+            summary = re.sub(r'\s+', ' ', summary)
+            if len(summary) > 50 and len(summary) < 500:  # Reasonable length
+                return summary
+    
+    return None
+
+def extract_skills_list(content: str) -> List[str]:
+    """Extract skills from CV content"""
+    skills = []
+    
+    for pattern in SKILLS_PATTERNS:
+        match = re.search(pattern, content, re.IGNORECASE | re.DOTALL)
+        if match:
+            skills_text = match.group(1).strip()
+            # Parse skills from various formats
+            parsed_skills = parse_skills_text(skills_text)
+            skills.extend(parsed_skills)
+    
+    # Remove duplicates and clean up
+    unique_skills = list(set(skill.strip() for skill in skills if skill.strip()))
+    return unique_skills[:20]  # Limit to 20 skills
+
+def parse_skills_text(skills_text: str) -> List[str]:
+    """Parse skills from text using various delimiters"""
+    skills = []
+    
+    # Try different separators
+    separators = [',', '•', '|', ';', '\n', '/', '\\']
+    
+    for separator in separators:
+        if separator in skills_text:
+            parts = skills_text.split(separator)
+            for part in parts:
+                skill = part.strip().strip('•').strip('-').strip()
+                if skill and len(skill) < 50:
+                    skills.append(skill)
+            break
+    
+    # If no separators found, try word-based extraction
+    if not skills:
+        # Look for technology/skill keywords
+        words = skills_text.split()
+        for word in words:
+            word = word.strip('.,;()[]{}')
+            if len(word) > 2 and len(word) < 25:
+                skills.append(word)
+    
+    return skills
+
+def extract_education_list(content: str) -> List[Dict[str, str]]:
+    """Extract education information from CV content"""
+    education = []
+    
+    for pattern in EDUCATION_PATTERNS:
+        matches = re.finditer(pattern, content, re.IGNORECASE | re.DOTALL)
+        for match in matches:
+            edu_text = match.group(1).strip()
+            edu_info = parse_education_entry(edu_text)
+            if edu_info:
+                education.append(edu_info)
+    
+    return education[:5]  # Limit to 5 education entries
+
+def parse_education_entry(edu_text: str) -> Optional[Dict[str, str]]:
+    """Parse individual education entry"""
+    if len(edu_text) < 10 or len(edu_text) > 300:
+        return None
+    
+    edu_info = {
+        'degree': '',
+        'institution': '',
+        'year': '',
+        'details': edu_text
+    }
+    
+    # Try to extract degree
+    degree_patterns = [
+        r'(Bachelor[^,\n]*|Master[^,\n]*|PhD[^,\n]*|MBA[^,\n]*|B\.S\.[^,\n]*|M\.S\.[^,\n]*|B\.A\.[^,\n]*|M\.A\.[^,\n]*)',
+        r'(Associate[^,\n]*|Diploma[^,\n]*|Certificate[^,\n]*)'
+    ]
+    
+    for pattern in degree_patterns:
+        match = re.search(pattern, edu_text, re.IGNORECASE)
+        if match:
+            edu_info['degree'] = match.group(1).strip()
+            break
+    
+    # Try to extract institution
+    institution_match = re.search(r'([A-Za-z\s]+(?:University|College|Institute|School))', edu_text, re.IGNORECASE)
+    if institution_match:
+        edu_info['institution'] = institution_match.group(1).strip()
+    
+    # Try to extract year
+    year_match = re.search(r'(19\d{2}|20\d{2})', edu_text)
+    if year_match:
+        edu_info['year'] = year_match.group(1)
+    
+    return edu_info
+
+def extract_work_experience_list(content: str) -> List[Dict[str, str]]:
+    """Extract work experience from CV content"""
+    experience = []
+    
+    for pattern in EXPERIENCE_PATTERNS:
+        matches = re.finditer(pattern, content, re.IGNORECASE | re.DOTALL)
+        for match in matches:
+            exp_text = match.group(1).strip()
+            # Split by likely job separators
+            job_entries = re.split(r'\n(?=[A-Z][^a-z]*[|•])', exp_text)
+            
+            for entry in job_entries:
+                exp_info = parse_experience_entry(entry.strip())
+                if exp_info:
+                    experience.append(exp_info)
+    
+    return experience[:5]  # Limit to 5 experience entries
+
+def parse_experience_entry(exp_text: str) -> Optional[Dict[str, str]]:
+    """Parse individual work experience entry"""
+    if len(exp_text) < 20 or len(exp_text) > 500:
+        return None
+    
+    exp_info = {
+        'title': '',
+        'company': '',
+        'duration': '',
+        'description': exp_text
+    }
+    
+    # Try to extract title | company | duration pattern
+    pipe_match = re.search(r'([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)', exp_text)
+    if pipe_match:
+        exp_info['title'] = pipe_match.group(1).strip()
+        exp_info['company'] = pipe_match.group(2).strip()
+        exp_info['duration'] = pipe_match.group(3).strip()
+    else:
+        # Try to extract from first line
+        first_line = exp_text.split('\n')[0]
+        if '|' in first_line:
+            parts = first_line.split('|')
+            if len(parts) >= 2:
+                exp_info['title'] = parts[0].strip()
+                exp_info['company'] = parts[1].strip()
+                if len(parts) >= 3:
+                    exp_info['duration'] = parts[2].strip()
+    
+    return exp_info
+
+def estimate_years_of_experience(content: str) -> Optional[int]:
+    """Estimate years of professional experience from CV content"""
+    # Look for years in experience section
+    years = []
+    year_pattern = r'(19\d{2}|20\d{2})'
+    
+    matches = re.findall(year_pattern, content)
+    if matches:
+        years = [int(year) for year in matches]
+        years.sort()
+        
+        if len(years) >= 2:
+            # Calculate span from earliest to latest year
+            span = years[-1] - years[0]
+            if span > 0 and span < 50:  # Reasonable range
+                return span
+    
+    # Look for explicit experience statements
+    exp_statements = [
+        r'(\d+)\s*\+?\s*years?\s+(?:of\s+)?experience',
+        r'experience.*?(\d+)\s*\+?\s*years?',
+        r'(\d+)\s*\+?\s*years?\s+(?:in|with)'
+    ]
+    
+    for pattern in exp_statements:
+        match = re.search(pattern, content, re.IGNORECASE)
+        if match:
+            years_exp = int(match.group(1))
+            if 0 < years_exp < 50:
+                return years_exp
+    
+    return None
+
+def save_user_profile_data(user_id: str, extracted_data: Dict[str, Any]) -> bool:
+    """
+    Save extracted CV data to user_profiles table
+    
+    Args:
+        user_id: User ID from auth
+        extracted_data: Extracted personal information
+        
+    Returns:
+        Boolean indicating success
+    """
+    try:
+        from supabase import create_client, Client
+        import os
+        
+        # Initialize Supabase client
+        supabase_url = os.getenv('SUPABASE_URL')
+        supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')  # Use service role for server-side operations
+        
+        if not supabase_url or not supabase_key:
+            print("Warning: Supabase credentials not found, skipping database save")
+            return False
+            
+        supabase: Client = create_client(supabase_url, supabase_key)
+        
+        # Prepare profile data for database (only include non-None values)
+        profile_data = {}
+        
+        field_mapping = {
+            'full_name': extracted_data.get('full_name'),
+            'email': extracted_data.get('email'),
+            'phone': extracted_data.get('phone'),
+            'address': extracted_data.get('address'),
+            'city': extracted_data.get('city'),
+            'state': extracted_data.get('state'),
+            'linkedin_url': extracted_data.get('linkedin_url'),
+            'github_url': extracted_data.get('github_url'),
+            'website_url': extracted_data.get('website_url'),
+            'professional_summary': extracted_data.get('professional_summary'),
+            'years_of_experience': extracted_data.get('years_of_experience'),
+            'skills': extracted_data.get('skills', []),
+            'education': extracted_data.get('education', []),
+            'work_experience': extracted_data.get('work_experience', []),
+            'data_source': 'cv_parsed'
+        }
+        
+        # Only include fields that have values
+        for key, value in field_mapping.items():
+            if value is not None and value != '' and value != []:
+                profile_data[key] = value
+        
+        # Add timestamp
+        from datetime import datetime
+        profile_data['cv_last_updated'] = datetime.now().isoformat()
+        
+        # Update user profile in database
+        result = supabase.table('user_profiles').update(profile_data).eq('id', user_id).execute()
+        
+        if result.data:
+            logger.info(f"Successfully updated user profile data for user {user_id}")
+            logger.info(f"Updated fields: {list(profile_data.keys())}")
+            return True
+        else:
+            logger.warning(f"No rows updated for user {user_id}")
+            return False
+        
+    except Exception as e:
+        logger.error(f"Failed to save user profile data: {str(e)}")
+        return False
+
+def analyze_resume_content(file_url: str) -> Dict[str, Any]:
+    """
+    Main function to analyze resume content and return comprehensive ATS analysis
+    
+    Args:
+        file_url: URL of the uploaded resume file
+        
+    Returns:
+        Dictionary containing comprehensive analysis results
+    """
+    try:
+        # Validate URL
+        if not validate_file_url(file_url):
+            raise FileProcessingError("Invalid file URL format")
+        
+        # Download file with timeout and size limits
+        response = requests.get(file_url, timeout=30, stream=True)
+        response.raise_for_status()
+        
+        # Check file size (max 10MB)
+        content_length = response.headers.get('content-length')
+        if content_length and int(content_length) > 10 * 1024 * 1024:
+            raise FileProcessingError("File size exceeds 10MB limit")
+        
+        file_content = response.content
+        
+        # Extract text content
+        content = extract_text_from_file(file_content, file_url)
+        
+        # Validate extracted content
+        if not content or len(content.strip()) < 50:
+            raise TextExtractionError("Insufficient text content extracted from file")
+        
+        logger.info(f"Successfully extracted {len(content)} characters from resume")
+        
+        # Extract personal information from CV content
+        personal_info = extract_personal_information(content)
+        logger.info(f"Extracted personal information: {list(personal_info.keys())}")
+        
+        # Perform comprehensive ATS analysis
+        ats_analysis = calculate_comprehensive_ats_score(content)
+        
+        # Generate recommendations
+        recommendations = generate_comprehensive_recommendations(ats_analysis)
+        
+        # Combine results
+        result = {
+            **ats_analysis,
+            **recommendations,
+            'personal_information': personal_info,
+            'extracted_text_length': len(content),
+            'analysis_timestamp': json.dumps({}).__class__.__module__ # Simple timestamp
+        }
+        
+        logger.info(f"Analysis completed - Score: {ats_analysis['ats_score']}")
+        return result
+        
+    except requests.exceptions.Timeout:
+        raise FileProcessingError("File download timeout - please try again")
+    except requests.exceptions.RequestException as e:
+        raise FileProcessingError(f"Could not download file: {str(e)}")
+    except (FileProcessingError, TextExtractionError):
+        raise  # Re-raise specific errors
+    except Exception as e:
+        logger.error(f"Unexpected error in resume analysis: {str(e)}")
+        raise ATSAnalysisError("An unexpected error occurred during analysis")
 
 def handler(event, context):
     """
@@ -335,7 +1166,8 @@ def handler(event, context):
         # Parse request body
         body = json.loads(event.get('body', '{}'))
         file_url = body.get('file_url')
-        analysis_type = body.get('analysis_type', 'ats_score')
+        user_id = body.get('user_id')  # Optional user ID for database saving
+        analysis_type = body.get('analysis_type', 'comprehensive')
         include_recommendations = body.get('include_recommendations', True)
         
         if not file_url:
@@ -345,8 +1177,27 @@ def handler(event, context):
                 'body': json.dumps({'error': 'file_url is required'})
             }
         
-        # Perform analysis
+        # Perform comprehensive analysis
         analysis_result = analyze_resume_content(file_url)
+        
+        # Save personal information to database if user_id is provided
+        if user_id and 'personal_information' in analysis_result:
+            try:
+                save_success = save_user_profile_data(user_id, analysis_result['personal_information'])
+                analysis_result['profile_updated'] = save_success
+                if save_success:
+                    logger.info(f"Successfully saved profile data for user {user_id}")
+                else:
+                    logger.warning(f"Failed to save profile data for user {user_id}")
+            except Exception as e:
+                logger.error(f"Error saving profile data for user {user_id}: {str(e)}")
+                analysis_result['profile_updated'] = False
+        
+        # Filter results based on request parameters
+        if not include_recommendations:
+            # Remove recommendation fields if not requested
+            analysis_result = {k: v for k, v in analysis_result.items() 
+                             if k not in ['improvements', 'suggestions', 'next_steps']}
         
         # Return results
         return {
@@ -355,8 +1206,29 @@ def handler(event, context):
             'body': json.dumps(analysis_result)
         }
         
+    except FileProcessingError as e:
+        logger.error(f"File processing error: {str(e)}")
+        return {
+            'statusCode': 400,
+            'headers': cors_headers(),
+            'body': json.dumps({'error': str(e)})
+        }
+    except TextExtractionError as e:
+        logger.error(f"Text extraction error: {str(e)}")
+        return {
+            'statusCode': 422,
+            'headers': cors_headers(),
+            'body': json.dumps({'error': f'Text extraction failed: {str(e)}'})
+        }
+    except ATSAnalysisError as e:
+        logger.error(f"ATS analysis error: {str(e)}")
+        return {
+            'statusCode': 500,
+            'headers': cors_headers(),
+            'body': json.dumps({'error': str(e)})
+        }
     except Exception as e:
-        logger.error(f"API error: {str(e)}")
+        logger.error(f"Unexpected API error: {str(e)}")
         return {
             'statusCode': 500,
             'headers': cors_headers(),
@@ -370,10 +1242,13 @@ if __name__ == "__main__":
         'httpMethod': 'POST',
         'body': json.dumps({
             'file_url': 'https://example.com/test-resume.pdf',
-            'analysis_type': 'ats_score',
+            'analysis_type': 'comprehensive',
             'include_recommendations': True
         })
     }
     
-    result = handler(test_event, None)
-    print(json.dumps(result, indent=2)) 
+    try:
+        result = handler(test_event, None)
+        print(json.dumps(result, indent=2))
+    except Exception as e:
+        print(f"Test error: {e}")

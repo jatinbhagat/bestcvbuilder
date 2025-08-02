@@ -20,7 +20,7 @@ export async function uploadFile(file, userId = null) {
             throw new Error('Invalid file type or size');
         }
         
-        // Upload to Supabase storage
+        // Always upload to Supabase storage (no dev/prod distinction)
         const fileUrl = await StorageService.uploadFile(file, userId);
         
         console.log('File uploaded successfully:', fileUrl);
@@ -28,6 +28,12 @@ export async function uploadFile(file, userId = null) {
         
     } catch (error) {
         console.error('File upload failed:', error);
+        
+        // If upload fails in production, we can't proceed
+        if (error.message && error.message.includes('violates row-level security')) {
+            throw new Error('Storage access denied. Please contact support.');
+        }
+        
         throw error;
     }
 }

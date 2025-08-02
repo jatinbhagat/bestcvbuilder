@@ -3,9 +3,10 @@
  * Handles resume analysis and score calculation
  */
 
-// API Configuration
-const API_BASE_URL = 'https://your-vercel-app.vercel.app/api';
+// API Configuration - Always use production Vercel endpoint
+const API_BASE_URL = 'https://bestcvbuilder-gnktl1mxh-bestcvbuilder.vercel.app/api';
 const CV_PARSER_ENDPOINT = `${API_BASE_URL}/cv-parser`;
+
 
 /**
  * Analyze resume using the Python ATS engine
@@ -179,61 +180,8 @@ export function generateDetailedReport(analysis) {
     };
 }
 
-/**
- * Mock analysis for development/testing
- * @param {string} fileUrl - File URL (not used in mock)
- * @returns {Promise<Object>} Mock analysis result
- */
-export async function mockAnalyzeResume(fileUrl) {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const mockScore = Math.floor(Math.random() * 40) + 30; // 30-70 range
-    
-    return {
-        score: mockScore,
-        scoreCategory: getScoreCategory(mockScore),
-        strengths: [
-            'Good use of action verbs',
-            'Clear job titles and dates',
-            'Consistent formatting'
-        ],
-        improvements: [
-            'Add more industry-specific keywords',
-            'Include quantifiable achievements',
-            'Optimize for ATS readability'
-        ],
-        detailedAnalysis: 'This resume shows good structure but could benefit from more targeted keywords and quantifiable achievements to improve ATS compatibility.',
-        keywords: ['project management', 'leadership', 'analysis'],
-        missingKeywords: ['agile', 'scrum', 'stakeholder management'],
-        formattingIssues: ['Consider using standard fonts', 'Ensure consistent spacing'],
-        suggestions: [
-            {
-                title: 'Add Quantifiable Achievements',
-                description: 'Include specific numbers and metrics to demonstrate impact',
-                priority: 'high'
-            }
-        ],
-        timestamp: new Date().toISOString()
-    };
-}
 
-/**
- * Check if analysis is in development mode
- * @returns {boolean} Whether to use mock analysis
- */
-function isDevelopmentMode() {
-    return process.env.NODE_ENV === 'development' || 
-           window.location.hostname === 'localhost' ||
-           window.location.hostname === '127.0.0.1';
-}
-
-// Export the main analysis function with development fallback
+// Export the main analysis function (always use production API)
 export const analyzeResumeWithFallback = async (fileUrl) => {
-    if (isDevelopmentMode()) {
-        console.log('Using mock analysis for development');
-        return mockAnalyzeResume(fileUrl);
-    }
-    
     return analyzeResume(fileUrl);
 }; 
