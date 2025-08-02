@@ -2,6 +2,8 @@
  * ATS Analysis module for communicating with the Python CV parser API
  * Handles resume analysis and score calculation
  * Updated: 2025-08-02 - Fixed CORS with relative URLs
+ * Force Deploy: Timestamp $(date) - Ensuring fresh deployment
+ * TEST: Vercel auto-deploy trigger - Cache bust v2.1
  */
 
 // API Configuration - Use same domain as frontend (relative URL)

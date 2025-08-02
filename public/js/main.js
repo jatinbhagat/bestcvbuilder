@@ -1,6 +1,7 @@
 /**
  * Main JavaScript file for BestCVBuilder landing page
  * Handles file upload, ATS analysis, and user flow
+ * DEPLOY TRIGGER: Force rebuild for CORS fix - v2.1.0
  */
 
 import { supabase } from './supabase.js';
