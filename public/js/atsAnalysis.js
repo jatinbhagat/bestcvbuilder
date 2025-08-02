@@ -1,11 +1,14 @@
 /**
  * ATS Analysis module for communicating with the Python CV parser API
  * Handles resume analysis and score calculation
+ * Updated: 2025-08-02 - Fixed CORS with relative URLs
  */
 
 // API Configuration - Use same domain as frontend (relative URL)
 const API_BASE_URL = '/api';
 const CV_PARSER_ENDPOINT = `${API_BASE_URL}/cv-parser`;
+
+console.log('🔗 API Configuration:', { API_BASE_URL, CV_PARSER_ENDPOINT });
 
 
 /**
