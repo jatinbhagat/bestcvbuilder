@@ -2,6 +2,8 @@
 
 A mobile-first responsive web application that helps users analyze their resumes for ATS compatibility and purchase AI-powered CV improvements.
 
+<!-- VERCEL DEPLOY TRIGGER: v3.0 - CORS FIX CRITICAL - August 2nd 2025 -->
+
 ## 🎯 Features
 
 - **ATS Score Analysis**: Instant resume analysis with ATS compatibility scoring

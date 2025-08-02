@@ -1,7 +1,7 @@
 {
   "name": "bestcvbuilder",
   "version": "1.0.0",
-  "description": "ATS Score Checker and CV Updater - Mobile-first responsive web application [DEPLOY-TRIGGER-v2.1]",
+  "description": "ATS Score Checker and CV Updater - Mobile-first responsive web application [DEPLOY-TRIGGER-v3.0-CRITICAL]",
   "main": "index.js",
   "scripts": {
     "dev": "vite",

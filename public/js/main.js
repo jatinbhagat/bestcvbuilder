@@ -2,6 +2,8 @@
  * Main JavaScript file for BestCVBuilder landing page
  * Handles file upload, ATS analysis, and user flow
  * DEPLOY TRIGGER: Force rebuild for CORS fix - v2.1.0
+ * VERCEL AUTO-DEPLOY: Trigger change v3.0 - Critical fix
+ * REDEPLOY REQUEST: August 2nd 2025 - API URL fix needed
  */
 
 import { supabase } from './supabase.js';

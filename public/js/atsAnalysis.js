@@ -4,6 +4,8 @@
  * Updated: 2025-08-02 - Fixed CORS with relative URLs
  * Force Deploy: Timestamp $(date) - Ensuring fresh deployment
  * TEST: Vercel auto-deploy trigger - Cache bust v2.1
+ * DEPLOY NOW: Force rebuild v3.0 - CORS fix critical
+ * VERCEL REDEPLOY: Change detection trigger - August 2nd 2025
  */
 
 // API Configuration - Use same domain as frontend (relative URL)
