@@ -1,0 +1,39 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "public/**/*",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "api/**/*.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/public/$1"
+    }
+  ],
+  "functions": {
+    "api/cv-parser/index.py": {
+      "runtime": "python3.9",
+      "maxDuration": 30
+    },
+    "api/cv-rewrite/index.py": {
+      "runtime": "python3.9",
+      "maxDuration": 60
+    }
+  },
+  "env": {
+    "SUPABASE_URL": "@supabase_url",
+    "PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY": "@supabase_publishable_key",
+    "STRIPE_SECRET_KEY": "@stripe_secret_key",
+    "STRIPE_WEBHOOK_SECRET": "@stripe_webhook_secret"
+  }
+} 

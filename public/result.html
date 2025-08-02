@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATS Analysis Results - BestCVBuilder</title>
+    <meta name="description" content="Your resume ATS analysis results and upgrade options">
+    
+    <!-- Tailwind CSS -->
+    <link href="./css/output.css" rel="stylesheet">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="./assets/favicon.ico">
+</head>
+<body class="bg-gray-50 font-sans">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a href="./index.html" class="text-xl font-bold text-gray-900">BestCVBuilder</a>
+                </div>
+                <nav class="hidden md:flex space-x-8">
+                    <a href="#" class="text-gray-500 hover:text-gray-900">How it works</a>
+                    <a href="#" class="text-gray-500 hover:text-gray-900">Pricing</a>
+                    <a href="#" class="text-gray-500 hover:text-gray-900">Contact</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Results Header -->
+        <section class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                Your ATS Analysis Results
+            </h1>
+            <p class="text-lg text-gray-600">
+                Here's how your resume performs with ATS systems
+            </p>
+        </section>
+
+        <!-- ATS Score Display -->
+        <section class="max-w-4xl mx-auto mb-8">
+            <div class="bg-white rounded-lg shadow-lg p-6 md:p-8">
+                <div class="text-center mb-8">
+                    <div class="inline-flex items-center justify-center w-24 h-24 rounded-full bg-primary-100 mb-4">
+                        <span class="text-3xl font-bold text-primary-600" id="atsScore">0</span>
+                        <span class="text-lg text-primary-600 ml-1">/100</span>
+                    </div>
+                    <h2 class="text-2xl font-semibold text-gray-900 mb-2" id="scoreTitle">ATS Score</h2>
+                    <p class="text-gray-600" id="scoreDescription">Loading score...</p>
+                </div>
+
+                <!-- Score Breakdown -->
+                <div class="grid md:grid-cols-2 gap-6 mb-8">
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Strengths</h3>
+                        <ul id="strengthsList" class="space-y-2">
+                            <!-- Strengths will be populated by JavaScript -->
+                        </ul>
+                    </div>
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Areas for Improvement</h3>
+                        <ul id="improvementsList" class="space-y-2">
+                            <!-- Improvements will be populated by JavaScript -->
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Detailed Analysis -->
+                <div class="border-t border-gray-200 pt-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Detailed Analysis</h3>
+                    <div id="detailedAnalysis" class="prose prose-sm max-w-none">
+                        <!-- Detailed analysis will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Upgrade Section -->
+        <section class="max-w-4xl mx-auto mb-8">
+            <div class="bg-gradient-to-r from-primary-600 to-primary-700 rounded-lg shadow-lg p-6 md:p-8 text-white">
+                <div class="text-center mb-6">
+                    <h2 class="text-2xl md:text-3xl font-bold mb-4">
+                        Get Your AI-Optimized Resume
+                    </h2>
+                    <p class="text-lg opacity-90 mb-6">
+                        Upgrade to our AI-powered CV rewrite and boost your ATS score by up to 40%
+                    </p>
+                </div>
+
+                <div class="grid md:grid-cols-3 gap-6 mb-8">
+                    <div class="text-center">
+                        <div class="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center mx-auto mb-3">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="font-semibold mb-2">AI-Powered Rewrite</h3>
+                        <p class="text-sm opacity-90">Optimized content that beats ATS algorithms</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center mx-auto mb-3">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="font-semibold mb-2">Keyword Optimization</h3>
+                        <p class="text-sm opacity-90">Targeted keywords for your industry</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center mx-auto mb-3">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="font-semibold mb-2">Professional Formatting</h3>
+                        <p class="text-sm opacity-90">Clean, ATS-friendly layout</p>
+                    </div>
+                </div>
+
+                <div class="text-center">
+                    <div class="mb-4">
+                        <span class="text-3xl font-bold">$29</span>
+                        <span class="text-lg opacity-90">one-time</span>
+                    </div>
+                    <button 
+                        id="upgradeBtn"
+                        class="bg-white text-primary-600 py-3 px-8 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+                    >
+                        Upgrade Now
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Alternative Actions -->
+        <section class="max-w-2xl mx-auto text-center">
+            <div class="space-y-4">
+                <button 
+                    id="newAnalysisBtn"
+                    class="w-full bg-gray-200 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                >
+                    Analyze Another Resume
+                </button>
+                <button 
+                    id="downloadReportBtn"
+                    class="w-full bg-transparent border border-gray-300 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                >
+                    Download Analysis Report
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-8 mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center">
+                <p class="text-gray-400">&copy; 2024 BestCVBuilder. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script type="module" src="./js/result.js"></script>
+</body>
+</html> 
