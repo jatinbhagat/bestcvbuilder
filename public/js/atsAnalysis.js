@@ -3,8 +3,8 @@
  * Handles resume analysis and score calculation
  */
 
-// API Configuration - Always use production Vercel endpoint
-const API_BASE_URL = 'https://bestcvbuilder-gnktl1mxh-bestcvbuilder.vercel.app/api';
+// API Configuration - Use same domain as frontend (relative URL)
+const API_BASE_URL = '/api';
 const CV_PARSER_ENDPOINT = `${API_BASE_URL}/cv-parser`;
 
 
