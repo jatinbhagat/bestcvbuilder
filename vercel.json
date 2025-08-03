@@ -1,15 +1,5 @@
 {
   "framework": "vite", 
   "buildCommand": "npm ci && npm run build",
-  "outputDirectory": "dist",
-  "builds": [
-    {
-      "src": "api/cv-parser/index.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "api/cv-rewrite/index.py", 
-      "use": "@vercel/python"
-    }
-  ]
+  "outputDirectory": "dist"
 }
