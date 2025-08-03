@@ -1,5 +1,16 @@
 {
   "framework": "vite", 
-  "buildCommand": "npm ci && npm run build",
-  "outputDirectory": "dist"
+  "buildCommand": "rm -rf dist node_modules/.vite && npm ci && npm run build",
+  "outputDirectory": "dist",
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    }
+  ]
 }
