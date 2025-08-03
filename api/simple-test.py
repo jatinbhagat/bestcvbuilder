@@ -1,26 +1,30 @@
 """
-Simple API test to diagnose 500 errors
+Simple API test to diagnose 500 errors - Using exact pattern from working API
 """
 
-from flask import Flask, request, jsonify
 import json
 
-app = Flask(__name__)
-
-@app.route('/api/simple-test', methods=['GET', 'POST', 'OPTIONS'])
-def handler():
-    """Minimal handler to test what's working"""
-    
-    # CORS headers
-    headers = {
+def cors_headers():
+    """Return CORS headers"""
+    return {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Content-Type': 'application/json'
     }
+
+def handler(request):
+    """
+    Minimal handler to test what's working - matches cv-parser pattern exactly
+    """
+    from flask import Response
     
-    # Handle preflight
+    # Handle CORS preflight requests
     if request.method == 'OPTIONS':
-        return '', 200, headers
+        response = Response()
+        for key, value in cors_headers().items():
+            response.headers[key] = value
+        return response
     
     try:
         # Test what we can import
@@ -47,21 +51,21 @@ def handler():
         # Test request data
         request_info = {
             'method': request.method,
-            'content_type': request.content_type or 'unknown',
-            'args': dict(request.args),
-            'headers_count': len(request.headers)
+            'content_type': getattr(request, 'content_type', 'unknown'),
+            'has_get_json': hasattr(request, 'get_json')
         }
         
         response_data = {
             "status": "success",
-            "message": "Simple API test working with Flask",
+            "message": "Simple API test working - Flask Response pattern",
             "available_imports": available_imports,
             "request_info": request_info,
-            "timestamp": "2025-08-03-15:20"
+            "timestamp": "2025-08-03-15:25"
         }
         
-        response = jsonify(response_data)
-        for key, value in headers.items():
+        # Return using Flask Response like the main API
+        response = Response(json.dumps(response_data), status=200, content_type='application/json')
+        for key, value in cors_headers().items():
             response.headers[key] = value
         return response
         
@@ -71,10 +75,10 @@ def handler():
             "status": "error",
             "error_message": str(e),
             "error_type": type(e).__name__,
-            "timestamp": "2025-08-03-15:20"
+            "timestamp": "2025-08-03-15:25"
         }
         
-        response = jsonify(error_data)
-        for key, value in headers.items():
+        response = Response(json.dumps(error_data), status=200, content_type='application/json')  # Return 200 so we can see the error
+        for key, value in cors_headers().items():
             response.headers[key] = value
         return response
