@@ -2,9 +2,12 @@
 # Core dependencies
 requests==2.31.0
 
-# PDF/Word processing (lightweight)
-PyPDF2==3.0.1
-python-docx==1.1.0
+# PDF/Word processing - Critical for accurate text extraction
+PyPDF2==3.0.1              # Basic PDF extraction (fallback)
+python-docx==1.1.0          # DOCX file support
+pdfplumber==0.10.3          # Enhanced PDF extraction (recommended)
+pdfminer.six==20221105      # Comprehensive PDF extraction (best accuracy)
+PyMuPDF==1.23.8             # High-performance PDF extraction
 
 # Database (lightweight client)
 supabase==2.0.2

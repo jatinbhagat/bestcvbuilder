@@ -16,6 +16,10 @@ from urllib.parse import urlparse
 import math
 import uuid
 
+# Configure logging first
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Import configuration system
 from config.config_loader import (
     get_industry_keywords, get_grammar_patterns, get_spelling_corrections,
@@ -23,20 +27,84 @@ from config.config_loader import (
     get_score_categories, get_keywords_for_industry, config_loader
 )
 
-# Text extraction libraries
+# Text extraction libraries - Critical dependency checking
+PYPDF2_AVAILABLE = False
+DOCX_AVAILABLE = False
+PDFPLUMBER_AVAILABLE = False
+PYMUPDF_AVAILABLE = False
+PDFMINER_AVAILABLE = False
+
+# Check PyPDF2 (basic fallback - always required)
 try:
     import PyPDF2
-    import docx
     PYPDF2_AVAILABLE = True
-    DOCX_AVAILABLE = True
+    logger.info("✅ PyPDF2 available (basic PDF extraction)")
 except ImportError as e:
-    logging.warning(f"Text extraction library not available: {e}")
+    logger.error(f"❌ CRITICAL: PyPDF2 not available: {e}")
     PYPDF2_AVAILABLE = False
+
+# Check python-docx (for DOCX files)
+try:
+    import docx
+    DOCX_AVAILABLE = True
+    logger.info("✅ python-docx available (DOCX extraction)")
+except ImportError as e:
+    logger.warning(f"⚠️  python-docx not available: {e}")
     DOCX_AVAILABLE = False
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Check pdfplumber (better PDF extraction)
+try:
+    import pdfplumber
+    PDFPLUMBER_AVAILABLE = True
+    logger.info("✅ pdfplumber available (enhanced PDF extraction)")
+except ImportError as e:
+    logger.warning(f"⚠️  pdfplumber not available: {e}")
+    PDFPLUMBER_AVAILABLE = False
+
+# Check PyMuPDF/fitz (accurate text extraction)
+try:
+    import fitz
+    PYMUPDF_AVAILABLE = True
+    logger.info("✅ PyMuPDF/fitz available (accurate PDF extraction)")
+except ImportError as e:
+    logger.warning(f"⚠️  PyMuPDF not available: {e}")
+    PYMUPDF_AVAILABLE = False
+
+# Check pdfminer (comprehensive extraction)
+try:
+    from pdfminer.high_level import extract_text
+    PDFMINER_AVAILABLE = True
+    logger.info("✅ pdfminer available (comprehensive PDF extraction)")
+except ImportError as e:
+    logger.warning(f"⚠️  pdfminer not available: {e}")
+    PDFMINER_AVAILABLE = False
+
+# Log dependency summary
+def log_dependency_status():
+    """Log the status of all PDF extraction dependencies"""
+    total_available = sum([PYPDF2_AVAILABLE, PDFPLUMBER_AVAILABLE, PYMUPDF_AVAILABLE, PDFMINER_AVAILABLE])
+    
+    logger.info("📊 PDF Extraction Dependencies Status:")
+    logger.info(f"   PyPDF2: {'✅ Available' if PYPDF2_AVAILABLE else '❌ Missing'}")
+    logger.info(f"   pdfplumber: {'✅ Available' if PDFPLUMBER_AVAILABLE else '❌ Missing'}")
+    logger.info(f"   PyMuPDF: {'✅ Available' if PYMUPDF_AVAILABLE else '❌ Missing'}")
+    logger.info(f"   pdfminer: {'✅ Available' if PDFMINER_AVAILABLE else '❌ Missing'}")
+    logger.info(f"   python-docx: {'✅ Available' if DOCX_AVAILABLE else '❌ Missing'}")
+    logger.info(f"Total PDF extraction methods available: {total_available}/4")
+    
+    if total_available == 1 and PYPDF2_AVAILABLE:
+        logger.warning("⚠️  WARNING: Only PyPDF2 available - PDF extraction quality may be limited")
+    elif total_available >= 3:
+        logger.info("✅ Good: Multiple PDF extraction methods available for high quality")
+    elif total_available >= 2:
+        logger.info("✅ Acceptable: Multiple PDF extraction methods available")
+    elif total_available == 0:
+        logger.error("❌ CRITICAL: No PDF extraction methods available!")
+        
+    return total_available
+
+# Check dependencies at startup
+available_methods = log_dependency_status()
 
 # API configuration
 ALLOWED_ORIGINS = [
@@ -167,49 +235,123 @@ def extract_text_from_file(file_content: bytes, file_url: str) -> str:
 def extract_pdf_text(file_content: bytes) -> str:
     """Extract text from PDF using multiple methods with fallbacks for better accuracy"""
     
-    extraction_methods = [
-        ("PyPDF2", extract_with_pypdf2),
-        ("pdfplumber", extract_with_pdfplumber),
-        ("pymupdf", extract_with_pymupdf),
-        ("pdfminer", extract_with_pdfminer)
-    ]
+    # Log which methods are available for this extraction attempt
+    logger.info("🔍 Starting PDF extraction process...")
     
-    best_text = ""
-    best_score = 0
-    errors = []
+    if not PYPDF2_AVAILABLE:
+        raise TextExtractionError("CRITICAL: No PDF extraction libraries available")
     
-    for method_name, method_func in extraction_methods:
+    # Primary method that should always work
+    fallback_text = ""
+    fallback_score = 0
+    
+    if PYPDF2_AVAILABLE:
         try:
-            logger.info(f"Attempting PDF extraction with {method_name}")
+            logger.info("📄 Attempting PDF extraction with PyPDF2 (primary)")
+            text = extract_with_pypdf2(file_content)
+            
+            if text and len(text.strip()) >= 50:
+                quality_score = score_text_quality(text)
+                logger.info(f"📊 PyPDF2 extraction score: {quality_score}/100")
+                
+                # If PyPDF2 gives good results, use it
+                if quality_score >= 70:
+                    logger.info("✅ PyPDF2 extraction successful, using primary result")
+                    return text
+                
+                # Store as fallback
+                fallback_text = text
+                fallback_score = quality_score
+                logger.info(f"💾 Storing PyPDF2 result as fallback (score: {quality_score})")
+            else:
+                fallback_text = text if text else ""
+                fallback_score = 0
+                logger.warning("⚠️  PyPDF2 extracted minimal text")
+                
+        except Exception as e:
+            logger.error(f"❌ PyPDF2 extraction failed: {str(e)}")
+            fallback_text = ""
+            fallback_score = 0
+    
+    # Try alternative methods for better quality (only if available)
+    alternative_methods = []
+    
+    if PDFPLUMBER_AVAILABLE:
+        alternative_methods.append(("pdfplumber", extract_with_pdfplumber))
+    if PYMUPDF_AVAILABLE:
+        alternative_methods.append(("pymupdf", extract_with_pymupdf))
+    if PDFMINER_AVAILABLE:
+        alternative_methods.append(("pdfminer", extract_with_pdfminer))
+    
+    if not alternative_methods:
+        logger.warning("⚠️  No alternative PDF extraction methods available - relying on PyPDF2 only")
+    else:
+        logger.info(f"🔄 Trying {len(alternative_methods)} alternative extraction methods for better quality")
+    
+    best_text = fallback_text
+    best_score = fallback_score
+    
+    for method_name, method_func in alternative_methods:
+        try:
+            logger.info(f"📄 Attempting PDF extraction with {method_name}")
             text = method_func(file_content)
             
             if text and len(text.strip()) >= 50:
-                # Score the extraction quality
                 quality_score = score_text_quality(text)
-                logger.info(f"{method_name} extraction score: {quality_score}")
+                logger.info(f"📊 {method_name} extraction score: {quality_score}/100")
                 
                 if quality_score > best_score:
                     best_text = text
                     best_score = quality_score
-                    logger.info(f"New best extraction method: {method_name}")
+                    logger.info(f"🏆 New best extraction method: {method_name} (score: {quality_score})")
                     
-                # If we get a very good score, use it immediately
-                if quality_score >= 90:
-                    logger.info(f"High quality extraction achieved with {method_name}")
+                # If we get excellent results, use them immediately
+                if quality_score >= 95:
+                    logger.info(f"🎯 Excellent quality extraction achieved with {method_name}")
                     break
+            else:
+                logger.warning(f"⚠️  {method_name} extracted minimal text")
                     
         except Exception as e:
-            error_msg = f"{method_name} failed: {str(e)}"
-            logger.warning(error_msg)
-            errors.append(error_msg)
+            logger.warning(f"❌ {method_name} failed: {str(e)}")
             continue
     
+    # Ensure we have some text to work with
     if not best_text or len(best_text.strip()) < 50:
-        error_summary = "; ".join(errors)
-        raise TextExtractionError(f"All PDF extraction methods failed. Errors: {error_summary}")
+        # Last resort: try basic PyPDF2 without scoring
+        if PYPDF2_AVAILABLE:
+            try:
+                logger.warning("🚨 Falling back to basic PyPDF2 extraction (last resort)")
+                basic_text = extract_with_pypdf2_basic(file_content)
+                if basic_text and len(basic_text.strip()) >= 20:  # Lower threshold for last resort
+                    logger.info(f"✅ Basic PyPDF2 extracted {len(basic_text)} characters")
+                    return basic_text
+            except Exception as e:
+                logger.error(f"❌ Basic PyPDF2 extraction also failed: {str(e)}")
+        
+        raise TextExtractionError("PDF extraction failed - file may be corrupted, image-only, or password protected")
     
-    logger.info(f"Final PDF extraction completed with score: {best_score}")
+    logger.info(f"🎉 Final PDF extraction completed successfully!")
+    logger.info(f"📊 Best method score: {best_score}/100")
+    logger.info(f"📝 Extracted text length: {len(best_text)} characters")
     return best_text
+
+def extract_with_pypdf2_basic(file_content: bytes) -> str:
+    """Basic PyPDF2 extraction without cleaning - last resort fallback"""
+    text = ""
+    pdf_file = io.BytesIO(file_content)
+    pdf_reader = PyPDF2.PdfReader(pdf_file)
+    
+    for page in pdf_reader.pages:
+        try:
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text + "\n"
+        except Exception as e:
+            logger.warning(f"Failed to extract text from page: {e}")
+            continue
+    
+    return text
 
 def extract_with_pypdf2(file_content: bytes) -> str:
     """Extract text using PyPDF2"""
@@ -226,6 +368,9 @@ def extract_with_pypdf2(file_content: bytes) -> str:
 
 def extract_with_pdfplumber(file_content: bytes) -> str:
     """Extract text using pdfplumber (more accurate for complex layouts)"""
+    if not PDFPLUMBER_AVAILABLE:
+        raise Exception("pdfplumber not available in runtime environment")
+    
     try:
         import pdfplumber
         text = ""
@@ -238,11 +383,14 @@ def extract_with_pdfplumber(file_content: bytes) -> str:
                     text += page_text + "\n"
         
         return clean_extracted_text(text)
-    except ImportError:
-        raise Exception("pdfplumber not available")
+    except Exception as e:
+        raise Exception(f"pdfplumber extraction failed: {str(e)}")
 
 def extract_with_pymupdf(file_content: bytes) -> str:
     """Extract text using PyMuPDF/fitz (good for text accuracy)"""
+    if not PYMUPDF_AVAILABLE:
+        raise Exception("PyMuPDF not available in runtime environment")
+    
     try:
         import fitz  # PyMuPDF
         text = ""
@@ -256,19 +404,22 @@ def extract_with_pymupdf(file_content: bytes) -> str:
         
         pdf_document.close()
         return clean_extracted_text(text)
-    except ImportError:
-        raise Exception("PyMuPDF not available")
+    except Exception as e:
+        raise Exception(f"PyMuPDF extraction failed: {str(e)}")
 
 def extract_with_pdfminer(file_content: bytes) -> str:
     """Extract text using pdfminer (most comprehensive but slower)"""
+    if not PDFMINER_AVAILABLE:
+        raise Exception("pdfminer not available in runtime environment")
+    
     try:
         from pdfminer.high_level import extract_text
         from io import BytesIO
         
         text = extract_text(BytesIO(file_content))
         return clean_extracted_text(text)
-    except ImportError:
-        raise Exception("pdfminer not available")
+    except Exception as e:
+        raise Exception(f"pdfminer extraction failed: {str(e)}")
 
 def score_text_quality(text: str) -> float:
     """
@@ -2330,8 +2481,46 @@ class handler(BaseHTTPRequestHandler):
             self.send_error_response({'error': 'Internal server error'}, 500)
     
     def do_GET(self):
-        """Handle GET requests - not allowed for this API"""
-        self.send_error_response({'error': 'Method not allowed - use POST'}, 405)
+        """Handle GET requests for diagnostics"""
+        try:
+            # Parse the request path
+            from urllib.parse import urlparse, parse_qs
+            parsed_path = urlparse(self.path)
+            
+            if parsed_path.path == '/diagnostics' or parsed_path.path == '/api/cv-parser/diagnostics':
+                # Return dependency status for diagnostics
+                diagnostic_info = {
+                    'service': 'CV Parser API',
+                    'status': 'running',
+                    'dependencies': {
+                        'PyPDF2': PYPDF2_AVAILABLE,
+                        'pdfplumber': PDFPLUMBER_AVAILABLE,
+                        'PyMuPDF': PYMUPDF_AVAILABLE,
+                        'pdfminer': PDFMINER_AVAILABLE,
+                        'python-docx': DOCX_AVAILABLE
+                    },
+                    'total_pdf_methods': sum([PYPDF2_AVAILABLE, PDFPLUMBER_AVAILABLE, PYMUPDF_AVAILABLE, PDFMINER_AVAILABLE]),
+                    'extraction_quality': (
+                        'Excellent' if sum([PDFPLUMBER_AVAILABLE, PYMUPDF_AVAILABLE, PDFMINER_AVAILABLE]) >= 2
+                        else 'Good' if sum([PDFPLUMBER_AVAILABLE, PYMUPDF_AVAILABLE, PDFMINER_AVAILABLE]) >= 1
+                        else 'Basic (PyPDF2 only)' if PYPDF2_AVAILABLE
+                        else 'Critical - No PDF extraction available'
+                    ),
+                    'runtime_environment': 'Vercel Serverless',
+                    'recommendation': (
+                        'All dependencies available - optimal performance' if sum([PYPDF2_AVAILABLE, PDFPLUMBER_AVAILABLE, PYMUPDF_AVAILABLE, PDFMINER_AVAILABLE]) >= 3
+                        else 'Consider installing missing PDF libraries for better extraction quality' if sum([PYPDF2_AVAILABLE, PDFPLUMBER_AVAILABLE, PYMUPDF_AVAILABLE, PDFMINER_AVAILABLE]) < 3
+                        else 'URGENT: Install PDF extraction libraries'
+                    )
+                }
+                
+                self.send_success_response(diagnostic_info)
+            else:
+                self.send_error_response({'error': 'Use POST for CV analysis or GET /diagnostics for status'}, 405)
+                
+        except Exception as e:
+            logger.error(f"Diagnostics error: {str(e)}")
+            self.send_error_response({'error': 'Diagnostics failed'}, 500)
     
     def send_success_response(self, data):
         """Send successful JSON response"""
