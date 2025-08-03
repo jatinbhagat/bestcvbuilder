@@ -9,10 +9,10 @@
  * CACHE BUST v1.1.0: Build timestamp 20250803-0417 - Force refresh
  */
 
-// API Configuration - FORCE NEW BUILD v1.2.0 - Use correct production domain  
-const API_BASE_URL = 'https://bestcvbuilder-gnktl1mxh-bestcvbuilder.vercel.app/api';
+// API Configuration - Use relative URLs to avoid CORS issues
+const API_BASE_URL = '/api';
 const CV_PARSER_ENDPOINT = `${API_BASE_URL}/cv-parser`;
-const BUILD_VERSION = '1.2.0-FORCE-REBUILD';
+const BUILD_VERSION = '2.0.0-RELATIVE-URLS';
 
 console.log('🔗 API Configuration v1.1.0:', { API_BASE_URL, CV_PARSER_ENDPOINT });
 console.log('🚨 CRITICAL: Verify this shows correct URL - should NOT be bestcvbuilder-gamma!');

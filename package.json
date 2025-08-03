@@ -1,6 +1,6 @@
 {
   "name": "bestcvbuilder",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "description": "ATS Score Checker and CV Updater - Mobile-first responsive web application [CACHE-BUST-v1.1.0-TIMESTAMP-20250803]",
   "main": "index.js",
   "scripts": {
