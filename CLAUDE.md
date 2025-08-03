@@ -8,6 +8,7 @@ Keep the UI/UX clean, minimal and fast.
 DON'T BE LAZY. Read complete files.
 Detail out your steps from broad perspective. 
 I am a Product Manager without coding experience. 
+Simplify Vercel config: Let Vercel auto-detect Python functions
 
 
 ## Project Overview
