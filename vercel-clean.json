@@ -1,0 +1,33 @@
+{
+  "version": 2,
+  "framework": "vite",
+  "buildCommand": "rm -rf dist node_modules/.vite && npm ci && npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm ci",
+  "devCommand": "npm run dev",
+  "functions": {
+    "api/cv-parser/index.py": {
+      "runtime": "python3.9"
+    },
+    "api/fix-cors.py": {
+      "runtime": "python3.9"
+    }
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    }
+  ]
+}
