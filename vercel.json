@@ -2,12 +2,14 @@
   "framework": "vite", 
   "buildCommand": "npm ci && npm run build",
   "outputDirectory": "dist",
-  "functions": {
-    "api/cv-parser/index.py": {
-      "runtime": "python3.9"
+  "builds": [
+    {
+      "src": "api/cv-parser/index.py",
+      "use": "@vercel/python"
     },
-    "api/cv-rewrite/index.py": {
-      "runtime": "python3.9"
+    {
+      "src": "api/cv-rewrite/index.py", 
+      "use": "@vercel/python"
     }
-  }
+  ]
 }
