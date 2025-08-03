@@ -234,17 +234,25 @@ function displayEnhancedStrengths(strengths) {
     
     strengthsList.innerHTML = '';
     
-    strengths.forEach(strength => {
+    // Show only top 4 strengths for cleaner layout
+    const topStrengths = strengths.slice(0, 4);
+    
+    topStrengths.forEach(strength => {
         const div = document.createElement('div');
-        div.className = 'bg-green-50 border border-green-200 rounded-lg p-3 flex items-start';
+        div.className = 'bg-green-50 rounded-lg p-2 border-l-4 border-green-400';
         div.innerHTML = `
-            <svg class="w-5 h-5 text-green-500 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-            <span class="text-gray-700 text-sm font-medium">${strength}</span>
+            <span class="text-sm text-gray-800 font-medium">${strength}</span>
         `;
         strengthsList.appendChild(div);
     });
+    
+    // Add "show more" if there are additional strengths
+    if (strengths.length > 4) {
+        const showMore = document.createElement('div');
+        showMore.className = 'text-xs text-green-600 font-medium text-center pt-2';
+        showMore.textContent = `+${strengths.length - 4} more strengths`;
+        strengthsList.appendChild(showMore);
+    }
 }
 
 // This function is replaced by displayQuickWins and displayCriticalIssues
@@ -369,6 +377,12 @@ function setupEventListeners() {
         upgradeBtn.addEventListener('click', handleUpgrade);
     }
     
+    // Sticky mobile upgrade button
+    const stickyUpgradeBtn = document.getElementById('stickyUpgradeBtn');
+    if (stickyUpgradeBtn) {
+        stickyUpgradeBtn.addEventListener('click', handleUpgrade);
+    }
+    
     // New analysis button
     if (newAnalysisBtn) {
         newAnalysisBtn.addEventListener('click', handleNewAnalysis);
@@ -378,6 +392,55 @@ function setupEventListeners() {
     if (downloadReportBtn) {
         downloadReportBtn.addEventListener('click', handleDownloadReport);
     }
+    
+    // Detailed analysis toggle
+    const toggleBtn = document.getElementById('toggleDetailedAnalysis');
+    const detailsSection = document.getElementById('detailedAnalysisSection');
+    const chevron = document.getElementById('detailsChevron');
+    
+    if (toggleBtn && detailsSection && chevron) {
+        toggleBtn.addEventListener('click', () => {
+            const isHidden = detailsSection.classList.contains('hidden');
+            
+            if (isHidden) {
+                detailsSection.classList.remove('hidden');
+                chevron.style.transform = 'rotate(180deg)';
+            } else {
+                detailsSection.classList.add('hidden');
+                chevron.style.transform = 'rotate(0deg)';
+            }
+        });
+    }
+    
+    // Hide sticky CTA when main CTA is visible
+    setupStickyCtaVisibility();
+}
+
+/**
+ * Setup sticky CTA visibility based on main CTA position
+ */
+function setupStickyCtaVisibility() {
+    const mainCTA = document.getElementById('upgradeBtn');
+    const stickyCTA = document.getElementById('stickyMobileCTA');
+    
+    if (!mainCTA || !stickyCTA) return;
+    
+    const observer = new IntersectionObserver(
+        (entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    // Main CTA is visible, hide sticky
+                    stickyCTA.style.transform = 'translateY(100%)';
+                } else {
+                    // Main CTA is not visible, show sticky
+                    stickyCTA.style.transform = 'translateY(0)';
+                }
+            });
+        },
+        { threshold: 0.1 }
+    );
+    
+    observer.observe(mainCTA);
 }
 
 /**
@@ -716,38 +779,40 @@ function displayCriticalAlert(insights) {
 function displayQuickWins(quickWins) {
     if (!quickWinsList || !quickWinsCount) return;
     
-    quickWinsCount.textContent = `${quickWins.length} fixes`;
+    quickWinsCount.textContent = quickWins.length;
     quickWinsList.innerHTML = '';
     
     if (quickWins.length === 0) {
-        quickWinsList.innerHTML = '<p class="text-blue-700 text-sm">Great! No quick fixes needed - you have the basics covered.</p>';
+        quickWinsList.innerHTML = '<p class="text-blue-700 text-sm">Great! No quick fixes needed.</p>';
         return;
     }
     
-    quickWins.forEach(win => {
+    // Show only top 2 quick wins for cleaner summary
+    const topWins = quickWins.slice(0, 2);
+    
+    topWins.forEach(win => {
         const div = document.createElement('div');
-        div.className = 'bg-white rounded-lg p-3 md:p-4 border border-blue-200 hover:border-blue-300 transition-colors touch-manipulation';
+        div.className = 'bg-blue-50 rounded-lg p-3 border-l-4 border-blue-400';
         
         // Handle both new and legacy data formats
-        const timeToFix = win.time_to_fix || win.timeToFix || '2 minutes';
-        const impact = win.impact || 'Medium';
         const pointsGain = win.points_gain || win.pointsGain || 3;
         
         div.innerHTML = `
-            <div class="flex items-start justify-between">
-                <div class="flex-1 min-w-0">
-                    <h4 class="font-medium text-gray-900 text-sm leading-tight">${win.title}</h4>
-                    ${win.component ? `<p class="text-xs text-gray-500 mt-1 truncate">${win.component}</p>` : ''}
-                    ${pointsGain ? `<p class="text-xs text-green-600 mt-1">+${pointsGain} points</p>` : ''}
-                </div>
-                <div class="text-right ml-3 flex-shrink-0">
-                    <span class="text-xs font-medium text-blue-600 block">${timeToFix}</span>
-                    <span class="text-xs text-gray-500">${impact} impact</span>
-                </div>
+            <div class="flex items-center justify-between">
+                <span class="text-sm text-gray-800 font-medium flex-1">${win.title}</span>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium ml-2">+${pointsGain}pts</span>
             </div>
         `;
         quickWinsList.appendChild(div);
     });
+    
+    // Add "show more" if there are additional wins
+    if (quickWins.length > 2) {
+        const showMore = document.createElement('div');
+        showMore.className = 'text-xs text-blue-600 font-medium text-center pt-2';
+        showMore.textContent = `+${quickWins.length - 2} more fixes available`;
+        quickWinsList.appendChild(showMore);
+    }
 }
 
 /**
@@ -756,7 +821,7 @@ function displayQuickWins(quickWins) {
 function displayCriticalIssues(criticalIssues) {
     if (!criticalIssuesList || !criticalIssuesCount) return;
     
-    criticalIssuesCount.textContent = `${criticalIssues.length} issues`;
+    criticalIssuesCount.textContent = criticalIssues.length;
     criticalIssuesList.innerHTML = '';
     
     if (criticalIssues.length === 0) {
@@ -764,36 +829,32 @@ function displayCriticalIssues(criticalIssues) {
         return;
     }
     
-    criticalIssues.forEach(issue => {
+    // Show only top 3 critical issues for cleaner summary
+    const topIssues = criticalIssues.slice(0, 3);
+    
+    topIssues.forEach(issue => {
         const div = document.createElement('div');
-        div.className = 'bg-red-50 border border-red-200 rounded-lg p-3 md:p-4 hover:border-red-300 transition-colors touch-manipulation';
+        div.className = 'bg-red-50 rounded-lg p-3 border-l-4 border-red-400';
         
         // Handle both new and legacy data formats
-        const timeToFix = issue.time_to_fix || issue.timeToFix || '10-15 minutes';
-        const impact = issue.impact || 'High';
-        const pointsGain = issue.points_gain || issue.pointsGain;
-        const solution = issue.solution || issue.description || 'Review and optimize this section for better ATS compatibility';
+        const pointsGain = issue.points_gain || issue.pointsGain || 8;
         
         div.innerHTML = `
-            <div class="flex items-start">
-                <svg class="w-5 h-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01"></path>
-                </svg>
-                <div class="flex-1 min-w-0">
-                    <h4 class="font-medium text-gray-900 text-sm md:text-base leading-tight">${issue.title}</h4>
-                    ${issue.component ? `<p class="text-xs md:text-sm text-gray-600 mt-1">Component: ${issue.component}</p>` : ''}
-                    <p class="text-xs md:text-sm text-gray-700 mt-2 leading-relaxed">${solution}</p>
-                    <div class="flex flex-wrap items-center mt-2 text-xs text-gray-500 gap-2">
-                        <span>Time to fix: ${timeToFix}</span>
-                        <span class="hidden sm:inline">•</span>
-                        <span>Impact: ${impact}</span>
-                        ${pointsGain ? `<span class="hidden sm:inline">•</span><span class="text-green-600">+${pointsGain} points</span>` : ''}
-                    </div>
-                </div>
+            <div class="flex items-center justify-between">
+                <span class="text-sm text-gray-800 font-medium flex-1">${issue.title}</span>
+                <span class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-medium ml-2">+${pointsGain}pts</span>
             </div>
         `;
         criticalIssuesList.appendChild(div);
     });
+    
+    // Add "show more" if there are additional issues
+    if (criticalIssues.length > 3) {
+        const showMore = document.createElement('div');
+        showMore.className = 'text-xs text-red-600 font-medium text-center pt-2';
+        showMore.textContent = `+${criticalIssues.length - 3} more issues to fix`;
+        criticalIssuesList.appendChild(showMore);
+    }
 }
 
 /**
@@ -811,7 +872,7 @@ function displayComponentScores(detailedAnalysis) {
             const componentName = formatComponentName(component);
             
             const div = document.createElement('div');
-            div.className = 'bg-white border border-gray-200 rounded-lg p-4';
+            div.className = 'bg-gray-50 border border-gray-200 rounded-xl p-4';
             
             // Handle enhanced component data with letter grade
             const letterGrade = data.letter_grade || getComponentLetterGrade(percentage);
@@ -819,18 +880,18 @@ function displayComponentScores(detailedAnalysis) {
             
             div.innerHTML = `
                 <div class="flex justify-between items-center mb-3">
-                    <h4 class="font-semibold text-gray-900">${componentName}</h4>
+                    <h4 class="font-bold text-gray-900">${componentName}</h4>
                     <div class="text-right">
                         <div class="flex items-center space-x-2">
-                            <span class="text-lg font-bold ${getScoreColor(percentage)}">${data.score}</span>
+                            <span class="text-xl font-bold ${getScoreColor(percentage)}">${data.score}</span>
                             <span class="text-sm text-gray-500">/${maxScore}</span>
-                            <span class="text-sm font-bold ${getScoreColor(percentage)} bg-gray-100 px-2 py-1 rounded">${letterGrade}</span>
+                            <span class="text-sm font-bold ${getScoreColor(percentage)} bg-white px-2 py-1 rounded-lg">${letterGrade}</span>
                         </div>
                         <div class="text-xs text-gray-500">${percentage}%</div>
                     </div>
                 </div>
-                <div class="w-full bg-gray-200 rounded-full h-2 mb-3">
-                    <div class="${getProgressBarColor(percentage)} h-2 rounded-full transition-all duration-500" style="width: ${percentage}%"></div>
+                <div class="w-full bg-gray-200 rounded-full h-3 mb-3">
+                    <div class="${getProgressBarColor(percentage)} h-3 rounded-full transition-all duration-700" style="width: ${percentage}%"></div>
                 </div>
                 ${formatComponentDetails(data)}
                 ${recommendations.length > 0 ? formatRecommendations(recommendations) : ''}
@@ -858,10 +919,10 @@ function getComponentLetterGrade(percentage) {
 function formatRecommendations(recommendations) {
     if (!recommendations || recommendations.length === 0) return '';
     
-    const recList = recommendations.slice(0, 3).map(rec => `<li class="text-xs text-blue-700">• ${rec}</li>`).join('');
+    const recList = recommendations.slice(0, 2).map(rec => `<li class="text-xs text-blue-700">• ${rec}</li>`).join('');
     return `
-        <div class="mt-3 bg-blue-50 rounded p-2">
-            <p class="text-xs font-medium text-blue-800 mb-1">Quick improvements:</p>
+        <div class="mt-3 bg-blue-50 rounded-lg p-3">
+            <p class="text-xs font-bold text-blue-800 mb-2">💡 Quick improvements:</p>
             <ul class="space-y-1">${recList}</ul>
         </div>
     `;
