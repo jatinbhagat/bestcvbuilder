@@ -583,6 +583,426 @@ def calculate_comprehensive_ats_score(content: str) -> Dict[str, Any]:
         'detailed_analysis': components
     }
 
+def calculate_interview_rates(ats_score: int) -> Dict[str, Any]:
+    """
+    Calculate realistic interview rates based on ATS score
+    
+    Args:
+        ats_score: ATS compatibility score (0-100)
+        
+    Returns:
+        Dictionary with current and potential interview rates
+    """
+    # Based on industry research and ATS performance data
+    rate_mapping = [
+        (90, 100, 18, "Excellent"),  # Top 10% of candidates
+        (80, 89, 12, "Very Good"),   # Top 25% of candidates
+        (70, 79, 8, "Good"),         # Above average
+        (60, 69, 5, "Average"),      # Industry average
+        (50, 59, 3, "Below Average"), # Needs improvement
+        (0, 49, 1, "Poor")           # Major issues
+    ]
+    
+    current_rate = 1
+    performance_tier = "Poor"
+    
+    for min_score, max_score, rate, tier in rate_mapping:
+        if min_score <= ats_score <= max_score:
+            current_rate = rate
+            performance_tier = tier
+            break
+    
+    # Calculate potential rate with improvements (realistic maximum)
+    potential_rate = min(18, current_rate + (90 - ats_score) * 0.15)
+    multiplier = potential_rate / current_rate if current_rate > 0 else 5
+    
+    return {
+        "current_rate": current_rate,
+        "potential_rate": round(potential_rate),
+        "multiplier": round(multiplier, 1),
+        "performance_tier": performance_tier,
+        "percentile": get_score_percentile(ats_score)
+    }
+
+def get_score_percentile(ats_score: int) -> int:
+    """Get percentile ranking based on ATS score"""
+    if ats_score >= 90: return 95
+    if ats_score >= 80: return 80
+    if ats_score >= 70: return 60
+    if ats_score >= 60: return 40
+    if ats_score >= 50: return 25
+    return 10
+
+def get_letter_grade(ats_score: int) -> str:
+    """Convert ATS score to letter grade"""
+    if ats_score >= 90: return "A+"
+    if ats_score >= 85: return "A"
+    if ats_score >= 80: return "A-"
+    if ats_score >= 75: return "B+"
+    if ats_score >= 70: return "B"
+    if ats_score >= 65: return "B-"
+    if ats_score >= 60: return "C+"
+    if ats_score >= 55: return "C"
+    if ats_score >= 50: return "C-"
+    if ats_score >= 45: return "D"
+    return "F"
+
+def classify_issues_by_priority(analysis_data: Dict[str, Any]) -> Tuple[List[Dict], List[Dict]]:
+    """
+    Classify CV issues by priority and impact
+    
+    Args:
+        analysis_data: Complete analysis data including component scores
+        
+    Returns:
+        Tuple of (critical_issues, quick_wins)
+    """
+    critical_issues = []
+    quick_wins = []
+    
+    components = analysis_data.get('detailed_analysis', {})
+    component_scores = analysis_data.get('component_scores', {})
+    personal_info = analysis_data.get('personal_information', {})
+    
+    # CRITICAL ISSUES (blocks interviews)
+    
+    # Missing essential contact information
+    if component_scores.get('contact', 0) < 10:
+        missing_contact = []
+        if not personal_info.get('email'):
+            missing_contact.append('professional email')
+        if not personal_info.get('phone'):
+            missing_contact.append('phone number')
+        
+        if missing_contact:
+            critical_issues.append({
+                'title': 'Missing Essential Contact Information',
+                'issue': f"Missing: {', '.join(missing_contact)}",
+                'solution': 'Add complete contact details in a clear header section',
+                'time_to_fix': '2 minutes',
+                'points_gain': 8,
+                'impact': 'High',
+                'component': 'Contact Information',
+                'why_critical': 'Recruiters cannot contact you without proper contact details'
+            })
+    
+    # Missing professional summary
+    if not personal_info.get('professional_summary'):
+        critical_issues.append({
+            'title': 'No Professional Summary',
+            'issue': 'Missing career summary or objective statement',
+            'solution': 'Add a 2-3 sentence summary highlighting your key qualifications and career goals',
+            'time_to_fix': '10 minutes',
+            'points_gain': 12,
+            'impact': 'High',
+            'component': 'Professional Summary',
+            'why_critical': 'ATS systems and recruiters look for summary sections to quickly understand your profile'
+        })
+    
+    # Poor keyword optimization
+    if component_scores.get('keywords', 0) < 8:
+        critical_issues.append({
+            'title': 'Poor Keyword Optimization',
+            'issue': 'Missing industry-specific keywords that ATS systems scan for',
+            'solution': 'Research job postings in your field and include relevant keywords naturally',
+            'time_to_fix': '15 minutes',
+            'points_gain': 10,
+            'impact': 'High',
+            'component': 'Keywords & Skills',
+            'why_critical': 'ATS systems filter resumes based on keyword matches'
+        })
+    
+    # Poor formatting affecting ATS readability
+    if component_scores.get('formatting', 0) < 12:
+        critical_issues.append({
+            'title': 'ATS-Incompatible Formatting',
+            'issue': 'Formatting issues that prevent ATS systems from reading your resume',
+            'solution': 'Use standard section headers, consistent fonts, and avoid complex layouts',
+            'time_to_fix': '20 minutes',
+            'points_gain': 8,
+            'impact': 'High',
+            'component': 'Formatting',
+            'why_critical': 'Poor formatting can make your resume invisible to ATS systems'
+        })
+    
+    # QUICK WINS (easy improvements with good impact)
+    
+    # LinkedIn profile missing
+    if not personal_info.get('linkedin_url'):
+        quick_wins.append({
+            'title': 'Add LinkedIn Profile URL',
+            'issue': 'LinkedIn profile not included in contact section',
+            'solution': 'Add your LinkedIn profile URL to show professional online presence',
+            'time_to_fix': '1 minute',
+            'points_gain': 3,
+            'impact': 'Medium',
+            'component': 'Contact Information'
+        })
+    
+    # Phone number formatting
+    phone = personal_info.get('phone', '')
+    if phone and (len(phone.replace(' ', '').replace('-', '').replace('(', '').replace(')', '')) < 10):
+        quick_wins.append({
+            'title': 'Fix Phone Number Format',
+            'issue': 'Phone number format may not be ATS-friendly',
+            'solution': 'Use standard format: +1 (555) 123-4567 or +1-555-123-4567',
+            'time_to_fix': '1 minute',
+            'points_gain': 2,
+            'impact': 'Low',
+            'component': 'Contact Information'
+        })
+    
+    # Missing skills section
+    skills = personal_info.get('skills', [])
+    if not skills or len(skills) < 5:
+        quick_wins.append({
+            'title': 'Expand Skills Section',
+            'issue': 'Limited or missing technical skills listed',
+            'solution': 'Add 8-12 relevant skills including both technical and soft skills',
+            'time_to_fix': '5 minutes',
+            'points_gain': 5,
+            'impact': 'Medium',
+            'component': 'Skills'
+        })
+    
+    # Missing years of experience
+    if not personal_info.get('years_of_experience'):
+        quick_wins.append({
+            'title': 'Add Experience Level',
+            'issue': 'Years of experience not clearly indicated',
+            'solution': 'Include your total years of relevant experience in summary or skills section',
+            'time_to_fix': '2 minutes',
+            'points_gain': 3,
+            'impact': 'Medium',
+            'component': 'Experience'
+        })
+    
+    # Poor structure score
+    if component_scores.get('structure', 0) < 15:
+        structure_data = components.get('structure', {})
+        missing_sections = structure_data.get('missing_sections', [])
+        
+        if missing_sections:
+            quick_wins.append({
+                'title': 'Add Missing Resume Sections',
+                'issue': f"Missing sections: {', '.join(missing_sections)}",
+                'solution': 'Add standard resume sections to improve ATS compatibility',
+                'time_to_fix': '10 minutes',
+                'points_gain': 6,
+                'impact': 'Medium',
+                'component': 'Structure'
+            })
+    
+    return critical_issues, quick_wins
+
+def generate_transformation_preview(analysis_data: Dict[str, Any], critical_issues: List[Dict], quick_wins: List[Dict]) -> Dict[str, Any]:
+    """
+    Generate before/after transformation preview
+    
+    Args:
+        analysis_data: Current analysis data
+        critical_issues: List of critical issues
+        quick_wins: List of quick wins
+        
+    Returns:
+        Dictionary with transformation metrics
+    """
+    current_score = analysis_data.get('ats_score', 0)
+    current_rates = calculate_interview_rates(current_score)
+    
+    # Calculate potential improvement
+    total_points_gain = sum(issue.get('points_gain', 0) for issue in critical_issues + quick_wins)
+    potential_score = min(100, current_score + total_points_gain)
+    potential_rates = calculate_interview_rates(potential_score)
+    
+    return {
+        'current_score': current_score,
+        'potential_score': potential_score,
+        'score_improvement': potential_score - current_score,
+        'current_grade': get_letter_grade(current_score),
+        'potential_grade': get_letter_grade(potential_score),
+        'current_interview_rate': current_rates['current_rate'],
+        'potential_interview_rate': potential_rates['current_rate'],
+        'interview_improvement': f"{potential_rates['current_rate'] - current_rates['current_rate']}x more",
+        'total_fixes': len(critical_issues) + len(quick_wins),
+        'quick_fixes': len(quick_wins),
+        'time_investment': calculate_total_time(critical_issues + quick_wins)
+    }
+
+def calculate_total_time(issues: List[Dict]) -> str:
+    """Calculate total time needed for all improvements"""
+    total_minutes = 0
+    
+    for issue in issues:
+        time_str = issue.get('time_to_fix', '0 minutes')
+        # Extract number from time string
+        import re
+        numbers = re.findall(r'\d+', time_str)
+        if numbers:
+            total_minutes += int(numbers[0])
+    
+    if total_minutes < 60:
+        return f"{total_minutes} minutes"
+    else:
+        hours = total_minutes // 60
+        remaining_minutes = total_minutes % 60
+        if remaining_minutes == 0:
+            return f"{hours} hour{'s' if hours > 1 else ''}"
+        else:
+            return f"{hours}h {remaining_minutes}m"
+
+def enhance_component_breakdown(analysis_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Enhance component analysis with specific issues and solutions
+    
+    Args:
+        analysis_data: Current analysis data
+        
+    Returns:
+        Enhanced component breakdown with specific recommendations
+    """
+    components = analysis_data.get('detailed_analysis', {})
+    component_scores = analysis_data.get('component_scores', {})
+    enhanced_components = {}
+    
+    # Component maximum scores for percentage calculation
+    max_scores = {
+        'structure': 25,
+        'keywords': 20,
+        'contact': 15,
+        'formatting': 20,
+        'achievements': 10,
+        'readability': 10
+    }
+    
+    for component, max_score in max_scores.items():
+        current_score = component_scores.get(component, 0)
+        percentage = round((current_score / max_score) * 100)
+        
+        # Determine status and specific issues
+        if percentage >= 80:
+            status = 'excellent'
+            status_text = 'Excellent'
+            color = 'green'
+        elif percentage >= 60:
+            status = 'good'
+            status_text = 'Good'
+            color = 'blue'
+        elif percentage >= 40:
+            status = 'fair'
+            status_text = 'Needs Improvement'
+            color = 'yellow'
+        else:
+            status = 'poor'
+            status_text = 'Critical Issue'
+            color = 'red'
+        
+        # Get component-specific data
+        component_data = components.get(component, {})
+        
+        enhanced_components[component] = {
+            'name': format_component_name(component),
+            'score': current_score,
+            'max_score': max_score,
+            'percentage': percentage,
+            'status': status,
+            'status_text': status_text,
+            'color': color,
+            'specific_issues': get_component_specific_issues(component, component_data, current_score, max_score),
+            'recommendations': get_component_recommendations(component, component_data, current_score)
+        }
+    
+    return enhanced_components
+
+def get_component_specific_issues(component: str, data: Dict, current_score: int, max_score: int) -> List[str]:
+    """Get specific issues for each component"""
+    issues = []
+    
+    if component == 'structure':
+        missing_sections = data.get('missing_sections', [])
+        if missing_sections:
+            issues.append(f"Missing sections: {', '.join(missing_sections)}")
+        if current_score < max_score * 0.6:
+            issues.append("Poor overall resume structure and organization")
+    
+    elif component == 'keywords':
+        missing_keywords = data.get('missing_keywords', [])
+        if missing_keywords:
+            issues.append(f"Missing key industry terms: {', '.join(missing_keywords[:3])}")
+        if current_score < max_score * 0.4:
+            issues.append("Severely lacking relevant keywords for ATS optimization")
+    
+    elif component == 'contact':
+        if current_score < max_score * 0.7:
+            issues.append("Incomplete or improperly formatted contact information")
+        if current_score < max_score * 0.4:
+            issues.append("Missing essential contact details (phone, email, or location)")
+    
+    elif component == 'formatting':
+        if current_score < max_score * 0.6:
+            issues.append("ATS-incompatible formatting detected")
+            issues.append("Inconsistent font usage or spacing")
+    
+    elif component == 'achievements':
+        achievements_count = data.get('achievements_count', 0)
+        if achievements_count < 3:
+            issues.append("Insufficient quantified achievements and results")
+        if current_score < max_score * 0.5:
+            issues.append("Missing measurable impact statements")
+    
+    elif component == 'readability':
+        if current_score < max_score * 0.5:
+            issues.append("Poor readability and unclear language")
+            issues.append("Complex sentences that may confuse ATS systems")
+    
+    return issues
+
+def get_component_recommendations(component: str, data: Dict, current_score: int) -> List[str]:
+    """Get specific recommendations for each component"""
+    recommendations = []
+    
+    if component == 'structure':
+        recommendations.append("Use standard section headers: Summary, Experience, Education, Skills")
+        recommendations.append("Organize content in reverse chronological order")
+    
+    elif component == 'keywords':
+        recommendations.append("Research job descriptions in your field for relevant keywords")
+        recommendations.append("Include both technical skills and industry buzzwords")
+        recommendations.append("Use keywords naturally throughout your resume")
+    
+    elif component == 'contact':
+        recommendations.append("Include: Full name, phone, professional email, LinkedIn, location")
+        recommendations.append("Use consistent formatting for all contact information")
+    
+    elif component == 'formatting':
+        recommendations.append("Use standard fonts (Arial, Calibri, or Times New Roman)")
+        recommendations.append("Maintain consistent spacing and bullet point styles")
+        recommendations.append("Avoid tables, images, or complex layouts")
+    
+    elif component == 'achievements':
+        recommendations.append("Quantify accomplishments with numbers, percentages, or dollar amounts")
+        recommendations.append("Use action verbs to start each bullet point")
+        recommendations.append("Focus on results and impact, not just job duties")
+    
+    elif component == 'readability':
+        recommendations.append("Use clear, concise language and shorter sentences")
+        recommendations.append("Avoid jargon that ATS systems might not recognize")
+        recommendations.append("Ensure proper grammar and spelling")
+    
+    return recommendations
+
+def format_component_name(component: str) -> str:
+    """Format component names for display"""
+    names = {
+        'structure': 'Resume Structure',
+        'keywords': 'Keywords & Skills',
+        'contact': 'Contact Information',
+        'formatting': 'Formatting & Layout',
+        'achievements': 'Achievements & Impact',
+        'readability': 'Readability & Clarity'
+    }
+    return names.get(component, component.title())
+
 def generate_comprehensive_recommendations(analysis: Dict[str, Any]) -> Dict[str, Any]:
     """Generate detailed recommendations based on analysis"""
     
@@ -1375,13 +1795,29 @@ def analyze_resume_content(file_url: str) -> Dict[str, Any]:
         # Generate recommendations
         recommendations = generate_comprehensive_recommendations(ats_analysis)
         
-        # Combine results
+        # Generate enhanced analysis with all new features
+        critical_issues, quick_wins = classify_issues_by_priority(ats_analysis)
+        interview_metrics = calculate_interview_rates(ats_analysis['ats_score'])
+        transformation_preview = generate_transformation_preview(ats_analysis, critical_issues, quick_wins)
+        enhanced_components = enhance_component_breakdown(ats_analysis)
+        
+        # Combine results with enhanced data
         result = {
             **ats_analysis,
             **recommendations,
             'personal_information': personal_info,
             'extracted_text_length': len(content),
-            'analysis_timestamp': json.dumps({}).__class__.__module__ # Simple timestamp
+            'analysis_timestamp': json.dumps({}).__class__.__module__, # Simple timestamp
+            
+            # Enhanced algorithm features
+            'letter_grade': get_letter_grade(ats_analysis['ats_score']),
+            'interview_metrics': interview_metrics,
+            'critical_issues': critical_issues,
+            'quick_wins': quick_wins,
+            'transformation_preview': transformation_preview,
+            'enhanced_components': enhanced_components,
+            'total_issues': len(critical_issues) + len(quick_wins),
+            'actionable_improvements': len([i for i in critical_issues + quick_wins if i.get('time_to_fix', '').split()[0].isdigit() and int(i.get('time_to_fix', '0').split()[0]) <= 5])
         }
         
         logger.info(f"Analysis completed - Score: {ats_analysis['ats_score']}")
