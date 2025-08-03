@@ -15,7 +15,10 @@
       "Bash(true)",
       "Bash(vercel dev:*)",
       "Bash(ls:*)",
-      "Bash(supabase stop:*)"
+      "Bash(supabase stop:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ],
     "deny": []
   }
