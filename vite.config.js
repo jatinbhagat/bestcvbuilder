@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite'
+import { resolve } from 'path'
 
 export default defineConfig({
   root: 'public',
@@ -6,6 +7,12 @@ export default defineConfig({
     outDir: '../dist',
     emptyOutDir: true,
     rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'public/index.html'),
+        result: resolve(__dirname, 'public/result.html'),
+        payment: resolve(__dirname, 'public/payment.html'),
+        success: resolve(__dirname, 'public/success.html')
+      },
       output: {
         entryFileNames: `assets/[name]-[hash]-v2.js`,
         chunkFileNames: `assets/[name]-[hash]-v2.js`,
