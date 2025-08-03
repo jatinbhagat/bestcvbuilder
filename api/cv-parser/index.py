@@ -34,8 +34,7 @@ logger = logging.getLogger(__name__)
 ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:3002", 
-    "https://bestcvbuilder-gnktl1mxh-bestcvbuilder.vercel.app",
-    "https://bestcvbuilder-gamma.vercel.app"
+    "https://bestcvbuilder-gnktl1mxh-bestcvbuilder.vercel.app"
 ]
 
 # Industry-specific keyword databases
