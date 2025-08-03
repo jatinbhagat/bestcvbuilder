@@ -5,11 +5,12 @@
  * VERCEL AUTO-DEPLOY: Trigger change v3.0 - Critical fix
  * REDEPLOY REQUEST: August 2nd 2025 - API URL fix needed
  * UI UPDATE: Added clean upload progress loader v3.1
+ * CRITICAL FIX v1.1.0: Remove query params, force rebuild
  */
 
-import { supabase } from './supabase.js?v=1.1.0';
-import { uploadFile } from './fileUpload.js?v=1.1.0';
-import { analyzeResumeWithFallback } from './atsAnalysis.js?v=1.1.0';
+import { supabase } from './supabase.js';
+import { uploadFile } from './fileUpload.js';
+import { analyzeResumeWithFallback } from './atsAnalysis.js';
 
 // DOM Elements
 const uploadForm = document.getElementById('uploadForm');

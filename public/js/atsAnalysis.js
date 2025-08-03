@@ -13,7 +13,8 @@
 const API_BASE_URL = 'https://bestcvbuilder-gnktl1mxh-bestcvbuilder.vercel.app/api';
 const CV_PARSER_ENDPOINT = `${API_BASE_URL}/cv-parser`;
 
-console.log('🔗 API Configuration:', { API_BASE_URL, CV_PARSER_ENDPOINT });
+console.log('🔗 API Configuration v1.1.0:', { API_BASE_URL, CV_PARSER_ENDPOINT });
+console.log('🚨 CRITICAL: Verify this shows correct URL - should NOT be bestcvbuilder-gamma!');
 
 
 /**
