@@ -14,6 +14,7 @@ import logging
 from collections import Counter
 from urllib.parse import urlparse
 import math
+import uuid
 
 # Text extraction libraries
 try:
@@ -999,7 +1000,36 @@ def estimate_years_of_experience(content: str) -> Optional[int]:
     
     return None
 
-def save_user_profile_data(email: str, extracted_data: Dict[str, Any]) -> bool:
+def generate_session_uuid() -> str:
+    """Generate a unique session UUID for tracking"""
+    return str(uuid.uuid4())
+
+def generate_temp_email_from_uuid(session_uuid: str) -> str:
+    """Generate temporary email from UUID for CVs without email"""
+    return f"{session_uuid}@bestcvbuilder.com"
+
+def handle_missing_email(extracted_data: Dict[str, Any], session_uuid: str) -> str:
+    """
+    Handle cases where CV doesn't contain an email address
+    
+    Args:
+        extracted_data: Extracted personal information
+        session_uuid: Session UUID for this upload
+        
+    Returns:
+        Email address (real or temporary)
+    """
+    extracted_email = extracted_data.get('email')
+    
+    if extracted_email and '@' in extracted_email:
+        logger.info(f"Real email found in CV: {extracted_email}")
+        return extracted_email
+    else:
+        temp_email = generate_temp_email_from_uuid(session_uuid)
+        logger.info(f"No email found in CV, generated temporary email: {temp_email}")
+        return temp_email
+
+def save_user_profile_data(email: str, extracted_data: Dict[str, Any], session_uuid: str = None) -> bool:
     """
     Save extracted CV data to user_profiles table using email-based architecture
     
@@ -1044,13 +1074,18 @@ def save_user_profile_data(email: str, extracted_data: Dict[str, Any]) -> bool:
         # Remove None values
         profile_data = {k: v for k, v in profile_data.items() if v is not None and v != '' and v != []}
         
-        # Use the upsert function to create or update user profile
-        logger.info(f"Upserting user profile for email: {email}")
+        # Determine email source type
+        email_source = 'generated_temp' if '@bestcvbuilder.com' in email else 'cv_extracted'
         
-        # Call the database function to safely upsert user profile
-        result = supabase.rpc('upsert_user_profile', {
+        # Use the enhanced upsert function with UUID support
+        logger.info(f"Upserting user profile for email: {email} (source: {email_source})")
+        
+        # Call the enhanced database function with UUID support
+        result = supabase.rpc('upsert_user_profile_with_uuid', {
             'p_email': email,
-            'p_profile_data': profile_data
+            'p_session_uuid': session_uuid,
+            'p_profile_data': profile_data,
+            'p_email_source': email_source
         }).execute()
         
         if result.data:
@@ -1065,7 +1100,7 @@ def save_user_profile_data(email: str, extracted_data: Dict[str, Any]) -> bool:
         logger.error(f"Failed to save user profile data for {email}: {str(e)}")
         return False
 
-def save_resume_record(email: str, file_url: str, file_info: Dict[str, Any]) -> Optional[int]:
+def save_resume_record(email: str, file_url: str, file_info: Dict[str, Any], session_uuid: str = None) -> Optional[int]:
     """
     Save resume upload record to resumes table
     
@@ -1099,8 +1134,12 @@ def save_resume_record(email: str, file_url: str, file_info: Dict[str, Any]) -> 
         parsed_url = urlparse(file_url)
         filename = file_info.get('original_filename', 'unknown.pdf')
         
+        # Determine email source
+        email_source = 'generated_temp' if '@bestcvbuilder.com' in email else 'cv_extracted'
+        
         resume_data = {
             'email': email,
+            'session_uuid': session_uuid,
             'original_filename': filename,
             'file_path': parsed_url.path,
             'file_url': file_url,
@@ -1108,7 +1147,8 @@ def save_resume_record(email: str, file_url: str, file_info: Dict[str, Any]) -> 
             'file_type': file_info.get('file_type', 'pdf'),
             'file_hash': file_hash,
             'processing_status': 'processing',
-            'upload_source': 'web_app'
+            'upload_source': 'web_app',
+            'email_source': email_source
         }
         
         logger.info(f"Saving resume record for email: {email}")
@@ -1128,7 +1168,7 @@ def save_resume_record(email: str, file_url: str, file_info: Dict[str, Any]) -> 
         logger.error(f"Failed to save resume record: {str(e)}")
         return None
 
-def save_analysis_results(email: str, resume_id: int, analysis_data: Dict[str, Any]) -> bool:
+def save_analysis_results(email: str, resume_id: int, analysis_data: Dict[str, Any], session_uuid: str = None) -> bool:
     """
     Save analysis results to resume_analysis table
     
@@ -1157,6 +1197,7 @@ def save_analysis_results(email: str, resume_id: int, analysis_data: Dict[str, A
         analysis_record = {
             'email': email,
             'resume_id': resume_id,
+            'session_uuid': session_uuid,
             'ats_score': analysis_data.get('ats_score', 0),
             'score_category': analysis_data.get('category', 'poor'),
             'structure_score': analysis_data.get('component_scores', {}).get('structure', 0),
@@ -1192,7 +1233,7 @@ def save_analysis_results(email: str, resume_id: int, analysis_data: Dict[str, A
         return False
 
 def log_activity(email: str, action: str, resource_type: str = None, resource_id: int = None, 
-                success: bool = True, error_message: str = None, metadata: Dict = None):
+                success: bool = True, error_message: str = None, metadata: Dict = None, session_uuid: str = None):
     """
     Log user activity for audit trail
     
@@ -1224,7 +1265,8 @@ def log_activity(email: str, action: str, resource_type: str = None, resource_id
             'resource_id': resource_id,
             'success': success,
             'error_message': error_message,
-            'metadata': metadata or {}
+            'metadata': metadata or {},
+            'session_uuid': session_uuid
         }
         
         supabase.table('activity_logs').insert(activity_data).execute()
@@ -1338,80 +1380,94 @@ class handler(BaseHTTPRequestHandler):
             # Perform comprehensive analysis
             analysis_result = analyze_resume_content(file_url)
             
-            # Extract email from personal information for email-based architecture
+            # Extract personal information and handle email with UUID fallback
             personal_info = analysis_result.get('personal_information', {})
-            extracted_email = personal_info.get('email')
+            session_uuid = generate_session_uuid()
             
-            if extracted_email:
-                logger.info(f"Email extracted from CV: {extracted_email}")
+            # Handle missing email with UUID fallback
+            final_email = handle_missing_email(personal_info, session_uuid)
+            is_temp_email = '@bestcvbuilder.com' in final_email
+            
+            logger.info(f"Processing CV with email: {final_email} (temporary: {is_temp_email})")
+            
+            try:
+                # Step 1: Save/update user profile with UUID tracking
+                profile_saved = save_user_profile_data(final_email, personal_info, session_uuid)
+                analysis_result['profile_updated'] = profile_saved
+                analysis_result['session_uuid'] = session_uuid
+                analysis_result['email_used'] = final_email
+                analysis_result['is_temporary_email'] = is_temp_email
                 
-                try:
-                    # Step 1: Save/update user profile
-                    profile_saved = save_user_profile_data(extracted_email, personal_info)
-                    analysis_result['profile_updated'] = profile_saved
+                # Step 2: Save resume record with UUID
+                file_info = {
+                    'original_filename': 'uploaded_resume.pdf',  # This should come from request in real implementation
+                    'file_size': 0,  # This should come from file metadata
+                    'file_type': 'pdf'
+                }
+                resume_id = save_resume_record(final_email, file_url, file_info, session_uuid)
+                analysis_result['resume_id'] = resume_id
+                
+                # Step 3: Save analysis results with UUID
+                if resume_id:
+                    analysis_saved = save_analysis_results(final_email, resume_id, analysis_result, session_uuid)
+                    analysis_result['analysis_saved'] = analysis_saved
                     
-                    # Step 2: Save resume record
-                    file_info = {
-                        'original_filename': 'uploaded_resume.pdf',  # This should come from request in real implementation
-                        'file_size': 0,  # This should come from file metadata
-                        'file_type': 'pdf'
+                    # Update resume status to completed
+                    try:
+                        from supabase import create_client
+                        supabase_url = os.getenv('SUPABASE_URL')
+                        supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+                        if supabase_url and supabase_key:
+                            supabase = create_client(supabase_url, supabase_key)
+                            supabase.table('resumes').update({
+                                'processing_status': 'completed',
+                                'analysis_completed': True,
+                                'processed_at': 'now()'
+                            }).eq('id', resume_id).execute()
+                    except Exception as e:
+                        logger.error(f"Failed to update resume status: {str(e)}")
+                
+                # Step 4: Log activity with UUID
+                log_activity(
+                    email=final_email,
+                    action='resume_analysis',
+                    resource_type='resume',
+                    resource_id=resume_id,
+                    success=True,
+                    metadata={
+                        'ats_score': analysis_result.get('ats_score'),
+                        'file_url': file_url,
+                        'is_temporary_email': is_temp_email,
+                        'original_email_found': personal_info.get('email') is not None
+                    },
+                    session_uuid=session_uuid
+                )
+                
+                logger.info(f"Successfully completed processing for {final_email} (UUID: {session_uuid})")
+                
+                # Add instructions for temporary email users
+                if is_temp_email:
+                    analysis_result['temp_email_notice'] = {
+                        'message': 'Your CV did not contain an email address. We\'ve created a temporary session for you.',
+                        'temp_email': final_email,
+                        'session_uuid': session_uuid,
+                        'instructions': 'To access your results later, you can provide your email during payment.'
                     }
-                    resume_id = save_resume_record(extracted_email, file_url, file_info)
-                    analysis_result['resume_id'] = resume_id
-                    
-                    # Step 3: Save analysis results
-                    if resume_id:
-                        analysis_saved = save_analysis_results(extracted_email, resume_id, analysis_result)
-                        analysis_result['analysis_saved'] = analysis_saved
-                        
-                        # Update resume status to completed
-                        try:
-                            from supabase import create_client
-                            supabase_url = os.getenv('SUPABASE_URL')
-                            supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
-                            if supabase_url and supabase_key:
-                                supabase = create_client(supabase_url, supabase_key)
-                                supabase.table('resumes').update({
-                                    'processing_status': 'completed',
-                                    'analysis_completed': True,
-                                    'processed_at': 'now()'
-                                }).eq('id', resume_id).execute()
-                        except Exception as e:
-                            logger.error(f"Failed to update resume status: {str(e)}")
-                    
-                    # Step 4: Log activity
-                    log_activity(
-                        email=extracted_email,
-                        action='resume_analysis',
-                        resource_type='resume',
-                        resource_id=resume_id,
-                        success=True,
-                        metadata={
-                            'ats_score': analysis_result.get('ats_score'),
-                            'file_url': file_url
-                        }
-                    )
-                    
-                    logger.info(f"Successfully completed email-based processing for {extracted_email}")
-                    
-                except Exception as e:
-                    logger.error(f"Error in email-based processing: {str(e)}")
-                    analysis_result['profile_updated'] = False
-                    analysis_result['database_error'] = str(e)
-                    
-                    # Log failed activity
-                    if extracted_email:
-                        log_activity(
-                            email=extracted_email,
-                            action='resume_analysis',
-                            resource_type='resume',
-                            success=False,
-                            error_message=str(e)
-                        )
-            else:
-                logger.warning("No email found in extracted CV data - skipping database operations")
+                
+            except Exception as e:
+                logger.error(f"Error in email-based processing: {str(e)}")
                 analysis_result['profile_updated'] = False
-                analysis_result['email_extraction_failed'] = True
+                analysis_result['database_error'] = str(e)
+                
+                # Log failed activity
+                log_activity(
+                    email=final_email,
+                    action='resume_analysis',
+                    resource_type='resume',
+                    success=False,
+                    error_message=str(e),
+                    session_uuid=session_uuid
+                )
             
             # Filter results based on request parameters
             if not include_recommendations:
