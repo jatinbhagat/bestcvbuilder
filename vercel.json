@@ -1,5 +1,10 @@
 {
   "framework": "vite",
   "buildCommand": "rm -rf dist node_modules/.vite && npm ci && npm run build",
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "functions": {
+    "api/**/*.py": {
+      "runtime": "python3.9"
+    }
+  }
 }
