@@ -10,7 +10,7 @@
 
 import { supabase } from './supabase.js';
 import { uploadFile } from './fileUpload.js';
-import { analyzeResumeWithFallback } from './atsAnalysis.js';
+import { analyzeResumeWithFallback, BUILD_ID, API_BASE_URL, CV_PARSER_ENDPOINT } from './atsAnalysis.js';
 
 // DOM Elements
 const uploadForm = document.getElementById('uploadForm');
@@ -28,6 +28,40 @@ function init() {
     console.log('BestCVBuilder initialized');
     setupEventListeners();
     checkUserSession();
+    displayBuildInfo();
+}
+
+/**
+ * Display build information to verify cache status
+ */
+function displayBuildInfo() {
+    console.log('🏗️ BUILD INFO:', { BUILD_ID, API_BASE_URL, CV_PARSER_ENDPOINT });
+    
+    // Create build info element
+    const buildInfo = document.createElement('div');
+    buildInfo.id = 'build-info';
+    buildInfo.style.cssText = `
+        position: fixed; 
+        bottom: 10px; 
+        right: 10px; 
+        background: #1f2937; 
+        color: #10b981; 
+        padding: 8px 12px; 
+        border-radius: 6px; 
+        font-family: monospace; 
+        font-size: 11px; 
+        z-index: 9999;
+        border: 1px solid #10b981;
+    `;
+    buildInfo.textContent = `${BUILD_ID} | API: ${API_BASE_URL}`;
+    
+    document.body.appendChild(buildInfo);
+    
+    // Also display in header title temporarily for visibility
+    const header = document.querySelector('h1');
+    if (header) {
+        header.textContent = `BestCVBuilder [${BUILD_ID.slice(-10)}]`;
+    }
 }
 
 /**

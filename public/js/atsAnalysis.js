@@ -14,6 +14,10 @@ const API_BASE_URL = '/api';
 const CV_PARSER_ENDPOINT = `${API_BASE_URL}/cv-parser`;
 const BUILD_VERSION = '2.0.0-RELATIVE-URLS-FINAL';
 const CACHE_BUSTER = '20250803143000';
+const BUILD_ID = 'BUILD-2025-08-03-14:45:00-RELATIVE-API';
+
+// Export BUILD_ID and API config for main.js to display
+export { BUILD_ID, API_BASE_URL, CV_PARSER_ENDPOINT };
 
 console.log('🔗 API Configuration v1.1.0:', { API_BASE_URL, CV_PARSER_ENDPOINT });
 console.log('🚨 CRITICAL: Verify this shows correct URL - should NOT be bestcvbuilder-gamma!');
