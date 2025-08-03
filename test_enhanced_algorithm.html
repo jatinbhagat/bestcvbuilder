@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Algorithm Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+        .success { background-color: #d4edda; }
+        .error { background-color: #f8d7da; }
+        pre { background: #f5f5f5; padding: 10px; overflow: auto; }
+    </style>
+</head>
+<body>
+    <h1>Enhanced Algorithm Test</h1>
+    <button onclick="testEnhancedAlgorithm()">Test Enhanced Algorithm</button>
+    <div id="results"></div>
+
+    <script>
+        async function testEnhancedAlgorithm() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<p>Testing...</p>';
+            
+            // Test data that mimics a real file upload
+            const testData = {
+                file_url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+                analysis_type: 'comprehensive',
+                include_recommendations: true
+            };
+            
+            try {
+                const response = await fetch('/api/cv-parser', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                const data = await response.json();
+                
+                let result = '<div class="test-result ';
+                if (response.ok && data.critical_issues && data.quick_wins) {
+                    result += 'success">✅ Enhanced algorithm is working!<br>';
+                    result += `Found ${data.critical_issues.length} critical issues and ${data.quick_wins.length} quick wins<br>`;
+                    result += `Interview metrics: ${data.interview_metrics ? 'Yes' : 'No'}<br>`;
+                    result += `Transformation preview: ${data.transformation_preview ? 'Yes' : 'No'}<br>`;
+                } else {
+                    result += 'error">❌ Enhanced algorithm not detected<br>';
+                    result += `Response status: ${response.status}<br>`;
+                    result += `Has critical_issues: ${!!data.critical_issues}<br>`;
+                    result += `Has quick_wins: ${!!data.quick_wins}<br>`;
+                }
+                
+                result += '<br><strong>Full Response:</strong><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                result += '</div>';
+                
+                results.innerHTML = result;
+                
+            } catch (error) {
+                results.innerHTML = `<div class="test-result error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        // Test session storage data
+        function checkSessionData() {
+            const sessionData = sessionStorage.getItem('atsAnalysis');
+            if (sessionData) {
+                const parsed = JSON.parse(sessionData);
+                const hasEnhanced = !!(parsed.critical_issues && parsed.quick_wins);
+                return {
+                    exists: true,
+                    enhanced: hasEnhanced,
+                    data: parsed
+                };
+            }
+            return { exists: false };
+        }
+        
+        // Display session info on load
+        window.onload = function() {
+            const sessionInfo = checkSessionData();
+            const info = document.createElement('div');
+            info.className = 'test-result';
+            if (sessionInfo.exists) {
+                info.innerHTML = `
+                    <strong>Session Storage Status:</strong><br>
+                    Data exists: ✅<br>
+                    Enhanced format: ${sessionInfo.enhanced ? '✅' : '❌'}<br>
+                    <button onclick="sessionStorage.clear(); location.reload();">Clear Session Storage</button>
+                `;
+            } else {
+                info.innerHTML = '<strong>Session Storage:</strong> No data found';
+            }
+            document.getElementById('results').appendChild(info);
+        };
+    </script>
+</body>
+</html>

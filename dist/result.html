@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATS Analysis Results - BestCVBuilder</title>
+    <meta name="description" content="Your resume ATS analysis results and upgrade options">
+    
+    <!-- Tailwind CSS -->
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="./assets/favicon.ico">
+  <script type="module" crossorigin src="/assets/result-C3EY3Y11-v2.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/supabase-BMp_lEby-v2.js">
+  <link rel="modulepreload" crossorigin href="/assets/atsAnalysis-DtNXMMla-v2.js">
+  <link rel="stylesheet" crossorigin href="/assets/supabase-Du5OjIYV-v2.css">
+</head>
+<body class="bg-gray-50 font-sans">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a href="./index.html" class="text-xl font-bold text-gray-900">BestCVBuilder</a>
+                </div>
+                <nav class="hidden md:flex space-x-8">
+                    <a href="#" class="text-gray-500 hover:text-gray-900">How it works</a>
+                    <a href="#" class="text-gray-500 hover:text-gray-900">Pricing</a>
+                    <a href="#" class="text-gray-500 hover:text-gray-900">Contact</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Results Header with Critical Issues Alert -->
+        <section class="text-center mb-8">
+            <div id="criticalAlert" class="hidden bg-red-50 border border-red-200 rounded-lg p-4 mb-6 text-left">
+                <div class="flex items-start">
+                    <svg class="w-5 h-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                    </svg>
+                    <div>
+                        <h3 class="text-sm font-semibold text-red-800">Critical Issues Found</h3>
+                        <p class="text-sm text-red-700 mt-1" id="criticalAlertText">Your resume has major issues preventing it from passing ATS systems.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                Your Resume Analysis Results
+            </h1>
+            <p class="text-lg text-gray-600" id="mainDescription">
+                We've identified exactly what's preventing you from getting more interviews
+            </p>
+        </section>
+
+        <!-- ATS Score Display with Impact -->
+        <section class="max-w-4xl mx-auto mb-8">
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                <!-- Score Header with Visual Impact -->
+                <div class="bg-gradient-to-r from-gray-50 to-gray-100 p-6 md:p-8 text-center">
+                    <div class="inline-flex items-center justify-center w-32 h-32 rounded-full mb-4" id="scoreCircle">
+                        <div class="text-center">
+                            <span class="text-4xl font-bold" id="atsScore">0</span>
+                            <span class="text-xl ml-1">/100</span>
+                            <div class="text-sm font-medium mt-1" id="scoreLetter">F</div>
+                        </div>
+                    </div>
+                    <h2 class="text-2xl font-semibold text-gray-900 mb-2" id="scoreTitle">Your ATS Score</h2>
+                    <p class="text-gray-600 mb-4" id="scoreDescription">Loading analysis...</p>
+                    
+                    <!-- Impact Statement -->
+                    <div class="bg-white rounded-lg p-4 mx-auto max-w-lg">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-600">Current interview rate:</span>
+                            <span class="font-semibold text-red-600" id="currentRate">2%</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm mt-1">
+                            <span class="text-gray-600">Potential with fixes:</span>
+                            <span class="font-semibold text-green-600" id="potentialRate">15%</span>
+                        </div>
+                        <div class="mt-2 text-xs text-gray-500" id="impactText">
+                            That's 7x more interviews with the right improvements
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Wins Section -->
+                <div class="p-4 md:p-8 bg-blue-50 border-b border-blue-200">
+                    <div class="flex items-center mb-4">
+                        <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-base md:text-lg font-semibold text-gray-900 flex-1">Quick Wins (Under 2 Minutes)</h3>
+                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium flex-shrink-0" id="quickWinsCount">0 fixes</span>
+                    </div>
+                    <div id="quickWinsList" class="space-y-3">
+                        <!-- Quick wins will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Critical Issues Section -->
+                <div class="p-4 md:p-8">
+                    <div class="flex items-center mb-4">
+                        <div class="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-base md:text-lg font-semibold text-gray-900 flex-1">Critical Issues</h3>
+                        <span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium flex-shrink-0" id="criticalIssuesCount">0 issues</span>
+                    </div>
+                    <div id="criticalIssuesList" class="space-y-4">
+                        <!-- Critical issues will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Detailed Component Scores -->
+                <div class="p-4 md:p-8 bg-gray-50">
+                    <h3 class="text-base md:text-lg font-semibold text-gray-900 mb-4 md:mb-6">Component Breakdown</h3>
+                    <div id="componentScores" class="space-y-3 md:space-y-4">
+                        <!-- Component scores will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Strengths Section -->
+                <div class="p-4 md:p-8 border-t border-gray-200">
+                    <div class="flex items-center mb-4">
+                        <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-base md:text-lg font-semibold text-gray-900">What's Working Well</h3>
+                    </div>
+                    <div id="strengthsList" class="grid gap-3 sm:grid-cols-2">
+                        <!-- Strengths will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Before/After Preview -->
+        <section class="max-w-4xl mx-auto mb-8" id="beforeAfterSection">
+            <div class="bg-white rounded-lg shadow-lg p-4 md:p-8">
+                <h3 class="text-lg md:text-xl font-semibold text-gray-900 mb-4 md:mb-6 text-center">
+                    See the Transformation
+                </h3>
+                <div class="grid gap-4 md:grid-cols-2 md:gap-6">
+                    <div class="bg-red-50 rounded-lg p-4 min-h-[120px]">
+                        <h4 class="font-semibold text-red-800 mb-3 flex items-center text-sm md:text-base">
+                            <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                            Current Resume
+                        </h4>
+                        <ul class="space-y-2 text-sm" id="beforeList">
+                            <!-- Before state items -->
+                        </ul>
+                    </div>
+                    <div class="bg-green-50 rounded-lg p-4 min-h-[120px]">
+                        <h4 class="font-semibold text-green-800 mb-3 flex items-center text-sm md:text-base">
+                            <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            After AI Optimization
+                        </h4>
+                        <ul class="space-y-2 text-sm" id="afterList">
+                            <!-- After state items -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Upgrade Section -->
+        <section class="max-w-4xl mx-auto mb-8">
+            <div class="bg-gradient-to-r from-primary-600 to-primary-700 rounded-lg shadow-lg overflow-hidden">
+                <!-- Urgency Header -->
+                <div class="bg-yellow-400 text-yellow-900 px-6 py-2 text-center">
+                    <span class="text-sm font-semibold">⚡ Limited Time: Fix all issues automatically with AI</span>
+                </div>
+                
+                <div class="p-4 md:p-8 text-white">
+                    <div class="text-center mb-6">
+                        <h2 class="text-xl md:text-2xl lg:text-3xl font-bold mb-4">
+                            Get Your Interview-Ready Resume
+                        </h2>
+                        <p class="text-base md:text-lg opacity-90 mb-2">
+                            Our AI will fix all <span id="totalIssuesCount" class="font-bold">0</span> issues and boost your score to <span id="targetScore" class="font-bold">85+</span>
+                        </p>
+                        <p class="text-sm opacity-75">
+                            <span id="estimatedTime">5 minutes</span> to complete. Instant download.
+                        </p>
+                    </div>
+
+                    <!-- Value Proposition -->
+                    <div class="bg-white bg-opacity-10 rounded-lg p-4 mb-6">
+                        <div class="grid grid-cols-3 gap-2 md:gap-4 text-center">
+                            <div>
+                                <div class="text-xl md:text-2xl font-bold mb-1" id="scoreImprovement">+40</div>
+                                <div class="text-xs md:text-sm opacity-90">Points Improvement</div>
+                            </div>
+                            <div>
+                                <div class="text-xl md:text-2xl font-bold mb-1">7x</div>
+                                <div class="text-xs md:text-sm opacity-90">More Interviews</div>
+                            </div>
+                            <div>
+                                <div class="text-xl md:text-2xl font-bold mb-1">5 min</div>
+                                <div class="text-xs md:text-sm opacity-90">Delivery Time</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- What's Included -->
+                    <div class="grid gap-3 md:grid-cols-2 lg:grid-cols-3 mb-6 text-xs md:text-sm">
+                        <div class="flex items-start">
+                            <svg class="w-4 h-4 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span>Fix all critical issues automatically</span>
+                        </div>
+                        <div class="flex items-start">
+                            <svg class="w-4 h-4 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span>Industry-specific keyword optimization</span>
+                        </div>
+                        <div class="flex items-start">
+                            <svg class="w-4 h-4 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span>ATS-optimized formatting</span>
+                        </div>
+                        <div class="flex items-start">
+                            <svg class="w-4 h-4 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span>Impact-focused achievement rewrites</span>
+                        </div>
+                        <div class="flex items-start">
+                            <svg class="w-4 h-4 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span>Professional structure optimization</span>
+                        </div>
+                        <div class="flex items-start">
+                            <svg class="w-4 h-4 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span>Instant download in multiple formats</span>
+                        </div>
+                    </div>
+
+                    <!-- CTA -->
+                    <div class="text-center">
+                        <div class="mb-4">
+                            <span class="text-3xl md:text-4xl font-bold">$29</span>
+                            <span class="text-base md:text-lg opacity-90 ml-2">one-time payment</span>
+                        </div>
+                        <button 
+                            id="upgradeBtn"
+                            class="w-full md:w-auto bg-white text-primary-600 py-4 px-8 rounded-lg font-bold text-base md:text-lg hover:bg-gray-100 active:bg-gray-200 transition-all transform hover:scale-105 active:scale-95 shadow-lg min-h-[48px] touch-manipulation"
+                        >
+                            Fix My Resume Now
+                        </button>
+                        <p class="text-xs opacity-75 mt-3 leading-relaxed">
+                            30-day money-back guarantee • Secure payment • Instant access
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Alternative Actions -->
+        <section class="max-w-2xl mx-auto text-center">
+            <div class="space-y-3 md:space-y-4 px-4">
+                <button 
+                    id="newAnalysisBtn"
+                    class="w-full bg-gray-200 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-300 active:bg-gray-400 transition-colors min-h-[48px] touch-manipulation"
+                >
+                    Analyze Another Resume
+                </button>
+                <button 
+                    id="downloadReportBtn"
+                    class="w-full bg-transparent border border-gray-300 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-50 active:bg-gray-100 transition-colors min-h-[48px] touch-manipulation"
+                >
+                    Download Analysis Report
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-8 mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center">
+                <p class="text-gray-400">&copy; 2024 BestCVBuilder. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+</body>
+</html> 

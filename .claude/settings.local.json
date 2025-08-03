@@ -22,7 +22,8 @@
       "Bash(npm run build:*)",
       "WebFetch(domain:bestcvbuilder-gnktl1mxh-bestcvbuilder.vercel.app)",
       "Bash(cp:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "WebFetch(domain:bestcvbuilder-sooty.vercel.app)"
     ],
     "deny": []
   }

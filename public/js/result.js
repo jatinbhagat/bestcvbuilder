@@ -64,6 +64,17 @@ async function loadAnalysisData() {
         
         analysisData = JSON.parse(storedData);
         console.log('Loaded analysis data:', analysisData);
+    
+    // Debug: Check for enhanced algorithm features
+    const hasEnhanced = !!(analysisData.critical_issues && analysisData.quick_wins);
+    console.log('Enhanced algorithm detected:', hasEnhanced);
+    if (hasEnhanced) {
+        console.log('Critical issues:', analysisData.critical_issues.length);
+        console.log('Quick wins:', analysisData.quick_wins.length);
+        console.log('Interview metrics:', !!analysisData.interview_metrics);
+    } else {
+        console.log('Using legacy format - please upload a new resume to see enhanced features');
+    }
         
         displayAnalysisResults();
         
