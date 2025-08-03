@@ -171,10 +171,25 @@ async function processResumeUpload(file) {
         showUploadComplete();
         await new Promise(resolve => setTimeout(resolve, 800)); // Brief pause to show completion
         
-        // Step 2: Analyze resume
+        // Step 2: Analyze resume (with user ID for database saving)
         console.log('🔍 Step 2: Starting ATS analysis...');
         showAnalysisProgress();
-        const analysisResult = await analyzeResumeWithFallback(fileUrl);
+        
+        // Get current user for database saving
+        let userId = null;
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                userId = user.id;
+                console.log('User ID found for database saving:', userId);
+            } else {
+                console.log('No user logged in - proceeding without database save');
+            }
+        } catch (error) {
+            console.log('Error getting user:', error);
+        }
+        
+        const analysisResult = await analyzeResumeWithFallback(fileUrl, userId);
         console.log('✅ Analysis completed:', analysisResult);
         
         // Validate analysis result

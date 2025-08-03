@@ -32,7 +32,7 @@ function init() {
 /**
  * Load analysis data from session storage
  */
-function loadAnalysisData() {
+async function loadAnalysisData() {
     try {
         const storedData = sessionStorage.getItem('atsAnalysis');
         if (!storedData) {
@@ -45,6 +45,9 @@ function loadAnalysisData() {
         console.log('Loaded analysis data:', analysisData);
         
         displayAnalysisResults();
+        
+        // Save analysis to database if user is authenticated
+        await saveAnalysisToDatabase();
         
     } catch (error) {
         console.error('Error loading analysis data:', error);
@@ -190,9 +193,108 @@ function displayImprovements(improvements) {
 function displayDetailedAnalysis(analysis) {
     if (!detailedAnalysis || !analysis) return;
     
-    detailedAnalysis.innerHTML = `
-        <p class="text-gray-700 leading-relaxed">${analysis}</p>
-    `;
+    // Handle both string and object formats
+    if (typeof analysis === 'string') {
+        detailedAnalysis.innerHTML = `
+            <p class="text-gray-700 leading-relaxed">${analysis}</p>
+        `;
+        return;
+    }
+    
+    // Handle object format (component breakdown)
+    if (typeof analysis === 'object') {
+        let html = '<div class="space-y-4">';
+        
+        // Iterate through analysis components
+        Object.entries(analysis).forEach(([component, data]) => {
+            if (data && typeof data === 'object' && data.score !== undefined) {
+                const percentage = Math.round((data.score / getMaxScore(component)) * 100);
+                const componentName = formatComponentName(component);
+                
+                html += `
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <h4 class="font-semibold text-gray-900">${componentName}</h4>
+                            <span class="text-sm font-medium ${getScoreColor(percentage)}">${data.score} points (${percentage}%)</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2 mb-3">
+                            <div class="bg-blue-600 h-2 rounded-full" style="width: ${percentage}%"></div>
+                        </div>
+                        ${formatComponentDetails(data)}
+                    </div>
+                `;
+            }
+        });
+        
+        html += '</div>';
+        detailedAnalysis.innerHTML = html;
+    }
+}
+
+/**
+ * Get maximum possible score for a component
+ */
+function getMaxScore(component) {
+    const maxScores = {
+        'structure': 25,
+        'keywords': 20,
+        'contact': 15,
+        'formatting': 20,
+        'achievements': 10,
+        'readability': 10
+    };
+    return maxScores[component] || 20;
+}
+
+/**
+ * Format component name for display
+ */
+function formatComponentName(component) {
+    const names = {
+        'structure': 'Resume Structure',
+        'keywords': 'Keywords & Skills',
+        'contact': 'Contact Information',
+        'formatting': 'Formatting & Layout',
+        'achievements': 'Achievements & Impact',
+        'readability': 'Readability & Clarity'
+    };
+    return names[component] || component.charAt(0).toUpperCase() + component.slice(1);
+}
+
+/**
+ * Get score color class based on percentage
+ */
+function getScoreColor(percentage) {
+    if (percentage >= 80) return 'text-green-600';
+    if (percentage >= 60) return 'text-blue-600';
+    if (percentage >= 40) return 'text-yellow-600';
+    return 'text-red-600';
+}
+
+/**
+ * Format component details for display
+ */
+function formatComponentDetails(data) {
+    let details = '';
+    
+    // Show specific details based on what's available
+    if (data.missing_sections && data.missing_sections.length > 0) {
+        details += `<p class="text-sm text-red-600 mb-1"><strong>Missing:</strong> ${data.missing_sections.join(', ')}</p>`;
+    }
+    
+    if (data.found_keywords && data.found_keywords.length > 0) {
+        details += `<p class="text-sm text-green-600 mb-1"><strong>Found Keywords:</strong> ${data.found_keywords.slice(0, 5).join(', ')}${data.found_keywords.length > 5 ? '...' : ''}</p>`;
+    }
+    
+    if (data.missing_keywords && data.missing_keywords.length > 0) {
+        details += `<p class="text-sm text-yellow-600 mb-1"><strong>Consider Adding:</strong> ${data.missing_keywords.slice(0, 3).join(', ')}${data.missing_keywords.length > 3 ? '...' : ''}</p>`;
+    }
+    
+    if (data.achievements_count !== undefined) {
+        details += `<p class="text-sm text-gray-600"><strong>Quantified Achievements:</strong> ${data.achievements_count}</p>`;
+    }
+    
+    return details || '<p class="text-sm text-gray-600">Component analyzed successfully</p>';
 }
 
 /**

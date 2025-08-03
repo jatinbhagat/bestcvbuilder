@@ -26,22 +26,31 @@ console.log('🚨 CRITICAL: Verify this shows correct URL - should NOT be bestcv
 /**
  * Analyze resume using the Python ATS engine
  * @param {string} fileUrl - URL of the uploaded resume file
+ * @param {string} userId - Optional user ID for database saving
  * @returns {Promise<Object>} Analysis result with score and recommendations
  */
-export async function analyzeResume(fileUrl) {
+export async function analyzeResume(fileUrl, userId = null) {
     try {
         console.log('Starting ATS analysis for file:', fileUrl);
+        
+        const requestBody = {
+            file_url: fileUrl,
+            analysis_type: 'ats_score',
+            include_recommendations: true
+        };
+        
+        // Add user_id if provided for database saving
+        if (userId) {
+            requestBody.user_id = userId;
+            console.log('Including user_id for database saving:', userId);
+        }
         
         const response = await fetch(CV_PARSER_ENDPOINT, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                file_url: fileUrl,
-                analysis_type: 'ats_score',
-                include_recommendations: true
-            })
+            body: JSON.stringify(requestBody)
         });
         
         if (!response.ok) {
@@ -197,6 +206,6 @@ export function generateDetailedReport(analysis) {
 
 
 // Export the main analysis function (always use production API)
-export const analyzeResumeWithFallback = async (fileUrl) => {
-    return analyzeResume(fileUrl);
+export const analyzeResumeWithFallback = async (fileUrl, userId = null) => {
+    return analyzeResume(fileUrl, userId);
 }; 
