@@ -1008,6 +1008,52 @@ def generate_temp_email_from_uuid(session_uuid: str) -> str:
     """Generate temporary email from UUID for CVs without email"""
     return f"{session_uuid}@bestcvbuilder.com"
 
+def get_file_info_from_url(file_url: str) -> Optional[Dict[str, Any]]:
+    """
+    Get file information from URL by making a HEAD request
+    
+    Args:
+        file_url: URL of the uploaded file
+        
+    Returns:
+        Dictionary with file info or None if failed
+    """
+    try:
+        import requests
+        from urllib.parse import urlparse
+        
+        # Make HEAD request to get file metadata
+        response = requests.head(file_url, timeout=10)
+        
+        if response.status_code == 200:
+            # Get file size from Content-Length header
+            file_size = int(response.headers.get('content-length', 1024))
+            
+            # Parse filename from URL
+            parsed_url = urlparse(file_url)
+            filename = parsed_url.path.split('/')[-1] or 'uploaded_resume.pdf'
+            
+            # Determine file type from filename or content-type
+            content_type = response.headers.get('content-type', '')
+            if '.pdf' in filename.lower() or 'pdf' in content_type:
+                file_type = 'pdf'
+            elif '.docx' in filename.lower() or 'docx' in content_type:
+                file_type = 'docx'
+            elif '.doc' in filename.lower() or 'msword' in content_type:
+                file_type = 'doc'
+            else:
+                file_type = 'pdf'  # Default
+            
+            return {
+                'original_filename': filename,
+                'file_size': max(file_size, 1),  # Ensure at least 1 byte
+                'file_type': file_type
+            }
+    except Exception as e:
+        logger.warning(f"Failed to get file info from URL: {str(e)}")
+    
+    return None
+
 def handle_missing_email(extracted_data: Dict[str, Any], session_uuid: str) -> str:
     """
     Handle cases where CV doesn't contain an email address
@@ -1071,8 +1117,18 @@ def save_user_profile_data(email: str, extracted_data: Dict[str, Any], session_u
             'work_experience': extracted_data.get('work_experience', [])
         }
         
-        # Remove None values
-        profile_data = {k: v for k, v in profile_data.items() if v is not None and v != '' and v != []}
+        # Clean phone number (remove trailing spaces and validate length)
+        if profile_data.get('phone'):
+            phone = profile_data['phone'].strip()
+            # Only keep phone if it's at least 10 characters (as per constraint)
+            if len(phone) >= 10:
+                profile_data['phone'] = phone
+            else:
+                profile_data['phone'] = None
+        
+        # Remove None values and empty strings/arrays
+        profile_data = {k: v for k, v in profile_data.items() 
+                       if v is not None and v != '' and v != []}
         
         # Determine email source type
         email_source = 'generated_temp' if '@bestcvbuilder.com' in email else 'cv_extracted'
@@ -1399,11 +1455,14 @@ class handler(BaseHTTPRequestHandler):
                 analysis_result['is_temporary_email'] = is_temp_email
                 
                 # Step 2: Save resume record with UUID
-                file_info = {
-                    'original_filename': 'uploaded_resume.pdf',  # This should come from request in real implementation
-                    'file_size': 0,  # This should come from file metadata
-                    'file_type': 'pdf'
-                }
+                # Get file info from the actual file URL
+                file_info = get_file_info_from_url(file_url)
+                if not file_info:
+                    file_info = {
+                        'original_filename': 'uploaded_resume.pdf',
+                        'file_size': 1024,  # Default size to pass constraint (will be updated)
+                        'file_type': 'pdf'
+                    }
                 resume_id = save_resume_record(final_email, file_url, file_info, session_uuid)
                 analysis_result['resume_id'] = resume_id
                 
@@ -1427,21 +1486,22 @@ class handler(BaseHTTPRequestHandler):
                     except Exception as e:
                         logger.error(f"Failed to update resume status: {str(e)}")
                 
-                # Step 4: Log activity with UUID
-                log_activity(
-                    email=final_email,
-                    action='resume_analysis',
-                    resource_type='resume',
-                    resource_id=resume_id,
-                    success=True,
-                    metadata={
-                        'ats_score': analysis_result.get('ats_score'),
-                        'file_url': file_url,
-                        'is_temporary_email': is_temp_email,
-                        'original_email_found': personal_info.get('email') is not None
-                    },
-                    session_uuid=session_uuid
-                )
+                # Step 4: Log activity with UUID (only if profile was created successfully)
+                if profile_saved:
+                    log_activity(
+                        email=final_email,
+                        action='resume_analysis',
+                        resource_type='resume',
+                        resource_id=resume_id,
+                        success=True,
+                        metadata={
+                            'ats_score': analysis_result.get('ats_score'),
+                            'file_url': file_url,
+                            'is_temporary_email': is_temp_email,
+                            'original_email_found': personal_info.get('email') is not None
+                        },
+                        session_uuid=session_uuid
+                    )
                 
                 logger.info(f"Successfully completed processing for {final_email} (UUID: {session_uuid})")
                 
@@ -1459,15 +1519,18 @@ class handler(BaseHTTPRequestHandler):
                 analysis_result['profile_updated'] = False
                 analysis_result['database_error'] = str(e)
                 
-                # Log failed activity
-                log_activity(
-                    email=final_email,
-                    action='resume_analysis',
-                    resource_type='resume',
-                    success=False,
-                    error_message=str(e),
-                    session_uuid=session_uuid
-                )
+                # Log failed activity (skip if profile creation failed to avoid FK constraint)
+                try:
+                    log_activity(
+                        email=final_email,
+                        action='resume_analysis',
+                        resource_type='resume',
+                        success=False,
+                        error_message=str(e),
+                        session_uuid=session_uuid
+                    )
+                except Exception as log_error:
+                    logger.warning(f"Failed to log activity: {str(log_error)}")
             
             # Filter results based on request parameters
             if not include_recommendations:
