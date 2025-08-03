@@ -94,8 +94,39 @@
                 
                 <!-- Loading State -->
                 <div id="loadingState" class="hidden text-center py-8">
-                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-                    <p class="text-gray-600">Analyzing your resume...</p>
+                    <div class="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+                        <!-- Upload Progress -->
+                        <div id="uploadProgress" class="mb-6">
+                            <div class="flex items-center justify-center mb-4">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                                <span class="ml-3 text-gray-700 font-medium">Uploading resume...</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div id="uploadBar" class="bg-primary-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Upload Complete -->
+                        <div id="uploadComplete" class="hidden mb-6">
+                            <div class="flex items-center justify-center mb-3">
+                                <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </div>
+                                <span class="ml-3 text-green-700 font-medium">Upload complete!</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Analysis Progress -->
+                        <div id="analysisProgress" class="hidden">
+                            <div class="flex items-center justify-center mb-4">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                <span class="ml-3 text-gray-700 font-medium">Analyzing resume...</span>
+                            </div>
+                            <p class="text-sm text-gray-500">This may take a few seconds</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>

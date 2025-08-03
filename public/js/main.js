@@ -4,6 +4,7 @@
  * DEPLOY TRIGGER: Force rebuild for CORS fix - v2.1.0
  * VERCEL AUTO-DEPLOY: Trigger change v3.0 - Critical fix
  * REDEPLOY REQUEST: August 2nd 2025 - API URL fix needed
+ * UI UPDATE: Added clean upload progress loader v3.1
  */
 
 import { supabase } from './supabase.js';
@@ -125,13 +126,19 @@ async function processResumeUpload(file) {
         // Show loading state
         setLoadingState(true);
         
-        // Upload file to Supabase storage
+        // Step 1: Upload file with progress
         console.log('📤 Step 1: Uploading file to storage...');
+        showUploadProgress();
         const fileUrl = await uploadFile(file);
         console.log('✅ File uploaded successfully:', fileUrl);
         
-        // Analyze resume with ATS engine
+        // Show upload complete
+        showUploadComplete();
+        await new Promise(resolve => setTimeout(resolve, 800)); // Brief pause to show completion
+        
+        // Step 2: Analyze resume
         console.log('🔍 Step 2: Starting ATS analysis...');
+        showAnalysisProgress();
         const analysisResult = await analyzeResumeWithFallback(fileUrl);
         console.log('✅ Analysis completed:', analysisResult);
         
@@ -203,11 +210,62 @@ function setLoadingState(isLoading) {
         uploadForm.classList.add('hidden');
         loadingState.classList.remove('hidden');
         uploadBtn.disabled = true;
+        resetProgressStates();
     } else {
         uploadForm.classList.remove('hidden');
         loadingState.classList.add('hidden');
         uploadBtn.disabled = false;
     }
+}
+
+/**
+ * Reset all progress states
+ */
+function resetProgressStates() {
+    document.getElementById('uploadProgress').classList.remove('hidden');
+    document.getElementById('uploadComplete').classList.add('hidden');
+    document.getElementById('analysisProgress').classList.add('hidden');
+    document.getElementById('uploadBar').style.width = '0%';
+}
+
+/**
+ * Show upload progress with animated progress bar
+ */
+function showUploadProgress() {
+    document.getElementById('uploadProgress').classList.remove('hidden');
+    document.getElementById('uploadComplete').classList.add('hidden');
+    document.getElementById('analysisProgress').classList.add('hidden');
+    
+    // Animate progress bar
+    let progress = 0;
+    const progressBar = document.getElementById('uploadBar');
+    const interval = setInterval(() => {
+        progress += Math.random() * 15;
+        if (progress >= 95) {
+            progress = 95;
+            clearInterval(interval);
+        }
+        progressBar.style.width = progress + '%';
+    }, 100);
+}
+
+/**
+ * Show upload complete state
+ */
+function showUploadComplete() {
+    document.getElementById('uploadBar').style.width = '100%';
+    setTimeout(() => {
+        document.getElementById('uploadProgress').classList.add('hidden');
+        document.getElementById('uploadComplete').classList.remove('hidden');
+    }, 300);
+}
+
+/**
+ * Show analysis progress
+ */
+function showAnalysisProgress() {
+    document.getElementById('uploadComplete').classList.add('hidden');
+    document.getElementById('analysisProgress').classList.remove('hidden');
 }
 
 /**
