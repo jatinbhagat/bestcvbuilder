@@ -999,12 +999,12 @@ def estimate_years_of_experience(content: str) -> Optional[int]:
     
     return None
 
-def save_user_profile_data(user_id: str, extracted_data: Dict[str, Any]) -> bool:
+def save_user_profile_data(email: str, extracted_data: Dict[str, Any]) -> bool:
     """
-    Save extracted CV data to user_profiles table
+    Save extracted CV data to user_profiles table using email-based architecture
     
     Args:
-        user_id: User ID from auth
+        email: User email address extracted from CV
         extracted_data: Extracted personal information
         
     Returns:
@@ -1019,17 +1019,14 @@ def save_user_profile_data(user_id: str, extracted_data: Dict[str, Any]) -> bool
         supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')  # Use service role for server-side operations
         
         if not supabase_url or not supabase_key:
-            print("Warning: Supabase credentials not found, skipping database save")
+            logger.warning("Warning: Supabase credentials not found, skipping database save")
             return False
             
         supabase: Client = create_client(supabase_url, supabase_key)
         
         # Prepare profile data for database (only include non-None values)
-        profile_data = {}
-        
-        field_mapping = {
+        profile_data = {
             'full_name': extracted_data.get('full_name'),
-            'email': extracted_data.get('email'),
             'phone': extracted_data.get('phone'),
             'address': extracted_data.get('address'),
             'city': extracted_data.get('city'),
@@ -1041,33 +1038,199 @@ def save_user_profile_data(user_id: str, extracted_data: Dict[str, Any]) -> bool
             'years_of_experience': extracted_data.get('years_of_experience'),
             'skills': extracted_data.get('skills', []),
             'education': extracted_data.get('education', []),
-            'work_experience': extracted_data.get('work_experience', []),
-            'data_source': 'cv_parsed'
+            'work_experience': extracted_data.get('work_experience', [])
         }
         
-        # Only include fields that have values
-        for key, value in field_mapping.items():
-            if value is not None and value != '' and value != []:
-                profile_data[key] = value
+        # Remove None values
+        profile_data = {k: v for k, v in profile_data.items() if v is not None and v != '' and v != []}
         
-        # Add timestamp
-        from datetime import datetime
-        profile_data['cv_last_updated'] = datetime.now().isoformat()
+        # Use the upsert function to create or update user profile
+        logger.info(f"Upserting user profile for email: {email}")
         
-        # Update user profile in database
-        result = supabase.table('user_profiles').update(profile_data).eq('id', user_id).execute()
+        # Call the database function to safely upsert user profile
+        result = supabase.rpc('upsert_user_profile', {
+            'p_email': email,
+            'p_profile_data': profile_data
+        }).execute()
         
         if result.data:
-            logger.info(f"Successfully updated user profile data for user {user_id}")
+            logger.info(f"Successfully upserted user profile for email: {email}")
             logger.info(f"Updated fields: {list(profile_data.keys())}")
             return True
         else:
-            logger.warning(f"No rows updated for user {user_id}")
+            logger.warning(f"No profile created/updated for email: {email}")
             return False
         
     except Exception as e:
-        logger.error(f"Failed to save user profile data: {str(e)}")
+        logger.error(f"Failed to save user profile data for {email}: {str(e)}")
         return False
+
+def save_resume_record(email: str, file_url: str, file_info: Dict[str, Any]) -> Optional[int]:
+    """
+    Save resume upload record to resumes table
+    
+    Args:
+        email: User email address
+        file_url: URL of uploaded file
+        file_info: File metadata (filename, size, type, etc.)
+        
+    Returns:
+        Resume ID if successful, None otherwise
+    """
+    try:
+        from supabase import create_client, Client
+        import os
+        import hashlib
+        from urllib.parse import urlparse
+        
+        supabase_url = os.getenv('SUPABASE_URL')
+        supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+        
+        if not supabase_url or not supabase_key:
+            logger.warning("Supabase credentials not found, skipping resume record save")
+            return None
+            
+        supabase: Client = create_client(supabase_url, supabase_key)
+        
+        # Generate file hash for duplicate detection
+        file_hash = hashlib.sha256(file_url.encode()).hexdigest()[:16]  # Shortened hash
+        
+        # Parse file info from URL and metadata
+        parsed_url = urlparse(file_url)
+        filename = file_info.get('original_filename', 'unknown.pdf')
+        
+        resume_data = {
+            'email': email,
+            'original_filename': filename,
+            'file_path': parsed_url.path,
+            'file_url': file_url,
+            'file_size': file_info.get('file_size', 0),
+            'file_type': file_info.get('file_type', 'pdf'),
+            'file_hash': file_hash,
+            'processing_status': 'processing',
+            'upload_source': 'web_app'
+        }
+        
+        logger.info(f"Saving resume record for email: {email}")
+        
+        # Insert resume record
+        result = supabase.table('resumes').insert(resume_data).execute()
+        
+        if result.data and len(result.data) > 0:
+            resume_id = result.data[0]['id']
+            logger.info(f"Successfully saved resume record with ID: {resume_id}")
+            return resume_id
+        else:
+            logger.warning(f"Failed to create resume record for {email}")
+            return None
+        
+    except Exception as e:
+        logger.error(f"Failed to save resume record: {str(e)}")
+        return None
+
+def save_analysis_results(email: str, resume_id: int, analysis_data: Dict[str, Any]) -> bool:
+    """
+    Save analysis results to resume_analysis table
+    
+    Args:
+        email: User email address
+        resume_id: ID of the resume that was analyzed
+        analysis_data: Analysis results from ATS processing
+        
+    Returns:
+        Boolean indicating success
+    """
+    try:
+        from supabase import create_client, Client
+        import os
+        
+        supabase_url = os.getenv('SUPABASE_URL')
+        supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+        
+        if not supabase_url or not supabase_key:
+            logger.warning("Supabase credentials not found, skipping analysis save")
+            return False
+            
+        supabase: Client = create_client(supabase_url, supabase_key)
+        
+        # Prepare analysis data for database
+        analysis_record = {
+            'email': email,
+            'resume_id': resume_id,
+            'ats_score': analysis_data.get('ats_score', 0),
+            'score_category': analysis_data.get('category', 'poor'),
+            'structure_score': analysis_data.get('component_scores', {}).get('structure', 0),
+            'keywords_score': analysis_data.get('component_scores', {}).get('keywords', 0),
+            'contact_score': analysis_data.get('component_scores', {}).get('contact', 0),
+            'formatting_score': analysis_data.get('component_scores', {}).get('formatting', 0),
+            'achievements_score': analysis_data.get('component_scores', {}).get('achievements', 0),
+            'readability_score': analysis_data.get('component_scores', {}).get('readability', 0),
+            'strengths': analysis_data.get('strengths', []),
+            'improvements': analysis_data.get('improvements', []),
+            'missing_keywords': analysis_data.get('critical_issues', []),
+            'found_keywords': analysis_data.get('suggestions', []),
+            'detailed_analysis': analysis_data.get('detailed_analysis', {}),
+            'recommendations': analysis_data.get('next_steps', []),
+            'detected_industry': analysis_data.get('industry', 'general'),
+            'analysis_version': '2.0'
+        }
+        
+        logger.info(f"Saving analysis results for resume ID: {resume_id}")
+        
+        # Insert analysis results
+        result = supabase.table('resume_analysis').insert(analysis_record).execute()
+        
+        if result.data:
+            logger.info(f"Successfully saved analysis results for resume {resume_id}")
+            return True
+        else:
+            logger.warning(f"Failed to save analysis results for resume {resume_id}")
+            return False
+        
+    except Exception as e:
+        logger.error(f"Failed to save analysis results: {str(e)}")
+        return False
+
+def log_activity(email: str, action: str, resource_type: str = None, resource_id: int = None, 
+                success: bool = True, error_message: str = None, metadata: Dict = None):
+    """
+    Log user activity for audit trail
+    
+    Args:
+        email: User email address
+        action: Action performed (upload, analyze, etc.)
+        resource_type: Type of resource (resume, payment, etc.)
+        resource_id: ID of the resource
+        success: Whether the action was successful
+        error_message: Error message if failed
+        metadata: Additional metadata
+    """
+    try:
+        from supabase import create_client, Client
+        import os
+        
+        supabase_url = os.getenv('SUPABASE_URL')
+        supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+        
+        if not supabase_url or not supabase_key:
+            return  # Silently fail for logging
+            
+        supabase: Client = create_client(supabase_url, supabase_key)
+        
+        activity_data = {
+            'email': email,
+            'action': action,
+            'resource_type': resource_type,
+            'resource_id': resource_id,
+            'success': success,
+            'error_message': error_message,
+            'metadata': metadata or {}
+        }
+        
+        supabase.table('activity_logs').insert(activity_data).execute()
+        
+    except Exception as e:
+        logger.error(f"Failed to log activity: {str(e)}")  # Don't fail the main operation
 
 def analyze_resume_content(file_url: str) -> Dict[str, Any]:
     """
@@ -1175,18 +1338,80 @@ class handler(BaseHTTPRequestHandler):
             # Perform comprehensive analysis
             analysis_result = analyze_resume_content(file_url)
             
-            # Save personal information to database if user_id is provided
-            if user_id and 'personal_information' in analysis_result:
+            # Extract email from personal information for email-based architecture
+            personal_info = analysis_result.get('personal_information', {})
+            extracted_email = personal_info.get('email')
+            
+            if extracted_email:
+                logger.info(f"Email extracted from CV: {extracted_email}")
+                
                 try:
-                    save_success = save_user_profile_data(user_id, analysis_result['personal_information'])
-                    analysis_result['profile_updated'] = save_success
-                    if save_success:
-                        logger.info(f"Successfully saved profile data for user {user_id}")
-                    else:
-                        logger.warning(f"Failed to save profile data for user {user_id}")
+                    # Step 1: Save/update user profile
+                    profile_saved = save_user_profile_data(extracted_email, personal_info)
+                    analysis_result['profile_updated'] = profile_saved
+                    
+                    # Step 2: Save resume record
+                    file_info = {
+                        'original_filename': 'uploaded_resume.pdf',  # This should come from request in real implementation
+                        'file_size': 0,  # This should come from file metadata
+                        'file_type': 'pdf'
+                    }
+                    resume_id = save_resume_record(extracted_email, file_url, file_info)
+                    analysis_result['resume_id'] = resume_id
+                    
+                    # Step 3: Save analysis results
+                    if resume_id:
+                        analysis_saved = save_analysis_results(extracted_email, resume_id, analysis_result)
+                        analysis_result['analysis_saved'] = analysis_saved
+                        
+                        # Update resume status to completed
+                        try:
+                            from supabase import create_client
+                            supabase_url = os.getenv('SUPABASE_URL')
+                            supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+                            if supabase_url and supabase_key:
+                                supabase = create_client(supabase_url, supabase_key)
+                                supabase.table('resumes').update({
+                                    'processing_status': 'completed',
+                                    'analysis_completed': True,
+                                    'processed_at': 'now()'
+                                }).eq('id', resume_id).execute()
+                        except Exception as e:
+                            logger.error(f"Failed to update resume status: {str(e)}")
+                    
+                    # Step 4: Log activity
+                    log_activity(
+                        email=extracted_email,
+                        action='resume_analysis',
+                        resource_type='resume',
+                        resource_id=resume_id,
+                        success=True,
+                        metadata={
+                            'ats_score': analysis_result.get('ats_score'),
+                            'file_url': file_url
+                        }
+                    )
+                    
+                    logger.info(f"Successfully completed email-based processing for {extracted_email}")
+                    
                 except Exception as e:
-                    logger.error(f"Error saving profile data for user {user_id}: {str(e)}")
+                    logger.error(f"Error in email-based processing: {str(e)}")
                     analysis_result['profile_updated'] = False
+                    analysis_result['database_error'] = str(e)
+                    
+                    # Log failed activity
+                    if extracted_email:
+                        log_activity(
+                            email=extracted_email,
+                            action='resume_analysis',
+                            resource_type='resume',
+                            success=False,
+                            error_message=str(e)
+                        )
+            else:
+                logger.warning("No email found in extracted CV data - skipping database operations")
+                analysis_result['profile_updated'] = False
+                analysis_result['email_extraction_failed'] = True
             
             # Filter results based on request parameters
             if not include_recommendations:
