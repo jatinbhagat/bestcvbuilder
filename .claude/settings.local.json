@@ -23,7 +23,8 @@
       "WebFetch(domain:bestcvbuilder-gnktl1mxh-bestcvbuilder.vercel.app)",
       "Bash(cp:*)",
       "Bash(mv:*)",
-      "WebFetch(domain:bestcvbuilder-sooty.vercel.app)"
+      "WebFetch(domain:bestcvbuilder-sooty.vercel.app)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }

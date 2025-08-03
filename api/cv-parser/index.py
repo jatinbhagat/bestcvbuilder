@@ -477,30 +477,147 @@ def analyze_quantified_achievements(content: str) -> Dict[str, Any]:
         'achievements': unique_achievements[:5]  # First 5 examples
     }
 
+def check_grammar_issues(content: str) -> List[Dict[str, str]]:
+    """
+    Check for common grammar issues in resume content
+    """
+    grammar_issues = []
+    
+    # Common grammar patterns to check
+    patterns = [
+        # Subject-verb disagreement patterns
+        (r'\b(I|he|she|it)\s+(are|were)\b', 'Subject-verb disagreement: use "am/is/was"'),
+        (r'\b(we|they|you)\s+(is|was)\b', 'Subject-verb disagreement: use "are/were"'),
+        
+        # Incorrect tense consistency  
+        (r'\b(managed|led|developed|created|implemented)\b.*\b(manage|lead|develop|create|implement)\b',
+         'Inconsistent verb tenses - use past tense for previous roles'),
+        
+        # Double spaces
+        (r'\s{2,}', 'Multiple spaces should be single spaces'),
+        
+        # Missing spaces after periods
+        (r'\.[A-Z]', 'Missing space after period'),
+        
+        # Common resume grammar issues
+        (r'\breturn on investment\b', 'Consider using "ROI" for resume brevity'),
+        (r'\band etc\b', 'Avoid "etc." - be specific about accomplishments'),
+    ]
+    
+    for pattern, message in patterns:
+        matches = re.finditer(pattern, content, re.IGNORECASE)
+        for match in matches:
+            grammar_issues.append({
+                'type': 'grammar',
+                'issue': message,
+                'position': match.start(),
+                'text': match.group()
+            })
+            # Limit to avoid overwhelming the user
+            if len(grammar_issues) >= 6:
+                break
+        if len(grammar_issues) >= 6:
+            break
+    
+    return grammar_issues
+
+def check_spelling_issues(content: str) -> List[Dict[str, str]]:
+    """
+    Check for common spelling issues in resume content
+    """
+    spelling_issues = []
+    
+    # Common resume spelling mistakes
+    common_misspellings = {
+        # Professional terms
+        'managment': 'management',
+        'devlopment': 'development', 
+        'developement': 'development',
+        'recieved': 'received',
+        'acheived': 'achieved',
+        'seperate': 'separate',
+        'responsibile': 'responsible',
+        'experiance': 'experience',
+        'occured': 'occurred',
+        'sucessful': 'successful',
+        'sucessfully': 'successfully',
+        'recomendation': 'recommendation',
+        'comunication': 'communication',
+        'commited': 'committed',
+        'colaborated': 'collaborated',
+        'analysed': 'analyzed',  # US spelling preferred
+        'organised': 'organized',  # US spelling preferred
+        'realised': 'realized',   # US spelling preferred
+        
+        # Technology terms
+        'javascript': 'JavaScript',
+        'github': 'GitHub',
+        'linkedin': 'LinkedIn',
+        'powerpoint': 'PowerPoint',
+        'photoshop': 'Photoshop',
+        
+        # Common words
+        'definate': 'definite',
+        'definately': 'definitely',
+        'alot': 'a lot',
+        'accomodate': 'accommodate',
+        'occassion': 'occasion',
+        'reccommend': 'recommend',
+        'publically': 'publicly',
+        'maintenence': 'maintenance',
+        'independant': 'independent',
+        'begining': 'beginning',
+        'consistant': 'consistent',
+        'effeciency': 'efficiency',
+        'proficency': 'proficiency',
+    }
+    
+    # Check for each misspelling
+    words = re.findall(r'\b\w+\b', content.lower())
+    for word in words:
+        if word in common_misspellings:
+            spelling_issues.append({
+                'type': 'spelling',
+                'incorrect': word,
+                'correct': common_misspellings[word],
+                'issue': f'Misspelled "{word}" should be "{common_misspellings[word]}"'
+            })
+            # Limit to avoid overwhelming the user
+            if len(spelling_issues) >= 6:
+                break
+    
+    return spelling_issues
+
 def analyze_readability_and_length(content: str) -> Dict[str, Any]:
-    """Analyze content readability and optimal length"""
+    """
+    Analyze content readability, optimal length, grammar, and spelling
+    """
     word_count = len(content.split())
     char_count = len(content)
     sentence_count = len(re.findall(r'[.!?]+', content))
+    
+    # Grammar and spelling analysis
+    grammar_issues = check_grammar_issues(content)
+    spelling_issues = check_spelling_issues(content)
     
     # Optimal word count scoring
     length_score = 0
     length_feedback = ""
     
     if 400 <= word_count <= 600:
-        length_score = 10
+        length_score = 5
         length_feedback = "Optimal resume length"
     elif 300 <= word_count < 400 or 600 < word_count <= 800:
-        length_score = 8
+        length_score = 4
         length_feedback = "Good resume length"
     elif 200 <= word_count < 300 or 800 < word_count <= 1000:
-        length_score = 5
+        length_score = 3
         length_feedback = "Acceptable resume length"
     elif word_count < 200:
-        length_score = 2
+        length_score = 1
         length_feedback = "Resume too short - add more detail"
     else:
-        length_score = 3
+        length_score = 2
         length_feedback = "Resume too long - consider condensing"
     
     # Calculate average sentence length
@@ -509,21 +626,46 @@ def analyze_readability_and_length(content: str) -> Dict[str, Any]:
     # Readability scoring
     readability_score = 0
     if 10 <= avg_sentence_length <= 20:  # Optimal sentence length
-        readability_score = 5
-    elif 8 <= avg_sentence_length < 10 or 20 < avg_sentence_length <= 25:
         readability_score = 3
+    elif 8 <= avg_sentence_length < 10 or 20 < avg_sentence_length <= 25:
+        readability_score = 2
     else:
         readability_score = 1
     
-    total_score = length_score + readability_score
+    # Grammar scoring (4 points max)
+    grammar_score = 0
+    if len(grammar_issues) == 0:
+        grammar_score = 4
+    elif len(grammar_issues) <= 2:
+        grammar_score = 3
+    elif len(grammar_issues) <= 4:
+        grammar_score = 2
+    else:
+        grammar_score = 1
+    
+    # Spelling scoring (3 points max)
+    spelling_score = 0
+    if len(spelling_issues) == 0:
+        spelling_score = 3
+    elif len(spelling_issues) <= 2:
+        spelling_score = 2
+    else:
+        spelling_score = 1
+    
+    total_score = length_score + readability_score + grammar_score + spelling_score
     
     return {
-        'score': total_score,
+        'score': total_score,  # Max 15 points for this component
         'word_count': word_count,
         'character_count': char_count,
         'sentence_count': sentence_count,
         'avg_sentence_length': round(avg_sentence_length, 1),
-        'feedback': length_feedback
+        'feedback': length_feedback,
+        'grammar_errors': len(grammar_issues),
+        'spelling_errors': len(spelling_issues),
+        'grammar_issues': [issue['issue'] for issue in grammar_issues[:3]],  # Top 3
+        'spelling_issues': [issue['issue'] for issue in spelling_issues[:3]], # Top 3
+        'readability_level': 'Excellent' if total_score >= 12 else 'Good' if total_score >= 8 else 'Needs Improvement'
     }
 
 def calculate_comprehensive_ats_score(content: str) -> Dict[str, Any]:
