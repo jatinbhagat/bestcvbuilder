@@ -16,6 +16,13 @@ from urllib.parse import urlparse
 import math
 import uuid
 
+# Import configuration system
+from config.config_loader import (
+    get_industry_keywords, get_grammar_patterns, get_spelling_corrections,
+    get_achievement_verbs, get_professional_indicators, get_component_weights,
+    get_score_categories, get_keywords_for_industry, config_loader
+)
+
 # Text extraction libraries
 try:
     import PyPDF2
@@ -38,55 +45,8 @@ ALLOWED_ORIGINS = [
     "https://bestcvbuilder-gnktl1mxh-bestcvbuilder.vercel.app"
 ]
 
-# Industry-specific keyword databases
-INDUSTRY_KEYWORDS = {
-    'technology': {
-        'programming': ['python', 'javascript', 'java', 'react', 'node.js', 'sql', 'aws', 'docker', 'kubernetes'],
-        'methodologies': ['agile', 'scrum', 'devops', 'ci/cd', 'microservices', 'tdd', 'pair programming'],
-        'tools': ['git', 'jenkins', 'terraform', 'ansible', 'jira', 'confluence', 'figma'],
-        'databases': ['mysql', 'postgresql', 'mongodb', 'redis', 'elasticsearch'],
-        'cloud': ['aws', 'azure', 'gcp', 'cloud computing', 'serverless', 'lambda']
-    },
-    'marketing': {
-        'digital': ['seo', 'sem', 'google analytics', 'social media', 'content marketing', 'email marketing'],
-        'strategy': ['brand management', 'campaign management', 'market research', 'competitor analysis'],
-        'tools': ['hubspot', 'salesforce', 'google ads', 'facebook ads', 'mailchimp', 'hootsuite'],
-        'analytics': ['conversion optimization', 'a/b testing', 'user acquisition', 'retention']
-    },
-    'finance': {
-        'analysis': ['financial modeling', 'valuation', 'risk management', 'forecasting', 'budgeting'],
-        'compliance': ['sox', 'gaap', 'ifrs', 'audit', 'internal controls', 'regulatory compliance'],
-        'tools': ['excel', 'bloomberg', 'quickbooks', 'sap', 'tableau', 'power bi'],
-        'banking': ['credit analysis', 'loan underwriting', 'portfolio management', 'derivatives']
-    },
-    'sales': {
-        'skills': ['prospecting', 'lead generation', 'closing', 'negotiation', 'relationship building'],
-        'tools': ['salesforce', 'crm', 'pipedrive', 'hubspot', 'linkedin sales navigator'],
-        'metrics': ['quota attainment', 'pipeline management', 'forecasting', 'territory management']
-    },
-    'human_resources': {
-        'recruiting': ['talent acquisition', 'sourcing', 'interviewing', 'onboarding', 'employer branding'],
-        'compliance': ['employment law', 'diversity and inclusion', 'compensation analysis'],
-        'tools': ['workday', 'bamboohr', 'greenhouse', 'lever', 'indeed'],
-        'development': ['performance management', 'training and development', 'succession planning']
-    },
-    'operations': {
-        'management': ['supply chain', 'logistics', 'inventory management', 'process improvement'],
-        'quality': ['six sigma', 'lean manufacturing', 'quality assurance', 'continuous improvement'],
-        'tools': ['erp', 'sap', 'oracle', 'tableau', 'process mapping'],
-        'metrics': ['kpi development', 'operational efficiency', 'cost reduction']
-    }
-}
-
-# Standard professional action verbs with weights
-ACTION_VERBS = {
-    'leadership': ['led', 'managed', 'directed', 'supervised', 'mentored', 'coached', 'guided'],
-    'achievement': ['achieved', 'accomplished', 'delivered', 'exceeded', 'surpassed', 'improved'],
-    'creation': ['created', 'developed', 'designed', 'built', 'established', 'launched', 'initiated'],
-    'analysis': ['analyzed', 'evaluated', 'assessed', 'researched', 'investigated', 'studied'],
-    'collaboration': ['collaborated', 'coordinated', 'facilitated', 'partnered', 'supported'],
-    'optimization': ['optimized', 'streamlined', 'enhanced', 'upgraded', 'modernized', 'transformed']
-}
+# Configuration-driven data - loaded from config files
+# Industry keywords, action verbs, and other data points are now externalized
 
 # Contact information patterns
 CONTACT_PATTERNS = {
@@ -205,29 +165,210 @@ def extract_text_from_file(file_content: bytes, file_url: str) -> str:
         raise TextExtractionError(f"Could not extract text from file: {str(e)}")
 
 def extract_pdf_text(file_content: bytes) -> str:
-    """Extract text from PDF using PyPDF2 with fallback to pdfplumber"""
-    text = ""
+    """Extract text from PDF using multiple methods with fallbacks for better accuracy"""
     
+    extraction_methods = [
+        ("PyPDF2", extract_with_pypdf2),
+        ("pdfplumber", extract_with_pdfplumber),
+        ("pymupdf", extract_with_pymupdf),
+        ("pdfminer", extract_with_pdfminer)
+    ]
+    
+    best_text = ""
+    best_score = 0
+    errors = []
+    
+    for method_name, method_func in extraction_methods:
+        try:
+            logger.info(f"Attempting PDF extraction with {method_name}")
+            text = method_func(file_content)
+            
+            if text and len(text.strip()) >= 50:
+                # Score the extraction quality
+                quality_score = score_text_quality(text)
+                logger.info(f"{method_name} extraction score: {quality_score}")
+                
+                if quality_score > best_score:
+                    best_text = text
+                    best_score = quality_score
+                    logger.info(f"New best extraction method: {method_name}")
+                    
+                # If we get a very good score, use it immediately
+                if quality_score >= 90:
+                    logger.info(f"High quality extraction achieved with {method_name}")
+                    break
+                    
+        except Exception as e:
+            error_msg = f"{method_name} failed: {str(e)}"
+            logger.warning(error_msg)
+            errors.append(error_msg)
+            continue
+    
+    if not best_text or len(best_text.strip()) < 50:
+        error_summary = "; ".join(errors)
+        raise TextExtractionError(f"All PDF extraction methods failed. Errors: {error_summary}")
+    
+    logger.info(f"Final PDF extraction completed with score: {best_score}")
+    return best_text
+
+def extract_with_pypdf2(file_content: bytes) -> str:
+    """Extract text using PyPDF2"""
+    text = ""
+    pdf_file = io.BytesIO(file_content)
+    pdf_reader = PyPDF2.PdfReader(pdf_file)
+    
+    for page in pdf_reader.pages:
+        page_text = page.extract_text()
+        if page_text:
+            text += page_text + "\n"
+    
+    return clean_extracted_text(text)
+
+def extract_with_pdfplumber(file_content: bytes) -> str:
+    """Extract text using pdfplumber (more accurate for complex layouts)"""
     try:
-        # Primary method: PyPDF2
+        import pdfplumber
+        text = ""
         pdf_file = io.BytesIO(file_content)
-        pdf_reader = PyPDF2.PdfReader(pdf_file)
         
-        for page in pdf_reader.pages:
-            page_text = page.extract_text()
+        with pdfplumber.open(pdf_file) as pdf:
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
+        
+        return clean_extracted_text(text)
+    except ImportError:
+        raise Exception("pdfplumber not available")
+
+def extract_with_pymupdf(file_content: bytes) -> str:
+    """Extract text using PyMuPDF/fitz (good for text accuracy)"""
+    try:
+        import fitz  # PyMuPDF
+        text = ""
+        pdf_document = fitz.open("pdf", file_content)
+        
+        for page_num in range(pdf_document.page_count):
+            page = pdf_document[page_num]
+            page_text = page.get_text()
             if page_text:
                 text += page_text + "\n"
         
-        # PyPDF2 is the only PDF extraction method available
-                        
-    except Exception as e:
-        logger.error(f"PDF extraction error: {str(e)}")
-        raise TextExtractionError(f"PDF extraction failed: {str(e)}")
+        pdf_document.close()
+        return clean_extracted_text(text)
+    except ImportError:
+        raise Exception("PyMuPDF not available")
+
+def extract_with_pdfminer(file_content: bytes) -> str:
+    """Extract text using pdfminer (most comprehensive but slower)"""
+    try:
+        from pdfminer.high_level import extract_text
+        from io import BytesIO
         
-    if not text or len(text.strip()) < 50:
-        raise TextExtractionError("PDF appears to be empty or contains only images")
-        
-    return text
+        text = extract_text(BytesIO(file_content))
+        return clean_extracted_text(text)
+    except ImportError:
+        raise Exception("pdfminer not available")
+
+def score_text_quality(text: str) -> float:
+    """
+    Score the quality of extracted text based on various factors
+    Returns a score from 0-100
+    """
+    if not text or len(text.strip()) < 10:
+        return 0
+    
+    score = 0
+    
+    # Factor 1: Basic text characteristics (30 points)
+    word_count = len(text.split())
+    if word_count >= 50:
+        score += 15
+    elif word_count >= 20:
+        score += 10
+    elif word_count >= 10:
+        score += 5
+    
+    # Reasonable length (not too short or extremely long)
+    if 100 <= word_count <= 2000:
+        score += 15
+    elif 50 <= word_count < 100 or 2000 < word_count <= 5000:
+        score += 10
+    elif word_count > 5000:
+        score += 5
+    
+    # Factor 2: Email detection quality (25 points)
+    email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b'
+    emails = re.findall(email_pattern, text)
+    
+    if emails:
+        # Check for clean email extraction (no obvious artifacts)
+        clean_emails = [email for email in emails if not re.match(r'^[a-z][A-Z]', email)]
+        if clean_emails:
+            score += 25
+        else:
+            score += 10  # Found emails but they might have artifacts
+    
+    # Factor 3: Text structure quality (20 points)
+    lines = text.split('\n')
+    non_empty_lines = [line for line in lines if line.strip()]
+    
+    if len(non_empty_lines) >= 10:
+        score += 10
+    elif len(non_empty_lines) >= 5:
+        score += 5
+    
+    # Check for reasonable line lengths (not too many very short or very long lines)
+    reasonable_lines = [line for line in non_empty_lines if 10 <= len(line.strip()) <= 200]
+    if len(reasonable_lines) >= len(non_empty_lines) * 0.7:
+        score += 10
+    elif len(reasonable_lines) >= len(non_empty_lines) * 0.5:
+        score += 5
+    
+    # Factor 4: Character quality (15 points)
+    # Check for reasonable character distribution
+    alpha_ratio = sum(1 for c in text if c.isalpha()) / len(text)
+    if 0.6 <= alpha_ratio <= 0.9:
+        score += 10
+    elif 0.4 <= alpha_ratio <= 0.95:
+        score += 5
+    
+    # Check for reasonable punctuation
+    punct_ratio = sum(1 for c in text if c in '.,;:!?') / len(text)
+    if 0.02 <= punct_ratio <= 0.15:
+        score += 5
+    
+    # Factor 5: Professional content indicators (10 points)
+    professional_keywords = [
+        'experience', 'education', 'skills', 'work', 'job', 'company',
+        'university', 'degree', 'project', 'manager', 'developer', 'engineer'
+    ]
+    
+    found_keywords = sum(1 for keyword in professional_keywords if keyword.lower() in text.lower())
+    if found_keywords >= 5:
+        score += 10
+    elif found_keywords >= 3:
+        score += 5
+    elif found_keywords >= 1:
+        score += 2
+    
+    return min(score, 100)
+
+def clean_extracted_text(text: str) -> str:
+    """
+    Basic text cleaning for PDF extraction results
+    Focus on simple normalization rather than complex artifact fixing
+    """
+    # Normalize whitespace
+    text = re.sub(r'\s+', ' ', text)
+    
+    # Remove excessive line breaks
+    text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text)
+    
+    # Fix common spacing issues around punctuation
+    text = re.sub(r'\s+([,.;:!?])', r'\1', text)
+    
+    return text.strip()
 
 def extract_docx_text(file_content: bytes) -> str:
     """Extract text from DOCX files"""
@@ -266,7 +407,10 @@ def detect_industry(content: str) -> str:
     content_lower = content.lower()
     industry_scores = {}
     
-    for industry, categories in INDUSTRY_KEYWORDS.items():
+    # Load industry keywords from config
+    industry_keywords = get_industry_keywords()
+    
+    for industry, categories in industry_keywords.items():
         score = 0
         for category, keywords in categories.items():
             for keyword in keywords:
@@ -280,10 +424,13 @@ def detect_industry(content: str) -> str:
     return max(industry_scores, key=industry_scores.get)
 
 def analyze_content_structure(content: str) -> Dict[str, Any]:
-    """Analyze resume structure and organization"""
+    """Analyze resume structure and organization using config data"""
     content_lower = content.lower()
     
-    # Essential sections with patterns and weights
+    # Load essential sections from config
+    essential_sections_config = config_loader.get_essential_sections()
+    
+    # Build essential sections structure with patterns and weights
     essential_sections = {
         'contact': {
             'patterns': ['email', 'phone', 'linkedin', '@', 'contact'],
@@ -291,21 +438,46 @@ def analyze_content_structure(content: str) -> Dict[str, Any]:
             'found': False
         },
         'experience': {
-            'patterns': ['experience', 'employment', 'work history', 'professional experience', 'career'],
+            'patterns': essential_sections_config.get('required', [])[:5],  # First 5 experience patterns
             'weight': 10,
             'found': False
         },
         'education': {
-            'patterns': ['education', 'degree', 'university', 'college', 'school', 'academic'],
+            'patterns': essential_sections_config.get('required', [])[5:10],  # Education patterns
             'weight': 6,
             'found': False
         },
         'skills': {
-            'patterns': ['skills', 'technical skills', 'competencies', 'technologies', 'tools'],
+            'patterns': essential_sections_config.get('required', [])[10:],  # Skills patterns
             'weight': 6,
             'found': False
         }
     }
+    
+    # Fallback to hardcoded patterns if config is empty
+    if not essential_sections_config.get('required'):
+        essential_sections = {
+            'contact': {
+                'patterns': ['email', 'phone', 'linkedin', '@', 'contact'],
+                'weight': 8,
+                'found': False
+            },
+            'experience': {
+                'patterns': ['experience', 'employment', 'work history', 'professional experience', 'career'],
+                'weight': 10,
+                'found': False
+            },
+            'education': {
+                'patterns': ['education', 'degree', 'university', 'college', 'school', 'academic'],
+                'weight': 6,
+                'found': False
+            },
+            'skills': {
+                'patterns': ['skills', 'technical skills', 'competencies', 'technologies', 'tools'],
+                'weight': 6,
+                'found': False
+            }
+        }
     
     # Check for sections
     total_score = 0
@@ -319,8 +491,14 @@ def analyze_content_structure(content: str) -> Dict[str, Any]:
                 total_score += data['weight']
                 break
     
-    # Bonus for optional but valuable sections
-    optional_sections = ['summary', 'objective', 'achievements', 'projects', 'certifications', 'awards']
+    # Load optional sections from config
+    optional_sections_config = config_loader.get_essential_sections()
+    optional_sections = optional_sections_config.get('recommended', []) + optional_sections_config.get('optional', [])
+    
+    # Fallback if config is empty
+    if not optional_sections:
+        optional_sections = ['summary', 'objective', 'achievements', 'projects', 'certifications', 'awards']
+    
     optional_found = []
     
     for section in optional_sections:
@@ -341,9 +519,12 @@ def analyze_keyword_optimization(content: str, industry: str = None) -> Dict[str
     score = 0
     keyword_analysis = {}
     
+    # Load industry keywords from config
+    industry_keywords_config = get_industry_keywords()
+    
     # Industry-specific keywords
-    if industry and industry in INDUSTRY_KEYWORDS:
-        industry_keywords = INDUSTRY_KEYWORDS[industry]
+    if industry and industry in industry_keywords_config:
+        industry_keywords = industry_keywords_config[industry]
         industry_found = {}
         
         for category, keywords in industry_keywords.items():
@@ -364,11 +545,12 @@ def analyze_keyword_optimization(content: str, industry: str = None) -> Dict[str
         
         keyword_analysis['industry_keywords'] = industry_found
     
-    # Action verbs analysis
+    # Action verbs analysis using config
+    action_verbs_config = get_achievement_verbs()
     action_verb_score = 0
     found_verbs = {}
     
-    for category, verbs in ACTION_VERBS.items():
+    for category, verbs in action_verbs_config.items():
         category_verbs = []
         for verb in verbs:
             count = content_lower.count(verb)
@@ -388,21 +570,54 @@ def analyze_keyword_optimization(content: str, industry: str = None) -> Dict[str
     }
 
 def analyze_contact_information(content: str) -> Dict[str, Any]:
-    """Analyze contact information completeness and format"""
+    """Analyze contact information completeness and format using config patterns"""
     found_contacts = {}
     score = 0
     
-    for contact_type, pattern in CONTACT_PATTERNS.items():
-        matches = re.findall(pattern, content, re.IGNORECASE)
+    # Load contact requirements from config
+    contact_requirements = config_loader.get_contact_requirements()
+    
+    # Process essential contact types
+    for contact_type, contact_data in contact_requirements.get('essential', {}).items():
+        patterns = contact_data.get('patterns', [])
+        weight = contact_data.get('weight', 3)
+        
+        matches = []
+        for pattern in patterns:
+            pattern_matches = re.findall(pattern, content, re.IGNORECASE)
+            matches.extend(pattern_matches)
+        
         found_contacts[contact_type] = matches
         if matches:
-            score += 3  # 3 points per contact type
+            score += weight
     
-    # Bonus for professional contacts (LinkedIn, GitHub)
-    if found_contacts.get('linkedin'):
-        score += 2
-    if found_contacts.get('github'):
-        score += 2
+    # Process recommended contact types
+    for contact_type, contact_data in contact_requirements.get('recommended', {}).items():
+        patterns = contact_data.get('patterns', [])
+        weight = contact_data.get('weight', 2)
+        
+        matches = []
+        for pattern in patterns:
+            pattern_matches = re.findall(pattern, content, re.IGNORECASE)
+            matches.extend(pattern_matches)
+        
+        found_contacts[contact_type] = matches
+        if matches:
+            score += weight
+    
+    # Process optional contact types
+    for contact_type, contact_data in contact_requirements.get('optional', {}).items():
+        patterns = contact_data.get('patterns', [])
+        weight = contact_data.get('weight', 1)
+        
+        matches = []
+        for pattern in patterns:
+            pattern_matches = re.findall(pattern, content, re.IGNORECASE)
+            matches.extend(pattern_matches)
+        
+        found_contacts[contact_type] = matches
+        if matches:
+            score += weight
     
     return {
         'score': min(score, 15),  # Cap at 15 points
@@ -445,10 +660,30 @@ def analyze_formatting_quality(content: str) -> Dict[str, Any]:
     }
 
 def analyze_quantified_achievements(content: str) -> Dict[str, Any]:
-    """Look for quantified achievements with numbers and percentages"""
+    """Look for quantified achievements with numbers and percentages using config patterns"""
     quantified_achievements = []
     
-    for pattern in QUANTIFIED_PATTERNS:
+    # Load quantification patterns from config
+    quantification_patterns = config_loader.get_quantification_patterns()
+    
+    # Combine all pattern types
+    all_patterns = []
+    for pattern_type, patterns in quantification_patterns.items():
+        all_patterns.extend(patterns)
+    
+    # Fallback to hardcoded patterns if config is empty
+    if not all_patterns:
+        all_patterns = [
+            r'\b\d+%\b',  # Percentages
+            r'\$\d+[,\d]*(?:\.\d{2})?\b',  # Dollar amounts
+            r'\b\d+[,\d]*\s*(?:million|thousand|billion|k)\b',  # Large numbers
+            r'\b\d+\s*(?:years?|months?|weeks?|days?)\b',  # Time periods
+            r'\b\d+\s*(?:people|employees|team members|clients|customers|users)\b',  # Team/user sizes
+            r'\b\d+[,\d]*\s*(?:projects?|initiatives?|campaigns?|deals?)\b',  # Project counts
+            r'\b(?:increased|decreased|improved|reduced|grew|generated)\s+.*?\d+[%\d]*\b'  # Performance metrics
+        ]
+    
+    for pattern in all_patterns:
         matches = re.finditer(pattern, content, re.IGNORECASE)
         for match in matches:
             # Get surrounding context (20 chars before and after)
@@ -479,39 +714,26 @@ def analyze_quantified_achievements(content: str) -> Dict[str, Any]:
 
 def check_grammar_issues(content: str) -> List[Dict[str, str]]:
     """
-    Check for common grammar issues in resume content
+    Check for common grammar issues in resume content using config patterns
     """
     grammar_issues = []
     
-    # Common grammar patterns to check
-    patterns = [
-        # Subject-verb disagreement patterns
-        (r'\b(I|he|she|it)\s+(are|were)\b', 'Subject-verb disagreement: use "am/is/was"'),
-        (r'\b(we|they|you)\s+(is|was)\b', 'Subject-verb disagreement: use "are/were"'),
-        
-        # Incorrect tense consistency  
-        (r'\b(managed|led|developed|created|implemented)\b.*\b(manage|lead|develop|create|implement)\b',
-         'Inconsistent verb tenses - use past tense for previous roles'),
-        
-        # Double spaces
-        (r'\s{2,}', 'Multiple spaces should be single spaces'),
-        
-        # Missing spaces after periods
-        (r'\.[A-Z]', 'Missing space after period'),
-        
-        # Common resume grammar issues
-        (r'\breturn on investment\b', 'Consider using "ROI" for resume brevity'),
-        (r'\band etc\b', 'Avoid "etc." - be specific about accomplishments'),
-    ]
+    # Load grammar patterns from config
+    grammar_patterns = get_grammar_patterns()
     
-    for pattern, message in patterns:
+    for pattern_data in grammar_patterns:
+        pattern = pattern_data['pattern']
+        message = pattern_data['message']
+        
         matches = re.finditer(pattern, content, re.IGNORECASE)
         for match in matches:
             grammar_issues.append({
                 'type': 'grammar',
                 'issue': message,
                 'position': match.start(),
-                'text': match.group()
+                'text': match.group(),
+                'category': pattern_data.get('category', 'general'),
+                'severity': pattern_data.get('severity', 'medium')
             })
             # Limit to avoid overwhelming the user
             if len(grammar_issues) >= 6:
@@ -523,64 +745,22 @@ def check_grammar_issues(content: str) -> List[Dict[str, str]]:
 
 def check_spelling_issues(content: str) -> List[Dict[str, str]]:
     """
-    Check for common spelling issues in resume content
+    Check for common spelling issues in resume content using config corrections
     """
     spelling_issues = []
     
-    # Common resume spelling mistakes
-    common_misspellings = {
-        # Professional terms
-        'managment': 'management',
-        'devlopment': 'development', 
-        'developement': 'development',
-        'recieved': 'received',
-        'acheived': 'achieved',
-        'seperate': 'separate',
-        'responsibile': 'responsible',
-        'experiance': 'experience',
-        'occured': 'occurred',
-        'sucessful': 'successful',
-        'sucessfully': 'successfully',
-        'recomendation': 'recommendation',
-        'comunication': 'communication',
-        'commited': 'committed',
-        'colaborated': 'collaborated',
-        'analysed': 'analyzed',  # US spelling preferred
-        'organised': 'organized',  # US spelling preferred
-        'realised': 'realized',   # US spelling preferred
-        
-        # Technology terms
-        'javascript': 'JavaScript',
-        'github': 'GitHub',
-        'linkedin': 'LinkedIn',
-        'powerpoint': 'PowerPoint',
-        'photoshop': 'Photoshop',
-        
-        # Common words
-        'definate': 'definite',
-        'definately': 'definitely',
-        'alot': 'a lot',
-        'accomodate': 'accommodate',
-        'occassion': 'occasion',
-        'reccommend': 'recommend',
-        'publically': 'publicly',
-        'maintenence': 'maintenance',
-        'independant': 'independent',
-        'begining': 'beginning',
-        'consistant': 'consistent',
-        'effeciency': 'efficiency',
-        'proficency': 'proficiency',
-    }
+    # Load spelling corrections from config
+    spelling_corrections = get_spelling_corrections()
     
     # Check for each misspelling
     words = re.findall(r'\b\w+\b', content.lower())
     for word in words:
-        if word in common_misspellings:
+        if word in spelling_corrections:
             spelling_issues.append({
                 'type': 'spelling',
                 'incorrect': word,
-                'correct': common_misspellings[word],
-                'issue': f'Misspelled "{word}" should be "{common_misspellings[word]}"'
+                'correct': spelling_corrections[word],
+                'issue': f'Misspelled "{word}" should be "{spelling_corrections[word]}"'
             })
             # Limit to avoid overwhelming the user
             if len(spelling_issues) >= 6:
@@ -590,7 +770,7 @@ def check_spelling_issues(content: str) -> List[Dict[str, str]]:
 
 def analyze_readability_and_length(content: str) -> Dict[str, Any]:
     """
-    Analyze content readability, optimal length, grammar, and spelling
+    Analyze content readability, optimal length, grammar, and spelling using config thresholds
     """
     word_count = len(content.split())
     char_count = len(content)
@@ -600,20 +780,24 @@ def analyze_readability_and_length(content: str) -> Dict[str, Any]:
     grammar_issues = check_grammar_issues(content)
     spelling_issues = check_spelling_issues(content)
     
-    # Optimal word count scoring
+    # Load readability metrics from config
+    readability_metrics = config_loader.get_readability_metrics()
+    
+    # Optimal word count scoring using config thresholds
+    optimal_word_count = readability_metrics.get('optimal_word_count', {
+        'min': 300, 'max': 800, 'ideal_min': 400, 'ideal_max': 600
+    })
+    
     length_score = 0
     length_feedback = ""
     
-    if 400 <= word_count <= 600:
+    if optimal_word_count['ideal_min'] <= word_count <= optimal_word_count['ideal_max']:
         length_score = 5
         length_feedback = "Optimal resume length"
-    elif 300 <= word_count < 400 or 600 < word_count <= 800:
+    elif optimal_word_count['min'] <= word_count < optimal_word_count['ideal_min'] or optimal_word_count['ideal_max'] < word_count <= optimal_word_count['max']:
         length_score = 4
         length_feedback = "Good resume length"
-    elif 200 <= word_count < 300 or 800 < word_count <= 1000:
-        length_score = 3
-        length_feedback = "Acceptable resume length"
-    elif word_count < 200:
+    elif word_count < optimal_word_count['min']:
         length_score = 1
         length_feedback = "Resume too short - add more detail"
     else:
@@ -623,27 +807,58 @@ def analyze_readability_and_length(content: str) -> Dict[str, Any]:
     # Calculate average sentence length
     avg_sentence_length = word_count / max(sentence_count, 1)
     
-    # Readability scoring
+    # Readability scoring using config
+    optimal_sentence_length = readability_metrics.get('optimal_sentence_length', {
+        'min': 10, 'max': 20, 'ideal': 15
+    })
+    
     readability_score = 0
-    if 10 <= avg_sentence_length <= 20:  # Optimal sentence length
+    if optimal_sentence_length['min'] <= avg_sentence_length <= optimal_sentence_length['max']:
         readability_score = 3
-    elif 8 <= avg_sentence_length < 10 or 20 < avg_sentence_length <= 25:
+    elif avg_sentence_length < optimal_sentence_length['min'] or avg_sentence_length > optimal_sentence_length['max']:
         readability_score = 2
     else:
         readability_score = 1
     
-    # Grammar scoring (4 points max)
-    grammar_score = 0
-    if len(grammar_issues) == 0:
-        grammar_score = 4
-    elif len(grammar_issues) <= 2:
-        grammar_score = 3
-    elif len(grammar_issues) <= 4:
-        grammar_score = 2
-    else:
-        grammar_score = 1
+    # Enhanced grammar scoring with severity-based penalties
+    grammar_score = 4  # Start with max points
+    punctuation_penalty = 0
+    date_formatting_penalty = 0
     
-    # Spelling scoring (3 points max)
+    # Calculate penalties based on issue severity and category
+    for issue in grammar_issues:
+        severity = issue.get('severity', 'medium')
+        category = issue.get('category', 'general')
+        
+        if category == 'punctuation':
+            if severity == 'high':
+                punctuation_penalty += 1.0
+            elif severity == 'medium':
+                punctuation_penalty += 0.5
+            else:
+                punctuation_penalty += 0.25
+        elif category == 'date_formatting':
+            if severity == 'high':
+                date_formatting_penalty += 1.0
+            elif severity == 'medium':
+                date_formatting_penalty += 0.5
+            else:
+                date_formatting_penalty += 0.25
+        else:
+            # General grammar issues
+            if severity == 'high':
+                grammar_score -= 1.0
+            elif severity == 'medium':
+                grammar_score -= 0.5
+            else:
+                grammar_score -= 0.25
+    
+    # Apply specific penalties
+    grammar_score -= min(punctuation_penalty, 2.0)  # Max 2 point penalty for punctuation
+    grammar_score -= min(date_formatting_penalty, 2.0)  # Max 2 point penalty for date formatting
+    grammar_score = max(grammar_score, 0)  # Don't go below 0
+    
+    # Spelling scoring (3 points max) 
     spelling_score = 0
     if len(spelling_issues) == 0:
         spelling_score = 3
@@ -665,6 +880,8 @@ def analyze_readability_and_length(content: str) -> Dict[str, Any]:
         'spelling_errors': len(spelling_issues),
         'grammar_issues': [issue['issue'] for issue in grammar_issues[:3]],  # Top 3
         'spelling_issues': [issue['issue'] for issue in spelling_issues[:3]], # Top 3
+        'punctuation_penalty': round(punctuation_penalty, 2),
+        'date_formatting_penalty': round(date_formatting_penalty, 2),
         'readability_level': 'Excellent' if total_score >= 12 else 'Good' if total_score >= 8 else 'Needs Improvement'
     }
 
@@ -699,22 +916,18 @@ def calculate_comprehensive_ats_score(content: str) -> Dict[str, Any]:
     total_score = sum(comp['score'] for comp in components.values())
     final_score = min(total_score, 100)  # Cap at 100
     
+    # Load score categories from config
+    score_categories = get_score_categories()
+    
     # Determine score category
-    if final_score >= 90:
-        category = 'excellent'
-        description = 'Outstanding ATS compatibility - your resume is highly optimized!'
-    elif final_score >= 80:
-        category = 'very_good'
-        description = 'Very good ATS compatibility with room for minor improvements'
-    elif final_score >= 70:
-        category = 'good'
-        description = 'Good ATS compatibility - some optimization recommended'
-    elif final_score >= 60:
-        category = 'fair'
-        description = 'Fair ATS compatibility - significant improvements needed'
-    else:
-        category = 'poor'
-        description = 'Poor ATS compatibility - major optimization required'
+    category = 'poor'
+    description = 'Poor ATS compatibility - major optimization required'
+    
+    for cat_name, cat_data in score_categories.items():
+        if cat_data['min_score'] <= final_score <= cat_data['max_score']:
+            category = cat_name
+            description = cat_data['description']
+            break
     
     return {
         'ats_score': final_score,
@@ -727,7 +940,7 @@ def calculate_comprehensive_ats_score(content: str) -> Dict[str, Any]:
 
 def calculate_interview_rates(ats_score: int) -> Dict[str, Any]:
     """
-    Calculate realistic interview rates based on ATS score
+    Calculate realistic interview rates based on ATS score using config data
     
     Args:
         ats_score: ATS compatibility score (0-100)
@@ -735,23 +948,18 @@ def calculate_interview_rates(ats_score: int) -> Dict[str, Any]:
     Returns:
         Dictionary with current and potential interview rates
     """
-    # Based on industry research and ATS performance data
-    rate_mapping = [
-        (90, 100, 18, "Excellent"),  # Top 10% of candidates
-        (80, 89, 12, "Very Good"),   # Top 25% of candidates
-        (70, 79, 8, "Good"),         # Above average
-        (60, 69, 5, "Average"),      # Industry average
-        (50, 59, 3, "Below Average"), # Needs improvement
-        (0, 49, 1, "Poor")           # Major issues
-    ]
+    # Load score categories and interview rate mapping from config
+    score_categories = get_score_categories()
+    interview_rate_mapping = config_loader.get_interview_rate_mapping()
     
     current_rate = 1
     performance_tier = "Poor"
     
-    for min_score, max_score, rate, tier in rate_mapping:
-        if min_score <= ats_score <= max_score:
-            current_rate = rate
-            performance_tier = tier
+    # Find the matching score category
+    for cat_name, cat_data in score_categories.items():
+        if cat_data['min_score'] <= ats_score <= cat_data['max_score']:
+            current_rate = cat_data.get('interview_rate', 1)
+            performance_tier = cat_data.get('label', 'Poor')
             break
     
     # Calculate potential rate with improvements (realistic maximum)
@@ -776,17 +984,13 @@ def get_score_percentile(ats_score: int) -> int:
     return 10
 
 def get_letter_grade(ats_score: int) -> str:
-    """Convert ATS score to letter grade"""
-    if ats_score >= 90: return "A+"
-    if ats_score >= 85: return "A"
-    if ats_score >= 80: return "A-"
-    if ats_score >= 75: return "B+"
-    if ats_score >= 70: return "B"
-    if ats_score >= 65: return "B-"
-    if ats_score >= 60: return "C+"
-    if ats_score >= 55: return "C"
-    if ats_score >= 50: return "C-"
-    if ats_score >= 45: return "D"
+    """Convert ATS score to letter grade using config data"""
+    score_categories = get_score_categories()
+    
+    for cat_name, cat_data in score_categories.items():
+        if cat_data['min_score'] <= ats_score <= cat_data['max_score']:
+            return cat_data.get('letter_grade', 'F')
+    
     return "F"
 
 def classify_issues_by_priority(analysis_data: Dict[str, Any]) -> Tuple[List[Dict], List[Dict]]:
@@ -1007,15 +1211,8 @@ def enhance_component_breakdown(analysis_data: Dict[str, Any]) -> Dict[str, Any]
     component_scores = analysis_data.get('component_scores', {})
     enhanced_components = {}
     
-    # Component maximum scores for percentage calculation
-    max_scores = {
-        'structure': 25,
-        'keywords': 20,
-        'contact': 15,
-        'formatting': 20,
-        'achievements': 10,
-        'readability': 10
-    }
+    # Load component weights from config
+    max_scores = get_component_weights()
     
     for component, max_score in max_scores.items():
         current_score = component_scores.get(component, 0)

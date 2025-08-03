@@ -24,7 +24,8 @@
       "Bash(cp:*)",
       "Bash(mv:*)",
       "WebFetch(domain:bestcvbuilder-sooty.vercel.app)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(python:*)"
     ],
     "deny": []
   }
