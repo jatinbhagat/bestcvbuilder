@@ -9,10 +9,11 @@
  * CACHE BUST v1.1.0: Build timestamp 20250803-0417 - Force refresh
  */
 
-// API Configuration - Use relative URLs to avoid CORS issues
+// API Configuration - Use relative URLs to avoid CORS issues - TIMESTAMP: 2025-08-03-14:30
 const API_BASE_URL = '/api';
 const CV_PARSER_ENDPOINT = `${API_BASE_URL}/cv-parser`;
-const BUILD_VERSION = '2.0.0-RELATIVE-URLS';
+const BUILD_VERSION = '2.0.0-RELATIVE-URLS-FINAL';
+const CACHE_BUSTER = '20250803143000';
 
 console.log('🔗 API Configuration v1.1.0:', { API_BASE_URL, CV_PARSER_ENDPOINT });
 console.log('🚨 CRITICAL: Verify this shows correct URL - should NOT be bestcvbuilder-gamma!');
