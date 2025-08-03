@@ -1136,92 +1136,99 @@ def analyze_resume_content(file_url: str) -> Dict[str, Any]:
         logger.error(f"Unexpected error in resume analysis: {str(e)}")
         raise ATSAnalysisError("An unexpected error occurred during analysis")
 
-def handler(request):
+from http.server import BaseHTTPRequestHandler
+
+class handler(BaseHTTPRequestHandler):
     """
-    Main handler function for Vercel serverless function
+    Main handler class for Vercel serverless function using BaseHTTPRequestHandler
     """
-    from flask import Response
     
-    # Handle CORS preflight requests
-    if request.method == 'OPTIONS':
-        response = Response()
+    def do_OPTIONS(self):
+        """Handle CORS preflight requests"""
+        self.send_response(200)
         for key, value in cors_headers().items():
-            response.headers[key] = value
-        return response
+            if key != 'Content-Type':  # Don't set content-type for OPTIONS
+                self.send_header(key.replace('_', '-'), value)
+        self.end_headers()
+        return
     
-    # Only allow POST requests
-    if request.method != 'POST':
-        response = Response(json.dumps({'error': 'Method not allowed'}), status=405)
-        for key, value in cors_headers().items():
-            response.headers[key] = value
-        return response
+    def do_POST(self):
+        """Handle POST requests for CV analysis"""
+        try:
+            # Read request body
+            content_length = int(self.headers.get('Content-Length', 0))
+            if content_length > 0:
+                body_data = self.rfile.read(content_length).decode('utf-8')
+                body = json.loads(body_data)
+            else:
+                body = {}
+            
+            file_url = body.get('file_url')
+            user_id = body.get('user_id')  # Optional user ID for database saving
+            analysis_type = body.get('analysis_type', 'comprehensive')
+            include_recommendations = body.get('include_recommendations', True)
+            
+            if not file_url:
+                self.send_error_response({'error': 'file_url is required'}, 400)
+                return
+            
+            # Perform comprehensive analysis
+            analysis_result = analyze_resume_content(file_url)
+            
+            # Save personal information to database if user_id is provided
+            if user_id and 'personal_information' in analysis_result:
+                try:
+                    save_success = save_user_profile_data(user_id, analysis_result['personal_information'])
+                    analysis_result['profile_updated'] = save_success
+                    if save_success:
+                        logger.info(f"Successfully saved profile data for user {user_id}")
+                    else:
+                        logger.warning(f"Failed to save profile data for user {user_id}")
+                except Exception as e:
+                    logger.error(f"Error saving profile data for user {user_id}: {str(e)}")
+                    analysis_result['profile_updated'] = False
+            
+            # Filter results based on request parameters
+            if not include_recommendations:
+                # Remove recommendation fields if not requested
+                analysis_result = {k: v for k, v in analysis_result.items() 
+                                 if k not in ['improvements', 'suggestions', 'next_steps']}
+            
+            # Return successful results
+            self.send_success_response(analysis_result)
+            
+        except FileProcessingError as e:
+            logger.error(f"File processing error: {str(e)}")
+            self.send_error_response({'error': str(e)}, 400)
+        except TextExtractionError as e:
+            logger.error(f"Text extraction error: {str(e)}")
+            self.send_error_response({'error': f'Text extraction failed: {str(e)}'}, 422)
+        except ATSAnalysisError as e:
+            logger.error(f"ATS analysis error: {str(e)}")
+            self.send_error_response({'error': str(e)}, 500)
+        except Exception as e:
+            logger.error(f"Unexpected API error: {str(e)}")
+            self.send_error_response({'error': 'Internal server error'}, 500)
     
-    try:
-        # Parse request body
-        body = request.get_json() or {}
-        file_url = body.get('file_url')
-        user_id = body.get('user_id')  # Optional user ID for database saving
-        analysis_type = body.get('analysis_type', 'comprehensive')
-        include_recommendations = body.get('include_recommendations', True)
-        
-        if not file_url:
-            response = Response(json.dumps({'error': 'file_url is required'}), status=400)
-            for key, value in cors_headers().items():
-                response.headers[key] = value
-            return response
-        
-        # Perform comprehensive analysis
-        analysis_result = analyze_resume_content(file_url)
-        
-        # Save personal information to database if user_id is provided
-        if user_id and 'personal_information' in analysis_result:
-            try:
-                save_success = save_user_profile_data(user_id, analysis_result['personal_information'])
-                analysis_result['profile_updated'] = save_success
-                if save_success:
-                    logger.info(f"Successfully saved profile data for user {user_id}")
-                else:
-                    logger.warning(f"Failed to save profile data for user {user_id}")
-            except Exception as e:
-                logger.error(f"Error saving profile data for user {user_id}: {str(e)}")
-                analysis_result['profile_updated'] = False
-        
-        # Filter results based on request parameters
-        if not include_recommendations:
-            # Remove recommendation fields if not requested
-            analysis_result = {k: v for k, v in analysis_result.items() 
-                             if k not in ['improvements', 'suggestions', 'next_steps']}
-        
-        # Return results
-        response = Response(json.dumps(analysis_result), status=200, content_type='application/json')
+    def do_GET(self):
+        """Handle GET requests - not allowed for this API"""
+        self.send_error_response({'error': 'Method not allowed - use POST'}, 405)
+    
+    def send_success_response(self, data):
+        """Send successful JSON response"""
+        self.send_response(200)
         for key, value in cors_headers().items():
-            response.headers[key] = value
-        return response
-        
-    except FileProcessingError as e:
-        logger.error(f"File processing error: {str(e)}")
-        response = Response(json.dumps({'error': str(e)}), status=400, content_type='application/json')
+            self.send_header(key.replace('_', '-'), value)
+        self.end_headers()
+        self.wfile.write(json.dumps(data).encode('utf-8'))
+    
+    def send_error_response(self, error_data, status_code):
+        """Send error JSON response"""
+        self.send_response(status_code)
         for key, value in cors_headers().items():
-            response.headers[key] = value
-        return response
-    except TextExtractionError as e:
-        logger.error(f"Text extraction error: {str(e)}")
-        response = Response(json.dumps({'error': f'Text extraction failed: {str(e)}'}), status=422, content_type='application/json')
-        for key, value in cors_headers().items():
-            response.headers[key] = value
-        return response
-    except ATSAnalysisError as e:
-        logger.error(f"ATS analysis error: {str(e)}")
-        response = Response(json.dumps({'error': str(e)}), status=500, content_type='application/json')
-        for key, value in cors_headers().items():
-            response.headers[key] = value
-        return response
-    except Exception as e:
-        logger.error(f"Unexpected API error: {str(e)}")
-        response = Response(json.dumps({'error': 'Internal server error'}), status=500, content_type='application/json')
-        for key, value in cors_headers().items():
-            response.headers[key] = value
-        return response
+            self.send_header(key.replace('_', '-'), value)
+        self.end_headers()
+        self.wfile.write(json.dumps(error_data).encode('utf-8'))
 
 # For local testing
 if __name__ == "__main__":
