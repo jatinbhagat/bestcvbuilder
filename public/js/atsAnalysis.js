@@ -6,10 +6,11 @@
  * TEST: Vercel auto-deploy trigger - Cache bust v2.1
  * DEPLOY NOW: Force rebuild v3.0 - CORS fix critical
  * VERCEL REDEPLOY: Change detection trigger - August 2nd 2025
+ * CACHE BUST v1.1.0: Build timestamp 20250803-0417 - Force refresh
  */
 
-// API Configuration - Use same domain as frontend (relative URL)
-const API_BASE_URL = '/api';
+// API Configuration - Use correct production domain
+const API_BASE_URL = 'https://bestcvbuilder-gnktl1mxh-bestcvbuilder.vercel.app/api';
 const CV_PARSER_ENDPOINT = `${API_BASE_URL}/cv-parser`;
 
 console.log('🔗 API Configuration:', { API_BASE_URL, CV_PARSER_ENDPOINT });

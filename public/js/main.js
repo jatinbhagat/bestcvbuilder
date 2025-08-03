@@ -7,9 +7,9 @@
  * UI UPDATE: Added clean upload progress loader v3.1
  */
 
-import { supabase } from './supabase.js';
-import { uploadFile } from './fileUpload.js';
-import { analyzeResumeWithFallback } from './atsAnalysis.js';
+import { supabase } from './supabase.js?v=1.1.0';
+import { uploadFile } from './fileUpload.js?v=1.1.0';
+import { analyzeResumeWithFallback } from './atsAnalysis.js?v=1.1.0';
 
 // DOM Elements
 const uploadForm = document.getElementById('uploadForm');

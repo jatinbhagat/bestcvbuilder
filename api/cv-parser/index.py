@@ -33,7 +33,9 @@ logger = logging.getLogger(__name__)
 # API configuration
 ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://your-domain.com",  # Replace with your actual domain
+    "http://localhost:3002", 
+    "https://bestcvbuilder-gnktl1mxh-bestcvbuilder.vercel.app",
+    "https://bestcvbuilder-gamma.vercel.app"
 ]
 
 # Industry-specific keyword databases
@@ -1135,47 +1137,39 @@ def analyze_resume_content(file_url: str) -> Dict[str, Any]:
         logger.error(f"Unexpected error in resume analysis: {str(e)}")
         raise ATSAnalysisError("An unexpected error occurred during analysis")
 
-def handler(event, context):
+def handler(request):
     """
     Main handler function for Vercel serverless function
-    
-    Args:
-        event: API Gateway event
-        context: Lambda context
-        
-    Returns:
-        API response
     """
+    from flask import Response
+    
     # Handle CORS preflight requests
-    if event.get('httpMethod') == 'OPTIONS':
-        return {
-            'statusCode': 200,
-            'headers': cors_headers(),
-            'body': ''
-        }
+    if request.method == 'OPTIONS':
+        response = Response()
+        for key, value in cors_headers().items():
+            response.headers[key] = value
+        return response
     
     # Only allow POST requests
-    if event.get('httpMethod') != 'POST':
-        return {
-            'statusCode': 405,
-            'headers': cors_headers(),
-            'body': json.dumps({'error': 'Method not allowed'})
-        }
+    if request.method != 'POST':
+        response = Response(json.dumps({'error': 'Method not allowed'}), status=405)
+        for key, value in cors_headers().items():
+            response.headers[key] = value
+        return response
     
     try:
         # Parse request body
-        body = json.loads(event.get('body', '{}'))
+        body = request.get_json() or {}
         file_url = body.get('file_url')
         user_id = body.get('user_id')  # Optional user ID for database saving
         analysis_type = body.get('analysis_type', 'comprehensive')
         include_recommendations = body.get('include_recommendations', True)
         
         if not file_url:
-            return {
-                'statusCode': 400,
-                'headers': cors_headers(),
-                'body': json.dumps({'error': 'file_url is required'})
-            }
+            response = Response(json.dumps({'error': 'file_url is required'}), status=400)
+            for key, value in cors_headers().items():
+                response.headers[key] = value
+            return response
         
         # Perform comprehensive analysis
         analysis_result = analyze_resume_content(file_url)
@@ -1200,40 +1194,35 @@ def handler(event, context):
                              if k not in ['improvements', 'suggestions', 'next_steps']}
         
         # Return results
-        return {
-            'statusCode': 200,
-            'headers': cors_headers(),
-            'body': json.dumps(analysis_result)
-        }
+        response = Response(json.dumps(analysis_result), status=200, content_type='application/json')
+        for key, value in cors_headers().items():
+            response.headers[key] = value
+        return response
         
     except FileProcessingError as e:
         logger.error(f"File processing error: {str(e)}")
-        return {
-            'statusCode': 400,
-            'headers': cors_headers(),
-            'body': json.dumps({'error': str(e)})
-        }
+        response = Response(json.dumps({'error': str(e)}), status=400, content_type='application/json')
+        for key, value in cors_headers().items():
+            response.headers[key] = value
+        return response
     except TextExtractionError as e:
         logger.error(f"Text extraction error: {str(e)}")
-        return {
-            'statusCode': 422,
-            'headers': cors_headers(),
-            'body': json.dumps({'error': f'Text extraction failed: {str(e)}'})
-        }
+        response = Response(json.dumps({'error': f'Text extraction failed: {str(e)}'}), status=422, content_type='application/json')
+        for key, value in cors_headers().items():
+            response.headers[key] = value
+        return response
     except ATSAnalysisError as e:
         logger.error(f"ATS analysis error: {str(e)}")
-        return {
-            'statusCode': 500,
-            'headers': cors_headers(),
-            'body': json.dumps({'error': str(e)})
-        }
+        response = Response(json.dumps({'error': str(e)}), status=500, content_type='application/json')
+        for key, value in cors_headers().items():
+            response.headers[key] = value
+        return response
     except Exception as e:
         logger.error(f"Unexpected API error: {str(e)}")
-        return {
-            'statusCode': 500,
-            'headers': cors_headers(),
-            'body': json.dumps({'error': 'Internal server error'})
-        }
+        response = Response(json.dumps({'error': 'Internal server error'}), status=500, content_type='application/json')
+        for key, value in cors_headers().items():
+            response.headers[key] = value
+        return response
 
 # For local testing
 if __name__ == "__main__":

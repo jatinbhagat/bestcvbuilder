@@ -2,6 +2,9 @@
 # Core dependencies
 requests==2.31.0
 
+# Web framework for Vercel
+flask==2.3.3
+
 # PDF/Word processing (lightweight)
 PyPDF2==3.0.1
 python-docx==1.1.0
