@@ -2,26 +2,25 @@
 Simple API test to diagnose 500 errors
 """
 
-def handler(request):
+from flask import Flask, request, jsonify
+import json
+
+app = Flask(__name__)
+
+@app.route('/api/simple-test', methods=['GET', 'POST', 'OPTIONS'])
+def handler():
     """Minimal handler to test what's working"""
-    
-    import json
     
     # CORS headers
     headers = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Content-Type': 'application/json'
+        'Access-Control-Allow-Headers': 'Content-Type'
     }
     
     # Handle preflight
     if request.method == 'OPTIONS':
-        return {
-            'statusCode': 200,
-            'headers': headers,
-            'body': ''
-        }
+        return '', 200, headers
     
     try:
         # Test what we can import
@@ -29,42 +28,42 @@ def handler(request):
         
         try:
             import PyPDF2
-            available_imports.append('PyPDF2')
-        except:
-            available_imports.append('PyPDF2 - FAILED')
+            available_imports.append('PyPDF2 - OK')
+        except Exception as e:
+            available_imports.append(f'PyPDF2 - FAILED: {str(e)}')
             
         try:
             import docx
-            available_imports.append('docx')
-        except:
-            available_imports.append('docx - FAILED')
+            available_imports.append('docx - OK')
+        except Exception as e:
+            available_imports.append(f'docx - FAILED: {str(e)}')
             
         try:
             import requests
-            available_imports.append('requests')
-        except:
-            available_imports.append('requests - FAILED')
+            available_imports.append('requests - OK')
+        except Exception as e:
+            available_imports.append(f'requests - FAILED: {str(e)}')
         
         # Test request data
         request_info = {
             'method': request.method,
-            'has_json': hasattr(request, 'get_json'),
-            'content_type': getattr(request, 'content_type', 'unknown')
+            'content_type': request.content_type or 'unknown',
+            'args': dict(request.args),
+            'headers_count': len(request.headers)
         }
         
         response_data = {
             "status": "success",
-            "message": "Simple API test working",
+            "message": "Simple API test working with Flask",
             "available_imports": available_imports,
             "request_info": request_info,
-            "timestamp": "2025-08-03-15:15"
+            "timestamp": "2025-08-03-15:20"
         }
         
-        return {
-            'statusCode': 200,
-            'headers': headers,
-            'body': json.dumps(response_data, indent=2)
-        }
+        response = jsonify(response_data)
+        for key, value in headers.items():
+            response.headers[key] = value
+        return response
         
     except Exception as e:
         # Return detailed error info
@@ -72,15 +71,10 @@ def handler(request):
             "status": "error",
             "error_message": str(e),
             "error_type": type(e).__name__,
-            "timestamp": "2025-08-03-15:15"
+            "timestamp": "2025-08-03-15:20"
         }
         
-        return {
-            'statusCode': 200,  # Return 200 so we can see the error
-            'headers': headers,
-            'body': json.dumps(error_data, indent=2)
-        }
-
-# For Vercel
-def main(request):
-    return handler(request)
+        response = jsonify(error_data)
+        for key, value in headers.items():
+            response.headers[key] = value
+        return response
