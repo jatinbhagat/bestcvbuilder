@@ -1710,10 +1710,12 @@ def extract_personal_information(content: str) -> Dict[str, Any]:
 def extract_name(content: str) -> Optional[str]:
     """Extract full name from CV content"""
     lines = content.split('\n')
+    logger.info(f"🔍 Name extraction - checking first 10 lines:")
     
     # Try first non-empty line first
-    for line in lines[:10]:  # Check first 10 lines
+    for i, line in enumerate(lines[:10]):  # Check first 10 lines
         line = line.strip()
+        logger.info(f"  Line {i}: '{line}'")
         if line and len(line.split()) >= 2:
             # More flexible name detection
             words = line.split()
@@ -1723,7 +1725,16 @@ def extract_name(content: str) -> Optional[str]:
                     if len(line) < 80 and not any(char in line for char in '@.com|+()'):  # Not email/phone/url
                         # Additional checks to avoid headers
                         if not any(keyword in line.upper() for keyword in ['CURRICULUM', 'RESUME', 'CV', 'PROFILE', 'CONTACT']):
+                            logger.info(f"✅ Found potential name: '{line}'")
                             return line
+                        else:
+                            logger.info(f"❌ Rejected (keyword): '{line}'")
+                    else:
+                        logger.info(f"❌ Rejected (long/contact): '{line}'")
+                else:
+                    logger.info(f"❌ Rejected (not title case): '{line}'")
+            else:
+                logger.info(f"❌ Rejected (word count): '{line}' ({len(words)} words)")
     
     # Try regex patterns
     for pattern in NAME_PATTERNS:
@@ -2232,14 +2243,14 @@ def save_analysis_results(email: str, resume_id: int, analysis_data: Dict[str, A
             'email': email,
             'resume_id': resume_id,
             'session_uuid': session_uuid,
-            'ats_score': cleaned_analysis_data.get('ats_score', 0),
+            'ats_score': int(cleaned_analysis_data.get('ats_score', 0)),
             'score_category': cleaned_analysis_data.get('category', 'poor'),
             'structure_score': cleaned_analysis_data.get('component_scores', {}).get('structure', 0),
             'keywords_score': cleaned_analysis_data.get('component_scores', {}).get('keywords', 0),
             'contact_score': cleaned_analysis_data.get('component_scores', {}).get('contact', 0),
             'formatting_score': cleaned_analysis_data.get('component_scores', {}).get('formatting', 0),
             'achievements_score': cleaned_analysis_data.get('component_scores', {}).get('achievements', 0),
-            'readability_score': cleaned_analysis_data.get('component_scores', {}).get('readability', 0),
+            'readability_score': int(cleaned_analysis_data.get('component_scores', {}).get('readability', 0)),
             'strengths': cleaned_analysis_data.get('strengths', []),
             'improvements': cleaned_analysis_data.get('improvements', []),
             'missing_keywords': cleaned_analysis_data.get('critical_issues', []),
