@@ -116,29 +116,52 @@ def cv_parser():
             print(f"🔍 Processing CV with email: {final_email} (temporary: {is_temp_email})")
             
             # Step 1: Save/update user profile with UUID tracking
-            profile_saved = save_user_profile_data(final_email, personal_info, session_uuid)
+            print(f"🔄 Attempting to save user profile for: {final_email}")
+            try:
+                profile_saved = save_user_profile_data(final_email, personal_info, session_uuid)
+                print(f"✅ Profile save result: {profile_saved}")
+            except Exception as e:
+                print(f"❌ Profile save failed: {str(e)}")
+                profile_saved = False
+                
             result['profile_updated'] = profile_saved
             result['session_uuid'] = session_uuid
             result['email_used'] = final_email
             result['is_temporary_email'] = is_temp_email
             
             # Step 2: Save resume record with UUID
-            file_info = get_file_info_from_url(file_url)
-            if not file_info:
-                file_info = {
-                    'original_filename': 'uploaded_resume.pdf',
-                    'file_size': 1024,  # Default size
-                    'file_type': 'pdf'
-                }
-            resume_id = save_resume_record(final_email, file_url, file_info, session_uuid)
+            print(f"🔄 Attempting to save resume record...")
+            try:
+                file_info = get_file_info_from_url(file_url)
+                if not file_info:
+                    file_info = {
+                        'original_filename': 'uploaded_resume.pdf',
+                        'file_size': 1024,  # Default size
+                        'file_type': 'pdf'
+                    }
+                print(f"📄 File info: {file_info}")
+                resume_id = save_resume_record(final_email, file_url, file_info, session_uuid)
+                print(f"✅ Resume save result - ID: {resume_id}")
+            except Exception as e:
+                print(f"❌ Resume save failed: {str(e)}")
+                resume_id = None
+                
             result['resume_id'] = resume_id
             
             # Step 3: Save analysis results with UUID
             if resume_id:
-                analysis_saved = save_analysis_results(final_email, resume_id, result, session_uuid)
-                result['analysis_saved'] = analysis_saved
+                print(f"🔄 Attempting to save analysis results for resume {resume_id}...")
+                try:
+                    analysis_saved = save_analysis_results(final_email, resume_id, result, session_uuid)
+                    print(f"✅ Analysis save result: {analysis_saved}")
+                except Exception as e:
+                    print(f"❌ Analysis save failed: {str(e)}")
+                    analysis_saved = False
             else:
-                result['analysis_saved'] = False
+                print(f"⚠️  Skipping analysis save - no resume ID")
+                analysis_saved = False
+                
+            result['analysis_saved'] = analysis_saved
                 
             print(f"📧 Email used: {final_email}")
             print(f"💾 Profile updated: {profile_saved}")
