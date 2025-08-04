@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Deployment Test</title>
+</head>
+<body>
+    <h1>🧪 SIMPLE TEST PAGE</h1>
+    <p>If you can see this, basic file deployment is working.</p>
+    <p>Timestamp: 2025-08-03 15:00:00</p>
+    
+    <h2>Quick API Tests:</h2>
+    <button onclick="testAPI()">Test API</button>
+    <div id="result"></div>
+    
+    <script>
+        async function testAPI() {
+            const result = document.getElementById('result');
+            
+            try {
+                const response = await fetch('/api/debug-500', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ test: true })
+                });
+                
+                const data = await response.text();
+                result.innerHTML = `<pre>Status: ${response.status}\nResponse: ${data}</pre>`;
+                
+            } catch (error) {
+                result.innerHTML = `<pre>Error: ${error.message}</pre>`;
+            }
+        }
+    </script>
+</body>
+</html>

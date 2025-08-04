@@ -1,0 +1,33 @@
+{
+  "name": "bestcvbuilder",
+  "version": "2.0.0",
+  "description": "ATS Score Checker and CV Updater - Mobile-first responsive web application [CACHE-BUST-v1.1.0-TIMESTAMP-20250803]",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "tailwind:watch": "tailwindcss -i ./src/css/input.css -o ./public/css/output.css --watch"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "stripe": "^14.10.0",
+    "supabase": "^2.33.9"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.3.6",
+    "vite": "^5.0.8"
+  },
+  "keywords": [
+    "ats",
+    "resume",
+    "cv",
+    "mobile-first",
+    "supabase",
+    "vercel"
+  ],
+  "author": "BestCVBuilder",
+  "license": "MIT"
+}
