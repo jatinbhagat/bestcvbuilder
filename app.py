@@ -17,7 +17,7 @@ CORS(app)
 
 # Import the CV parser functions directly
 try:
-    from index import analyze_resume_comprehensive, ATSAnalysisError
+    from index import analyze_resume_content, ATSAnalysisError
     cv_parser_available = True
     print("✅ CV parser functions imported successfully")
 except ImportError as e:
@@ -70,14 +70,10 @@ def cv_parser():
         print(f"   File URL: {file_url}")
         print(f"   Analysis Type: {analysis_type}")
         print(f"   User ID: {user_id}")
+        print(f"   Function available: {callable(analyze_resume_content)}")
         
-        # Call the main analysis function
-        result = analyze_resume_comprehensive(
-            file_url=file_url,
-            analysis_type=analysis_type,
-            include_recommendations=include_recommendations,
-            user_id=user_id
-        )
+        # Call the main analysis function (only takes file_url)
+        result = analyze_resume_content(file_url)
         
         print(f"✅ CV analysis completed successfully")
         
