@@ -2,16 +2,16 @@ import { defineConfig } from 'vite'
 import { resolve } from 'path'
 
 export default defineConfig({
-  root: 'public',
+  root: '.',  // Frontend directory is now the root
   build: {
-    outDir: '../dist',
+    outDir: 'dist',  // Output to frontend/dist
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'public/index.html'),
-        result: resolve(__dirname, 'public/result.html'),
-        payment: resolve(__dirname, 'public/payment.html'),
-        success: resolve(__dirname, 'public/success.html')
+        main: resolve(__dirname, 'index.html'),
+        result: resolve(__dirname, 'result.html'),
+        payment: resolve(__dirname, 'payment.html'),
+        success: resolve(__dirname, 'success.html')
       },
       output: {
         entryFileNames: `assets/[name]-[hash]-v2.js`,
