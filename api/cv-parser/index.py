@@ -2036,7 +2036,7 @@ def save_user_profile_data(email: str, extracted_data: Dict[str, Any], session_u
         
         # Initialize Supabase client
         supabase_url = os.getenv('SUPABASE_URL')
-        supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')  # Use service role for server-side operations
+        supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY') or os.getenv('PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY') or os.getenv('PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY')  # Fallback to public key
         
         if not supabase_url or not supabase_key:
             logger.warning("Warning: Supabase credentials not found, skipping database save")
@@ -2119,7 +2119,7 @@ def save_resume_record(email: str, file_url: str, file_info: Dict[str, Any], ses
         from urllib.parse import urlparse
         
         supabase_url = os.getenv('SUPABASE_URL')
-        supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+        supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY') or os.getenv('PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY')
         
         if not supabase_url or not supabase_key:
             logger.warning("Supabase credentials not found, skipping resume record save")
@@ -2185,7 +2185,7 @@ def save_analysis_results(email: str, resume_id: int, analysis_data: Dict[str, A
         import os
         
         supabase_url = os.getenv('SUPABASE_URL')
-        supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+        supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY') or os.getenv('PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY')
         
         if not supabase_url or not supabase_key:
             logger.warning("Supabase credentials not found, skipping analysis save")
@@ -2251,7 +2251,7 @@ def log_activity(email: str, action: str, resource_type: str = None, resource_id
         import os
         
         supabase_url = os.getenv('SUPABASE_URL')
-        supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+        supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY') or os.getenv('PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY')
         
         if not supabase_url or not supabase_key:
             return  # Silently fail for logging
@@ -2437,7 +2437,7 @@ class handler(BaseHTTPRequestHandler):
                     try:
                         from supabase import create_client
                         supabase_url = os.getenv('SUPABASE_URL')
-                        supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+                        supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY') or os.getenv('PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY')
                         if supabase_url and supabase_key:
                             supabase = create_client(supabase_url, supabase_key)
                             supabase.table('resumes').update({
