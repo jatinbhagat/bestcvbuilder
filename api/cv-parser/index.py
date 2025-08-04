@@ -1710,12 +1710,24 @@ def extract_personal_information(content: str) -> Dict[str, Any]:
 def extract_name(content: str) -> Optional[str]:
     """Extract full name from CV content"""
     lines = content.split('\n')
-    logger.info(f"🔍 Name extraction - checking first 10 lines:")
+    logger.info(f"🔍 Name extraction - checking first lines (showing first 100 chars each):")
     
     # Try first non-empty line first
     for i, line in enumerate(lines[:10]):  # Check first 10 lines
         line = line.strip()
-        logger.info(f"  Line {i}: '{line}'")
+        line_preview = line[:100] + "..." if len(line) > 100 else line
+        logger.info(f"  Line {i}: '{line_preview}'")
+        
+        # If line is too long (merged PDF), try to extract name from beginning
+        if len(line) > 100:
+            # Look for name pattern at the beginning of the line
+            import re
+            name_at_start = re.match(r'^([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)', line)
+            if name_at_start:
+                potential_name = name_at_start.group(1)
+                logger.info(f"✅ Found name at start of long line: '{potential_name}'")
+                return potential_name
+        
         if line and len(line.split()) >= 2:
             # More flexible name detection
             words = line.split()
@@ -2243,14 +2255,14 @@ def save_analysis_results(email: str, resume_id: int, analysis_data: Dict[str, A
             'email': email,
             'resume_id': resume_id,
             'session_uuid': session_uuid,
-            'ats_score': int(cleaned_analysis_data.get('ats_score', 0)),
+            'ats_score': min(100, max(0, int(cleaned_analysis_data.get('ats_score', 0)))),
             'score_category': cleaned_analysis_data.get('category', 'poor'),
-            'structure_score': cleaned_analysis_data.get('component_scores', {}).get('structure', 0),
-            'keywords_score': cleaned_analysis_data.get('component_scores', {}).get('keywords', 0),
-            'contact_score': cleaned_analysis_data.get('component_scores', {}).get('contact', 0),
-            'formatting_score': cleaned_analysis_data.get('component_scores', {}).get('formatting', 0),
-            'achievements_score': cleaned_analysis_data.get('component_scores', {}).get('achievements', 0),
-            'readability_score': int(cleaned_analysis_data.get('component_scores', {}).get('readability', 0)),
+            'structure_score': min(25, max(0, cleaned_analysis_data.get('component_scores', {}).get('structure', 0))),
+            'keywords_score': min(25, max(0, cleaned_analysis_data.get('component_scores', {}).get('keywords', 0))),
+            'contact_score': min(15, max(0, cleaned_analysis_data.get('component_scores', {}).get('contact', 0))),
+            'formatting_score': min(20, max(0, cleaned_analysis_data.get('component_scores', {}).get('formatting', 0))),
+            'achievements_score': min(10, max(0, cleaned_analysis_data.get('component_scores', {}).get('achievements', 0))),
+            'readability_score': min(10, max(0, int(cleaned_analysis_data.get('component_scores', {}).get('readability', 0)))),
             'strengths': cleaned_analysis_data.get('strengths', []),
             'improvements': cleaned_analysis_data.get('improvements', []),
             'missing_keywords': cleaned_analysis_data.get('critical_issues', []),
