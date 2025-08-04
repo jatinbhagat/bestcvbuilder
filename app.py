@@ -76,6 +76,12 @@ def cv_parser():
         result = analyze_resume_content(file_url)
         
         print(f"✅ CV analysis completed successfully")
+        print(f"📊 Analysis result keys: {list(result.keys())}")
+        print(f"📧 Email used: {result.get('email_used', 'Not found')}")
+        print(f"💾 Profile updated: {result.get('profile_updated', 'Not found')}")
+        print(f"📄 Resume ID: {result.get('resume_id', 'Not found')}")
+        print(f"📈 Analysis saved: {result.get('analysis_saved', 'Not found')}")
+        print(f"🎯 ATS Score: {result.get('ats_score', 'Not found')}")
         
         # Return results with CORS headers
         response = jsonify(result)
