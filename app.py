@@ -7,31 +7,22 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import sys
 import os
+import json
 
 # Add API modules to path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'api'))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'api', 'cv-parser'))
 
 app = Flask(__name__)
 CORS(app)
 
-# Import the serverless function handlers
+# Import the CV parser functions directly
 try:
-    # Import cv-parser
-    sys.path.append(os.path.join(os.path.dirname(__file__), 'api', 'cv-parser'))
-    from index import handler as cv_parser_handler
-    
-    # Import cv-rewrite  
-    sys.path.append(os.path.join(os.path.dirname(__file__), 'api', 'cv-rewrite'))
-    import importlib.util
-    spec = importlib.util.spec_from_file_location("cv_rewrite", os.path.join(os.path.dirname(__file__), 'api', 'cv-rewrite', 'index.py'))
-    cv_rewrite_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(cv_rewrite_module)
-    cv_rewrite_handler = cv_rewrite_module.handler
-    
+    from index import analyze_resume_comprehensive, ATSAnalysisError
+    cv_parser_available = True
+    print("✅ CV parser functions imported successfully")
 except ImportError as e:
-    print(f"Warning: Could not import API handlers: {e}")
-    cv_parser_handler = None
-    cv_rewrite_handler = None
+    print(f"❌ Could not import CV parser functions: {e}")
+    cv_parser_available = False
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -40,8 +31,8 @@ def health_check():
         "status": "healthy",
         "service": "bestcvbuilder-api",
         "handlers": {
-            "cv_parser": cv_parser_handler is not None,
-            "cv_rewrite": cv_rewrite_handler is not None
+            "cv_parser": cv_parser_available,
+            "cv_rewrite": False  # Not implemented yet
         }
     })
 
@@ -55,47 +46,67 @@ def cv_parser():
         response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
         return response
     
-    if cv_parser_handler is None:
-        return jsonify({"error": "CV parser handler not available"}), 500
-    
-    # Convert Flask request to Vercel-like event format
-    event = {
-        'body': request.get_json(),
-        'headers': dict(request.headers),
-        'httpMethod': request.method,
-        'path': '/api/cv-parser'
-    }
-    
-    # Mock context object
-    context = type('obj', (object,), {})()
+    if not cv_parser_available:
+        return jsonify({"error": "CV parser not available"}), 500
     
     try:
-        result = cv_parser_handler(event, context)
+        # Get request data
+        data = request.get_json()
         
-        # Handle Vercel response format
-        if isinstance(result, dict):
-            if 'statusCode' in result:
-                response = jsonify(result.get('body', {}))
-                response.status_code = result['statusCode']
-                
-                # Add headers if present
-                if 'headers' in result:
-                    for key, value in result['headers'].items():
-                        response.headers[key] = value
-                        
-                return response
-            else:
-                return jsonify(result)
-        else:
-            return result
-            
+        if not data:
+            return jsonify({"error": "No JSON data provided"}), 400
+        
+        # Extract required parameters
+        file_url = data.get('file_url')
+        if not file_url:
+            return jsonify({"error": "file_url is required"}), 400
+        
+        # Optional parameters
+        analysis_type = data.get('analysis_type', 'comprehensive')
+        include_recommendations = data.get('include_recommendations', True)
+        user_id = data.get('user_id')
+        
+        print(f"🔍 Processing CV analysis request:")
+        print(f"   File URL: {file_url}")
+        print(f"   Analysis Type: {analysis_type}")
+        print(f"   User ID: {user_id}")
+        
+        # Call the main analysis function
+        result = analyze_resume_comprehensive(
+            file_url=file_url,
+            analysis_type=analysis_type,
+            include_recommendations=include_recommendations,
+            user_id=user_id
+        )
+        
+        print(f"✅ CV analysis completed successfully")
+        
+        # Return results with CORS headers
+        response = jsonify(result)
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        
+        return response
+        
+    except ATSAnalysisError as e:
+        print(f"❌ ATS Analysis Error: {e}")
+        error_response = jsonify({"error": f"Analysis failed: {str(e)}"})
+        error_response.headers.add('Access-Control-Allow-Origin', '*')
+        return error_response, 400
+        
     except Exception as e:
-        print(f"Error in cv_parser: {e}")
-        return jsonify({"error": str(e)}), 500
+        print(f"❌ Unexpected error in cv_parser: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        error_response = jsonify({"error": f"Internal server error: {str(e)}"})
+        error_response.headers.add('Access-Control-Allow-Origin', '*')
+        return error_response, 500
 
 @app.route('/api/cv-rewrite', methods=['POST', 'OPTIONS'])
 def cv_rewrite():
-    """CV Rewrite API endpoint"""
+    """CV Rewrite API endpoint (placeholder)"""
     if request.method == 'OPTIONS':
         response = jsonify({'status': 'ok'})
         response.headers.add('Access-Control-Allow-Origin', '*')
@@ -103,43 +114,10 @@ def cv_rewrite():
         response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
         return response
     
-    if cv_rewrite_handler is None:
-        return jsonify({"error": "CV rewrite handler not available"}), 500
-    
-    # Convert Flask request to Vercel-like event format
-    event = {
-        'body': request.get_json(),
-        'headers': dict(request.headers),
-        'httpMethod': request.method,
-        'path': '/api/cv-rewrite'
-    }
-    
-    # Mock context object
-    context = type('obj', (object,), {})()
-    
-    try:
-        result = cv_rewrite_handler(event, context)
-        
-        # Handle Vercel response format
-        if isinstance(result, dict):
-            if 'statusCode' in result:
-                response = jsonify(result.get('body', {}))
-                response.status_code = result['statusCode']
-                
-                # Add headers if present
-                if 'headers' in result:
-                    for key, value in result['headers'].items():
-                        response.headers[key] = value
-                        
-                return response
-            else:
-                return jsonify(result)
-        else:
-            return result
-            
-    except Exception as e:
-        print(f"Error in cv_rewrite: {e}")
-        return jsonify({"error": str(e)}), 500
+    # Placeholder for future implementation
+    error_response = jsonify({"error": "CV rewrite not implemented yet"})
+    error_response.headers.add('Access-Control-Allow-Origin', '*')
+    return error_response, 501
 
 @app.errorhandler(404)
 def not_found(error):
@@ -151,4 +129,5 @@ def internal_error(error):
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
+    print(f"🚀 Starting BestCVBuilder API on port {port}")
     app.run(host='0.0.0.0', port=port, debug=False)
