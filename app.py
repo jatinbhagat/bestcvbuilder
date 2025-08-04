@@ -27,12 +27,35 @@ except ImportError as e:
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint for Render.com"""
+    # Test Supabase connection
+    supabase_status = "unknown"
+    try:
+        import os
+        supabase_url = os.environ.get('SUPABASE_URL')
+        supabase_key = os.environ.get('PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY')
+        
+        if supabase_url and supabase_key:
+            from supabase import create_client
+            supabase = create_client(supabase_url, supabase_key)
+            # Simple test query
+            result = supabase.table('user_profiles').select("count").limit(1).execute()
+            supabase_status = "connected"
+        else:
+            supabase_status = "missing_env_vars"
+    except Exception as e:
+        supabase_status = f"error: {str(e)}"
+    
     return jsonify({
         "status": "healthy",
         "service": "bestcvbuilder-api",
         "handlers": {
             "cv_parser": cv_parser_available,
-            "cv_rewrite": False  # Not implemented yet
+            "cv_rewrite": False
+        },
+        "supabase": supabase_status,
+        "env_vars": {
+            "supabase_url": bool(os.environ.get('SUPABASE_URL')),
+            "supabase_key": bool(os.environ.get('PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY'))
         }
     })
 
