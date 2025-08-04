@@ -130,6 +130,9 @@ NAME_PATTERNS = [
     r'^([A-Z][a-z]+ [A-Z][a-z]+)',  # First line name pattern
     r'([A-Z][a-z]+ [A-Z][a-z]+)\s*\n',  # Name followed by newline
     r'Name:\s*([A-Z][a-z]+ [A-Z][a-z]+)',  # Explicit name field
+    # Enhanced patterns for merged PDF lines and Unicode
+    r'^([A-Z][a-zA-Z\u00C0-\u017F]+ [A-Z][a-zA-Z\u00C0-\u017F]+(?:\s+[A-Z][a-zA-Z\u00C0-\u017F]+)?)',  # Unicode support
+    r'([A-Z][a-zA-Z\u00C0-\u017F]{2,}\s+[A-Z][a-zA-Z\u00C0-\u017F]{2,}(?:\s+[A-Z][a-zA-Z\u00C0-\u017F]{2,})?)',  # General name pattern with Unicode
 ]
 
 ADDRESS_PATTERNS = [
@@ -697,7 +700,7 @@ def analyze_content_structure(content: str) -> Dict[str, Any]:
     }
 
 def analyze_keyword_optimization(content: str, industry: str = None) -> Dict[str, Any]:
-    """Analyze keyword density and relevance"""
+    """Analyze keyword density and relevance - MAX 20 POINTS to match config weights"""
     content_lower = content.lower()
     score = 0
     keyword_analysis = {}
@@ -748,7 +751,7 @@ def analyze_keyword_optimization(content: str, industry: str = None) -> Dict[str
     keyword_analysis['action_verbs'] = found_verbs
     
     return {
-        'score': min(score, 30),  # Cap at 30 points
+        'score': min(score, 20),  # Cap at 20 points to match config weights
         'analysis': keyword_analysis
     }
 
@@ -953,7 +956,7 @@ def check_spelling_issues(content: str) -> List[Dict[str, str]]:
 
 def analyze_readability_and_length(content: str) -> Dict[str, Any]:
     """
-    Analyze content readability, optimal length, grammar, and spelling using config thresholds
+    Analyze content readability, optimal length, grammar, and spelling using config thresholds - MAX 10 POINTS to match config weights
     """
     word_count = len(content.split())
     char_count = len(content)
@@ -1050,10 +1053,12 @@ def analyze_readability_and_length(content: str) -> Dict[str, Any]:
     else:
         spelling_score = 1
     
+    # Scale total score to match config weight of 10 points (not 15)
     total_score = length_score + readability_score + grammar_score + spelling_score
+    scaled_score = min(total_score * (10.0 / 15.0), 10)  # Scale from 15-point range to 10-point range
     
     return {
-        'score': total_score,  # Max 15 points for this component
+        'score': round(scaled_score, 1),  # Max 10 points to match config weights
         'word_count': word_count,
         'character_count': char_count,
         'sentence_count': sentence_count,
@@ -1065,7 +1070,7 @@ def analyze_readability_and_length(content: str) -> Dict[str, Any]:
         'spelling_issues': [issue['issue'] for issue in spelling_issues[:3]], # Top 3
         'punctuation_penalty': round(punctuation_penalty, 2),
         'date_formatting_penalty': round(date_formatting_penalty, 2),
-        'readability_level': 'Excellent' if total_score >= 12 else 'Good' if total_score >= 8 else 'Needs Improvement'
+        'readability_level': 'Excellent' if scaled_score >= 8.5 else 'Good' if scaled_score >= 6.5 else 'Needs Improvement'
     }
 
 def calculate_comprehensive_ats_score(content: str) -> Dict[str, Any]:
@@ -1077,10 +1082,11 @@ def calculate_comprehensive_ats_score(content: str) -> Dict[str, Any]:
     # Initialize scoring components
     components = {}
     
+    # Apply configured component weights (total: 100 points)
     # 1. Content Structure Analysis (25 points)
     components['structure'] = analyze_content_structure(content)
     
-    # 2. Keyword Optimization (30 points)
+    # 2. Keyword Optimization (20 points) - CORRECTED from 30
     components['keywords'] = analyze_keyword_optimization(content, industry)
     
     # 3. Contact Information (15 points)
@@ -1092,7 +1098,7 @@ def calculate_comprehensive_ats_score(content: str) -> Dict[str, Any]:
     # 5. Quantified Achievements (10 points)
     components['achievements'] = analyze_quantified_achievements(content)
     
-    # 6. Readability and Length (15 points - bonus component)
+    # 6. Readability and Length (10 points) - CORRECTED from 15
     components['readability'] = analyze_readability_and_length(content)
     
     # Calculate total score
@@ -1708,8 +1714,12 @@ def extract_personal_information(content: str) -> Dict[str, Any]:
     return extracted_data
 
 def extract_name(content: str) -> Optional[str]:
-    """Extract full name from CV content"""
-    lines = content.split('\n')
+    """Extract full name from CV content with enhanced Unicode and merged line support"""
+    import unicodedata
+    
+    # Normalize Unicode characters to handle different encodings
+    normalized_content = unicodedata.normalize('NFKD', content)
+    lines = normalized_content.split('\n')
     logger.info(f"🔍 Name extraction - checking first lines (showing first 100 chars each):")
     
     # Try first non-empty line first
@@ -1720,25 +1730,52 @@ def extract_name(content: str) -> Optional[str]:
         
         # If line is too long (merged PDF), try to extract name from beginning
         if len(line) > 100:
-            # Look for name pattern at the beginning of the line
+            # Enhanced regex for merged PDF lines with Unicode support
             import re
-            name_at_start = re.match(r'^([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)', line)
-            if name_at_start:
-                potential_name = name_at_start.group(1)
-                logger.info(f"✅ Found name at start of long line: '{potential_name}'")
-                return potential_name
+            # Try multiple patterns for merged lines
+            merged_patterns = [
+                r'^([A-Z][a-zA-Z\u00C0-\u017F]+\s+[A-Z][a-zA-Z\u00C0-\u017F]+(?:\s+[A-Z][a-zA-Z\u00C0-\u017F]+)?)',  # Unicode names
+                r'^([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)(?:[\s\|\-•])',  # Name followed by separator
+                r'^([A-Z][a-z]+\s[A-Z][a-z]+)(?:\s*[A-Z][a-z]+@)',  # Name before email
+                r'^([A-Z][a-z]+\s[A-Z][a-z]+)(?:\s*\+?\d)',  # Name before phone
+            ]
+            
+            for pattern in merged_patterns:
+                name_match = re.match(pattern, line)
+                if name_match:
+                    potential_name = name_match.group(1).strip()
+                    # Validate name length and content
+                    if 4 <= len(potential_name) <= 40 and potential_name.count(' ') >= 1:
+                        logger.info(f"✅ Found name at start of long line: '{potential_name}'")
+                        return potential_name
         
         if line and len(line.split()) >= 2:
-            # More flexible name detection
+            # More flexible name detection with Unicode support
             words = line.split()
             if len(words) >= 2 and len(words) <= 4:  # Names are typically 2-4 words
-                # Check if first letter of each word is uppercase
-                if all(word and word[0].isupper() for word in words[:2]):
+                # Enhanced check for title case including Unicode characters
+                def is_title_case_unicode(word):
+                    if not word:
+                        return False
+                    first_char = word[0]
+                    # Check if first character is uppercase (including Unicode)
+                    return first_char.isupper() or unicodedata.category(first_char) == 'Lu'
+                
+                if all(is_title_case_unicode(word) for word in words[:2]):
                     if len(line) < 80 and not any(char in line for char in '@.com|+()'):  # Not email/phone/url
                         # Additional checks to avoid headers
                         if not any(keyword in line.upper() for keyword in ['CURRICULUM', 'RESUME', 'CV', 'PROFILE', 'CONTACT']):
-                            logger.info(f"✅ Found potential name: '{line}'")
-                            return line
+                            # Validate that it looks like a real name
+                            name_score = 0
+                            for word in words[:2]:
+                                if len(word) >= 2 and word.isalpha():
+                                    name_score += 1
+                            
+                            if name_score >= 2:  # At least 2 valid name words
+                                logger.info(f"✅ Found potential name: '{line}'")
+                                return line
+                            else:
+                                logger.info(f"❌ Rejected (invalid name pattern): '{line}'")
                         else:
                             logger.info(f"❌ Rejected (keyword): '{line}'")
                     else:
@@ -1748,12 +1785,17 @@ def extract_name(content: str) -> Optional[str]:
             else:
                 logger.info(f"❌ Rejected (word count): '{line}' ({len(words)} words)")
     
-    # Try regex patterns
+    # Try regex patterns with normalized content
     for pattern in NAME_PATTERNS:
-        match = re.search(pattern, content, re.MULTILINE)
+        match = re.search(pattern, normalized_content, re.MULTILINE)
         if match:
-            return match.group(1).strip()
+            potential_name = match.group(1).strip()
+            # Additional validation for regex-found names
+            if 4 <= len(potential_name) <= 40 and potential_name.count(' ') >= 1:
+                logger.info(f"✅ Found name via regex: '{potential_name}'")
+                return potential_name
     
+    logger.warning("⚠️ No valid name found in content")
     return None
 
 def extract_address(content: str) -> Dict[str, Optional[str]]:
@@ -2257,11 +2299,11 @@ def save_analysis_results(email: str, resume_id: int, analysis_data: Dict[str, A
             'session_uuid': session_uuid,
             'ats_score': min(100, max(0, int(cleaned_analysis_data.get('ats_score', 0)))),
             'score_category': cleaned_analysis_data.get('category', 'poor'),
-            'structure_score': min(25, max(0, cleaned_analysis_data.get('component_scores', {}).get('structure', 0))),
-            'keywords_score': min(25, max(0, cleaned_analysis_data.get('component_scores', {}).get('keywords', 0))),
-            'contact_score': min(15, max(0, cleaned_analysis_data.get('component_scores', {}).get('contact', 0))),
-            'formatting_score': min(20, max(0, cleaned_analysis_data.get('component_scores', {}).get('formatting', 0))),
-            'achievements_score': min(10, max(0, cleaned_analysis_data.get('component_scores', {}).get('achievements', 0))),
+            'structure_score': min(25, max(0, int(cleaned_analysis_data.get('component_scores', {}).get('structure', 0)))),
+            'keywords_score': min(20, max(0, int(cleaned_analysis_data.get('component_scores', {}).get('keywords', 0)))),  # Fixed: 20 not 25
+            'contact_score': min(15, max(0, int(cleaned_analysis_data.get('component_scores', {}).get('contact', 0)))),
+            'formatting_score': min(20, max(0, int(cleaned_analysis_data.get('component_scores', {}).get('formatting', 0)))),
+            'achievements_score': min(10, max(0, int(cleaned_analysis_data.get('component_scores', {}).get('achievements', 0)))),
             'readability_score': min(10, max(0, int(cleaned_analysis_data.get('component_scores', {}).get('readability', 0)))),
             'strengths': cleaned_analysis_data.get('strengths', []),
             'improvements': cleaned_analysis_data.get('improvements', []),
