@@ -235,63 +235,42 @@ def extract_text_from_file(file_content: bytes, file_url: str) -> str:
 def extract_pdf_text(file_content: bytes) -> str:
     """Extract text from PDF using multiple methods with fallbacks for better accuracy"""
     
-    # Log which methods are available for this extraction attempt
-    logger.info("🔍 Starting PDF extraction process...")
+    # Log available methods
+    logger.info("🔍 Starting PDF extraction with prioritized methods...")
     
-    if not PYPDF2_AVAILABLE:
+    # Check if any extraction method is available
+    if not any([PYPDF2_AVAILABLE, PDFPLUMBER_AVAILABLE, PYMUPDF_AVAILABLE, PDFMINER_AVAILABLE]):
         raise TextExtractionError("CRITICAL: No PDF extraction libraries available")
     
-    # Primary method that should always work
-    fallback_text = ""
-    fallback_score = 0
+    # Prioritized extraction methods (best first for Render.com)
+    extraction_methods = []
     
-    if PYPDF2_AVAILABLE:
-        try:
-            logger.info("📄 Attempting PDF extraction with PyPDF2 (primary)")
-            text = extract_with_pypdf2(file_content)
-            
-            if text and len(text.strip()) >= 50:
-                quality_score = score_text_quality(text)
-                logger.info(f"📊 PyPDF2 extraction score: {quality_score}/100")
-                
-                # If PyPDF2 gives good results, use it
-                if quality_score >= 70:
-                    logger.info("✅ PyPDF2 extraction successful, using primary result")
-                    return text
-                
-                # Store as fallback
-                fallback_text = text
-                fallback_score = quality_score
-                logger.info(f"💾 Storing PyPDF2 result as fallback (score: {quality_score})")
-            else:
-                fallback_text = text if text else ""
-                fallback_score = 0
-                logger.warning("⚠️  PyPDF2 extracted minimal text")
-                
-        except Exception as e:
-            logger.error(f"❌ PyPDF2 extraction failed: {str(e)}")
-            fallback_text = ""
-            fallback_score = 0
-    
-    # Try alternative methods for better quality (only if available)
-    alternative_methods = []
-    
+    # Priority 1: pdfplumber (excellent for structured text, emails, preserves formatting)
     if PDFPLUMBER_AVAILABLE:
-        alternative_methods.append(("pdfplumber", extract_with_pdfplumber))
+        extraction_methods.append(("pdfplumber", extract_with_pdfplumber))
+    
+    # Priority 2: PyMuPDF (best overall accuracy, speed, and text quality)  
     if PYMUPDF_AVAILABLE:
-        alternative_methods.append(("pymupdf", extract_with_pymupdf))
+        extraction_methods.append(("pymupdf", extract_with_pymupdf))
+        
+    # Priority 3: pdfminer (comprehensive extraction, good for complex layouts)
     if PDFMINER_AVAILABLE:
-        alternative_methods.append(("pdfminer", extract_with_pdfminer))
+        extraction_methods.append(("pdfminer", extract_with_pdfminer))
+        
+    # Priority 4: PyPDF2 (reliable fallback, widely compatible)
+    if PYPDF2_AVAILABLE:
+        extraction_methods.append(("pypdf2", extract_with_pypdf2))
     
-    if not alternative_methods:
-        logger.warning("⚠️  No alternative PDF extraction methods available - relying on PyPDF2 only")
-    else:
-        logger.info(f"🔄 Trying {len(alternative_methods)} alternative extraction methods for better quality")
+    if not extraction_methods:
+        raise TextExtractionError("No PDF extraction methods available")
     
-    best_text = fallback_text
-    best_score = fallback_score
+    logger.info(f"🔄 Trying {len(extraction_methods)} PDF extraction methods in priority order")
     
-    for method_name, method_func in alternative_methods:
+    best_text = ""
+    best_score = 0
+    best_method = "none"
+    
+    for method_name, method_func in extraction_methods:
         try:
             logger.info(f"📄 Attempting PDF extraction with {method_name}")
             text = method_func(file_content)
@@ -300,15 +279,23 @@ def extract_pdf_text(file_content: bytes) -> str:
                 quality_score = score_text_quality(text)
                 logger.info(f"📊 {method_name} extraction score: {quality_score}/100")
                 
+                # Update best result if this is better
                 if quality_score > best_score:
                     best_text = text
                     best_score = quality_score
+                    best_method = method_name
                     logger.info(f"🏆 New best extraction method: {method_name} (score: {quality_score})")
-                    
-                # If we get excellent results, use them immediately
-                if quality_score >= 95:
-                    logger.info(f"🎯 Excellent quality extraction achieved with {method_name}")
+                
+                # If we get excellent results with priority methods, use them immediately
+                if quality_score >= 90 and method_name in ["pdfplumber", "pymupdf"]:
+                    logger.info(f"🎯 Excellent quality achieved with priority method {method_name}")
                     break
+                    
+                # For less accurate methods, require higher threshold to stop early
+                elif quality_score >= 95 and method_name in ["pdfminer", "pypdf2"]:
+                    logger.info(f"🎯 Excellent quality achieved with {method_name}")
+                    break
+                    
             else:
                 logger.warning(f"⚠️  {method_name} extracted minimal text")
                     

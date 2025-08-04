@@ -1,0 +1,31 @@
+services:
+  # Static Frontend (Vite build)
+  - type: web
+    name: bestcvbuilder-frontend
+    env: static
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://bestcvbuilder-api.onrender.com/*
+    
+  # Python API Service
+  - type: web
+    name: bestcvbuilder-api
+    env: python
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY  
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+    healthCheckPath: /health
+    
+databases:
+  # Using external Supabase - no database needed

@@ -1,0 +1,13 @@
+# Python API dependencies for BestCVBuilder - Minimal Render.com Compatible
+# Fallback if PyMuPDF compilation fails
+requests==2.31.0
+PyPDF2==3.0.1
+python-docx==1.1.0
+pdfplumber==0.11.0
+supabase==2.4.2
+flask==3.0.2
+gunicorn==21.2.0
+flask-cors==4.0.0
+# Additional stability
+Pillow==10.3.0
+wheel==0.43.0

@@ -1,6 +1,14 @@
-# Python API dependencies for BestCVBuilder - Vercel Compatible Versions
+# Python API dependencies for BestCVBuilder - Render.com Compatible
 requests==2.31.0
-PyPDF2==2.12.1
-python-docx==0.8.11
-PyMuPDF==1.23.8
-supabase==1.0.4 
+PyPDF2==3.0.1
+python-docx==1.1.0
+# PyMuPDF pre-compiled wheel (avoid compilation issues)
+PyMuPDF==1.23.14
+pdfplumber==0.11.0
+supabase==2.4.2
+flask==3.0.2
+gunicorn==21.2.0
+flask-cors==4.0.0
+# Additional dependencies for better compatibility
+Pillow==10.3.0
+wheel==0.43.0 
