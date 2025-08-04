@@ -1,0 +1,61 @@
+{
+  "penalty_weights": {
+    "non_standard_job_titles": 5,
+    "missing_section_headings": 8,
+    "date_format_issues": 6,
+    "excessive_formatting": 10,
+    "critical_info_in_headers": 12,
+    "images_unsupported_types": 8,
+    "hyperlinks_keyword_stuffing": 7,
+    "knockout_questions": 100,
+    "general_ats_compatibility": 3
+  },
+  "penalty_descriptions": {
+    "non_standard_job_titles": "Job titles don't match standard industry terminology",
+    "missing_section_headings": "Missing or non-standard section headings for Experience, Education, or Skills",
+    "date_format_issues": "Inconsistent, non-standard, or ambiguous date formats, or employment gaps over 6 months",
+    "excessive_formatting": "Excessive use of graphics, tables, columns, or non-standard resume formatting",
+    "critical_info_in_headers": "Critical information (skills, contact) only present in headers/footers/sidebars",
+    "images_unsupported_types": "Images, profile photos, or unsupported file types",
+    "hyperlinks_keyword_stuffing": "Hyperlinks (except contact info), keyword stuffing, or non-plain-text formatting",
+    "knockout_questions": "Knockout or screening questions not passing - sets score to zero",
+    "general_ats_compatibility": "General ATS compatibility issues"
+  },
+  "standard_job_titles": {
+    "software": ["software engineer", "software developer", "programmer", "developer", "software architect", "full stack developer", "backend developer", "frontend developer", "web developer", "mobile developer"],
+    "data": ["data scientist", "data analyst", "data engineer", "machine learning engineer", "ai engineer", "business analyst", "quantitative analyst"],
+    "management": ["project manager", "product manager", "program manager", "team lead", "engineering manager", "technical lead", "scrum master"],
+    "marketing": ["marketing manager", "digital marketing specialist", "content marketing manager", "social media manager", "marketing coordinator", "brand manager"],
+    "sales": ["sales representative", "account manager", "business development manager", "sales manager", "account executive", "sales director"],
+    "finance": ["financial analyst", "accountant", "controller", "finance manager", "investment analyst", "risk analyst", "financial advisor"],
+    "hr": ["human resources manager", "recruiter", "hr coordinator", "talent acquisition specialist", "hr business partner", "compensation analyst"],
+    "design": ["ux designer", "ui designer", "graphic designer", "product designer", "web designer", "creative director", "art director"],
+    "operations": ["operations manager", "supply chain manager", "logistics coordinator", "business operations analyst", "process improvement specialist"]
+  },
+  "standard_section_headings": {
+    "experience": ["experience", "work experience", "professional experience", "employment history", "career history", "work history"],
+    "education": ["education", "academic background", "educational background", "qualifications", "academic qualifications"],
+    "skills": ["skills", "technical skills", "core competencies", "expertise", "proficiencies", "abilities"]
+  },
+  "date_format_patterns": {
+    "valid_formats": [
+      "\\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\s+\\d{4}\\b",
+      "\\b\\d{1,2}/\\d{4}\\b",
+      "\\b\\d{4}\\s*-\\s*\\d{4}\\b",
+      "\\b\\d{4}\\s*–\\s*\\d{4}\\b",
+      "\\b(January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{4}\\b"
+    ],
+    "invalid_patterns": [
+      "\\b\\d{1,2}/\\d{1,2}/\\d{2}\\b",
+      "\\b\\d{1,2}-\\d{1,2}-\\d{2}\\b",
+      "\\b\\d{2}/\\d{2}\\b"
+    ]
+  },
+  "formatting_issues": {
+    "graphics_tables": ["<table", "<img", "<svg", "border=", "cellpadding="],
+    "columns": ["\\|\\s*\\|", "column-count:", "display:\\s*grid", "flex-direction:\\s*row"],
+    "non_standard": ["<div", "<span", "style=", "class=", "background-color:", "font-family:"]
+  },
+  "keyword_stuffing_threshold": 0.15,
+  "employment_gap_months": 6
+}

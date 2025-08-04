@@ -610,7 +610,7 @@ def detect_industry(content: str) -> str:
     return max(industry_scores, key=industry_scores.get)
 
 def analyze_content_structure(content: str) -> Dict[str, Any]:
-    """Analyze resume structure and organization using config data"""
+    """Analyze resume structure and organization using config data - More stringent scoring"""
     content_lower = content.lower()
     
     # Load essential sections from config
@@ -692,8 +692,11 @@ def analyze_content_structure(content: str) -> Dict[str, Any]:
             optional_found.append(section)
             total_score += 2  # Bonus points
     
+    # More stringent scoring - must have most sections to get high scores
+    section_score = min(total_score * 0.8, 20)  # Reduce by 20% and cap at 20
+    
     return {
-        'score': min(total_score, 25),  # Cap at 25 points
+        'score': max(section_score, 0),  # More realistic scoring
         'essential_sections': found_sections,
         'optional_sections': optional_found,
         'missing_sections': [k for k, v in essential_sections.items() if not v['found']]
@@ -763,18 +766,48 @@ def analyze_contact_information(content: str) -> Dict[str, Any]:
     # Load contact requirements from config
     contact_requirements = config_loader.get_contact_requirements()
     
+    # Enhanced phone number extraction with multiple strategies
+    phone_patterns = [
+        r'\+?\d{1,4}[\s\-\.]?\(?\d{3}\)?[\s\-\.]?\d{3}[\s\-\.]?\d{4}',  # International format
+        r'\(?\d{3}\)?[\s\-\.]?\d{3}[\s\-\.]?\d{4}',  # US format
+        r'\d{3}[\s\-\.]\d{3}[\s\-\.]\d{4}',  # Simple format
+        r'\+\d{1,3}\s?\(?\d{3}\)?\s?\d{3}[\s\-\.]?\d{4}',  # Mixed international
+        r'\d{10,}',  # Raw digits (10+ digits)
+    ]
+    
+    phone_matches = []
+    for pattern in phone_patterns:
+        matches = re.findall(pattern, content)
+        for match in matches:
+            # Validate phone number has enough digits
+            digits = re.sub(r'[^\d]', '', match)
+            if len(digits) >= 10:
+                phone_matches.append(match)
+    
+    # Remove duplicates and take the most complete phone number
+    if phone_matches:
+        # Sort by length to get the most complete number
+        phone_matches.sort(key=len, reverse=True)
+        found_contacts['phone'] = phone_matches
+    
     # Process essential contact types
     for contact_type, contact_data in contact_requirements.get('essential', {}).items():
-        patterns = contact_data.get('patterns', [])
-        weight = contact_data.get('weight', 3)
+        if contact_type == 'phone' and 'phone' in found_contacts:
+            # Use enhanced phone extraction results
+            matches = found_contacts['phone']
+        else:
+            patterns = contact_data.get('patterns', [])
+            weight = contact_data.get('weight', 3)
+            
+            matches = []
+            for pattern in patterns:
+                pattern_matches = re.findall(pattern, content, re.IGNORECASE)
+                matches.extend(pattern_matches)
+            
+            found_contacts[contact_type] = matches
         
-        matches = []
-        for pattern in patterns:
-            pattern_matches = re.findall(pattern, content, re.IGNORECASE)
-            matches.extend(pattern_matches)
-        
-        found_contacts[contact_type] = matches
         if matches:
+            weight = contact_data.get('weight', 3)
             score += weight
     
     # Process recommended contact types
@@ -812,8 +845,8 @@ def analyze_contact_information(content: str) -> Dict[str, Any]:
     }
 
 def analyze_formatting_quality(content: str) -> Dict[str, Any]:
-    """Analyze formatting and ATS readability"""
-    score = 20  # Start with full points, deduct for issues
+    """Analyze formatting and ATS readability - More stringent scoring"""
+    score = 15  # Start with lower baseline, deduct for issues
     issues = []
     
     # Check for formatting issues that hurt ATS parsing
@@ -1073,8 +1106,8 @@ def analyze_readability_and_length(content: str) -> Dict[str, Any]:
         'readability_level': 'Excellent' if scaled_score >= 8.5 else 'Good' if scaled_score >= 6.5 else 'Needs Improvement'
     }
 
-def calculate_comprehensive_ats_score(content: str) -> Dict[str, Any]:
-    """Calculate comprehensive ATS compatibility score"""
+def calculate_comprehensive_ats_score(content: str, job_posting: str = None, knockout_questions: List[Dict] = None) -> Dict[str, Any]:
+    """Calculate comprehensive ATS compatibility score with penalty system"""
     
     # Detect industry for targeted analysis
     industry = detect_industry(content)
@@ -1101,9 +1134,22 @@ def calculate_comprehensive_ats_score(content: str) -> Dict[str, Any]:
     # 6. Readability and Length (10 points) - CORRECTED from 15
     components['readability'] = analyze_readability_and_length(content)
     
-    # Calculate total score
-    total_score = sum(comp['score'] for comp in components.values())
-    final_score = min(total_score, 100)  # Cap at 100
+    # Calculate base score from components
+    base_score = sum(comp['score'] for comp in components.values())
+    base_score = min(base_score, 100)  # Cap at 100
+    
+    # Apply comprehensive penalty system
+    try:
+        from penalty_system import apply_comprehensive_penalties
+        penalty_result = apply_comprehensive_penalties(base_score, content, job_posting, knockout_questions)
+        final_score = penalty_result['final_score']
+        penalty_breakdown = penalty_result['penalty_breakdown']
+        total_penalty = penalty_result['total_penalty']
+    except ImportError as e:
+        logger.warning(f"Penalty system not available: {e}")
+        final_score = base_score
+        penalty_breakdown = {}
+        total_penalty = 0
     
     # Load score categories from config
     score_categories = get_score_categories()
@@ -1120,6 +1166,9 @@ def calculate_comprehensive_ats_score(content: str) -> Dict[str, Any]:
     
     return {
         'ats_score': final_score,
+        'base_score': base_score,
+        'total_penalty': total_penalty,
+        'penalty_breakdown': penalty_breakdown,
         'category': category,
         'description': description,
         'industry': industry,
@@ -1684,7 +1733,16 @@ def extract_personal_information(content: str) -> Dict[str, Any]:
     if found_contacts.get('email'):
         extracted_data['email'] = found_contacts['email'][0]
     if found_contacts.get('phone'):
-        extracted_data['phone'] = found_contacts['phone'][0]
+        # Clean and validate phone number
+        phone_raw = found_contacts['phone'][0]
+        phone_cleaned = re.sub(r'[^\d+\-\(\)\s]', '', phone_raw)
+        # Ensure we have a complete phone number
+        digits_only = re.sub(r'[^\d]', '', phone_cleaned)
+        if len(digits_only) >= 10:  # Minimum for a valid phone number
+            extracted_data['phone'] = phone_cleaned
+        else:
+            logger.warning(f"Phone number too short: {phone_raw} -> {digits_only} ({len(digits_only)} digits)")
+            extracted_data['phone'] = phone_raw  # Store original for debugging
     if found_contacts.get('linkedin'):
         extracted_data['linkedin_url'] = 'https://' + found_contacts['linkedin'][0]
     if found_contacts.get('github'):
@@ -2562,22 +2620,23 @@ class handler(BaseHTTPRequestHandler):
                     except Exception as e:
                         logger.error(f"Failed to update resume status: {str(e)}")
                 
-                # Step 4: Log activity with UUID (only if profile was created successfully)
-                if profile_saved:
-                    log_activity(
-                        email=final_email,
-                        action='resume_analysis',
-                        resource_type='resume',
-                        resource_id=resume_id,
-                        success=True,
-                        metadata={
-                            'ats_score': analysis_result.get('ats_score'),
-                            'file_url': file_url,
-                            'is_temporary_email': is_temp_email,
-                            'original_email_found': personal_info.get('email') is not None
-                        },
-                        session_uuid=session_uuid
-                    )
+                # Step 4: Log activity with UUID (always log for audit trail)
+                log_activity(
+                    email=final_email,
+                    action='resume_analysis',
+                    resource_type='resume',
+                    resource_id=resume_id,
+                    success=True,
+                    metadata={
+                        'ats_score': analysis_result.get('ats_score'),
+                        'file_url': file_url,
+                        'is_temporary_email': is_temp_email,
+                        'original_email_found': personal_info.get('email') is not None,
+                        'profile_saved': profile_saved,
+                        'analysis_saved': analysis_result.get('analysis_saved', False)
+                    },
+                    session_uuid=session_uuid
+                )
                 
                 logger.info(f"Successfully completed processing for {final_email} (UUID: {session_uuid})")
                 
