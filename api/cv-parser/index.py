@@ -43,13 +43,13 @@ except ImportError as e:
     logger.error(f"❌ CRITICAL: PyPDF2 not available: {e}")
     PYPDF2_AVAILABLE = False
 
-# Check python-docx (for DOCX files)
+# Check python-docx (for DOCX files) - Optional for minimal deployment
 try:
     import docx
     DOCX_AVAILABLE = True
     logger.info("✅ python-docx available (DOCX extraction)")
 except ImportError as e:
-    logger.warning(f"⚠️  python-docx not available: {e}")
+    logger.info(f"ℹ️  python-docx not available (minimal deployment): {e}")
     DOCX_AVAILABLE = False
 
 # Check pdfplumber (better PDF extraction)
@@ -565,7 +565,11 @@ def clean_extracted_text(text: str) -> str:
 
 def extract_docx_text(file_content: bytes) -> str:
     """Extract text from DOCX files"""
+    if not DOCX_AVAILABLE:
+        raise TextExtractionError("DOCX processing not available - please use PDF format")
+    
     try:
+        import docx
         doc_file = io.BytesIO(file_content)
         doc = docx.Document(doc_file)
         
