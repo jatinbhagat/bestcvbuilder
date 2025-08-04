@@ -2313,8 +2313,21 @@ def analyze_resume_content(file_url: str) -> Dict[str, Any]:
         personal_info = extract_personal_information(content)
         logger.info(f"Extracted personal information: {list(personal_info.keys())}")
         
+        # Debug: Log what was actually found vs None
+        non_empty_fields = {k: v for k, v in personal_info.items() if v is not None and v != [] and v != ''}
+        logger.info(f"Non-empty extracted fields: {list(non_empty_fields.keys())}")
+        logger.info(f"GitHub found: {personal_info.get('github_url', 'None')}")
+        logger.info(f"Website found: {personal_info.get('website_url', 'None')}")
+        
         # Perform comprehensive ATS analysis
         ats_analysis = calculate_comprehensive_ats_score(content)
+        
+        # Debug: Log component scores to see why total is 100
+        logger.info(f"Component scores breakdown:")
+        if 'component_scores' in ats_analysis:
+            for component, score in ats_analysis['component_scores'].items():
+                logger.info(f"  {component}: {score}")
+        logger.info(f"Total ATS score: {ats_analysis.get('ats_score', 'Not found')}")
         
         # Generate recommendations
         recommendations = generate_comprehensive_recommendations(ats_analysis)
