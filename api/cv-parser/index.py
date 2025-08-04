@@ -72,9 +72,9 @@ except ImportError as e:
 
 # Check pdfminer (comprehensive extraction)
 try:
-    from pdfminer.high_level import extract_text
+    from pdfminer.high_level import extract_text as pdfminer_extract_text
     PDFMINER_AVAILABLE = True
-    logger.info("✅ pdfminer available (comprehensive PDF extraction)")
+    logger.info("✅ pdfminer.six available (comprehensive PDF extraction)")
 except ImportError as e:
     logger.warning(f"⚠️  pdfminer not available: {e}")
     PDFMINER_AVAILABLE = False
@@ -442,10 +442,9 @@ def extract_with_pdfminer(file_content: bytes) -> str:
         raise Exception("pdfminer not available in runtime environment")
     
     try:
-        from pdfminer.high_level import extract_text
         from io import BytesIO
         
-        text = extract_text(BytesIO(file_content))
+        text = pdfminer_extract_text(BytesIO(file_content))
         return clean_extracted_text(text)
     except Exception as e:
         raise Exception(f"pdfminer extraction failed: {str(e)}")
