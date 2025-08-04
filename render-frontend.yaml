@@ -1,0 +1,7 @@
+services:
+  # Static Frontend Only
+  - type: web
+    name: bestcvbuilder-frontend
+    env: static
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist

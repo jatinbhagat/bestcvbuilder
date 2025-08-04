@@ -1,0 +1,197 @@
+{
+  "technology": {
+    "programming_languages": [
+      "python", "javascript", "java", "c++", "c#", "php", "ruby", "go", 
+      "rust", "swift", "kotlin", "typescript", "scala", "r", "matlab"
+    ],
+    "web_technologies": [
+      "react", "angular", "vue", "nodejs", "express", "django", "flask",
+      "html", "css", "sass", "webpack", "babel", "nextjs", "nuxtjs"
+    ],
+    "databases": [
+      "mysql", "postgresql", "mongodb", "redis", "elasticsearch", "cassandra",
+      "oracle", "sql server", "sqlite", "dynamodb", "firebase"
+    ],
+    "cloud_platforms": [
+      "aws", "azure", "google cloud", "gcp", "heroku", "digitalocean",
+      "kubernetes", "docker", "terraform", "ansible", "jenkins"
+    ],
+    "frameworks": [
+      "spring", "laravel", "rails", "dotnet", "fastapi", "gin", "fiber",
+      "electron", "react native", "flutter", "xamarin"
+    ],
+    "tools_devops": [
+      "git", "github", "gitlab", "bitbucket", "jira", "confluence",
+      "docker", "kubernetes", "ci/cd", "devops", "agile", "scrum"
+    ],
+    "data_analytics": [
+      "machine learning", "data science", "artificial intelligence", "ai",
+      "deep learning", "neural networks", "tensorflow", "pytorch", "pandas",
+      "numpy", "scikit-learn", "tableau", "power bi", "spark"
+    ],
+    "mobile_development": [
+      "ios", "android", "swift", "objective-c", "kotlin", "java",
+      "react native", "flutter", "xamarin", "cordova", "ionic"
+    ],
+    "security": [
+      "cybersecurity", "penetration testing", "vulnerability assessment",
+      "encryption", "ssl", "oauth", "jwt", "security audit", "compliance"
+    ]
+  },
+  "marketing": {
+    "digital_marketing": [
+      "seo", "sem", "ppc", "google ads", "facebook ads", "social media marketing",
+      "content marketing", "email marketing", "affiliate marketing", "influencer marketing"
+    ],
+    "analytics": [
+      "google analytics", "adobe analytics", "mixpanel", "segment",
+      "conversion tracking", "a/b testing", "cohort analysis", "funnel analysis"
+    ],
+    "tools": [
+      "hubspot", "salesforce", "marketo", "mailchimp", "hootsuite", "buffer",
+      "canva", "photoshop", "illustrator", "figma", "sketch"
+    ],
+    "strategies": [
+      "lead generation", "conversion optimization", "customer acquisition",
+      "retention", "brand awareness", "roi", "ctr", "cpc", "cpm", "ltv"
+    ],
+    "content": [
+      "copywriting", "content strategy", "blog writing", "social media content",
+      "video marketing", "podcast marketing", "webinar", "case studies"
+    ]
+  },
+  "finance": {
+    "accounting": [
+      "gaap", "ifrs", "financial reporting", "budgeting", "forecasting",
+      "variance analysis", "cost accounting", "management accounting"
+    ],
+    "analysis": [
+      "financial modeling", "valuation", "dcf", "ratio analysis", "trend analysis",
+      "sensitivity analysis", "scenario planning", "risk assessment"
+    ],
+    "tools": [
+      "excel", "quickbooks", "sap", "oracle financials", "bloomberg terminal",
+      "reuters", "tableau", "power bi", "sql", "python", "r"
+    ],
+    "compliance": [
+      "sox", "sec reporting", "audit", "internal controls", "risk management",
+      "compliance", "regulatory reporting", "tax planning"
+    ],
+    "investment": [
+      "portfolio management", "asset allocation", "hedge funds", "private equity",
+      "investment banking", "trading", "derivatives", "bonds", "equities"
+    ]
+  },
+  "sales": {
+    "methodologies": [
+      "consultative selling", "solution selling", "challenger sale",
+      "spin selling", "sandler", "meddic", "bant", "value selling"
+    ],
+    "tools": [
+      "salesforce", "hubspot", "pipedrive", "outreach", "salesloft",
+      "linkedin sales navigator", "zoom", "gong", "chorus"
+    ],
+    "metrics": [
+      "quota attainment", "pipeline management", "conversion rates",
+      "average deal size", "sales cycle", "churn rate", "upselling", "cross-selling"
+    ],
+    "types": [
+      "b2b sales", "b2c sales", "inside sales", "outside sales", "field sales",
+      "enterprise sales", "saas sales", "channel sales", "account management"
+    ]
+  },
+  "healthcare": {
+    "clinical": [
+      "patient care", "clinical research", "medical records", "emr", "ehr",
+      "hipaa", "clinical trials", "pharmacology", "diagnostics", "treatment planning"
+    ],
+    "specialties": [
+      "cardiology", "oncology", "neurology", "pediatrics", "geriatrics",
+      "surgery", "radiology", "pathology", "anesthesiology", "emergency medicine"
+    ],
+    "administration": [
+      "healthcare administration", "hospital management", "quality assurance",
+      "accreditation", "joint commission", "cms", "medicare", "medicaid"
+    ],
+    "technology": [
+      "telemedicine", "health informatics", "medical devices", "biomedical engineering",
+      "healthcare analytics", "population health", "interoperability"
+    ]
+  },
+  "education": {
+    "teaching": [
+      "curriculum development", "lesson planning", "classroom management",
+      "differentiated instruction", "assessment", "pedagogy", "learning outcomes"
+    ],
+    "technology": [
+      "educational technology", "lms", "canvas", "blackboard", "moodle",
+      "google classroom", "zoom", "interactive whiteboards", "tablets"
+    ],
+    "administration": [
+      "educational leadership", "school administration", "student services",
+      "enrollment management", "academic advising", "institutional research"
+    ],
+    "specialized": [
+      "special education", "esl", "stem education", "arts education",
+      "adult education", "continuing education", "professional development"
+    ]
+  },
+  "human_resources": {
+    "recruitment": [
+      "talent acquisition", "recruiting", "sourcing", "interviewing",
+      "candidate experience", "employer branding", "ats", "job boards"
+    ],
+    "employee_relations": [
+      "employee engagement", "performance management", "conflict resolution",
+      "disciplinary actions", "employee retention", "workplace culture"
+    ],
+    "compensation": [
+      "compensation analysis", "benefits administration", "payroll",
+      "equity programs", "performance incentives", "salary benchmarking"
+    ],
+    "compliance": [
+      "employment law", "eeoc", "fmla", "ada", "workplace safety",
+      "harassment prevention", "policy development", "training programs"
+    ],
+    "analytics": [
+      "hr analytics", "workforce planning", "turnover analysis",
+      "employee surveys", "metrics", "dashboard", "reporting"
+    ]
+  },
+  "operations": {
+    "process_improvement": [
+      "lean", "six sigma", "kaizen", "process optimization", "workflow analysis",
+      "automation", "efficiency", "quality improvement", "waste reduction"
+    ],
+    "supply_chain": [
+      "supply chain management", "procurement", "vendor management",
+      "inventory management", "logistics", "distribution", "warehousing"
+    ],
+    "project_management": [
+      "project management", "pmp", "agile", "scrum", "kanban", "waterfall",
+      "risk management", "stakeholder management", "resource planning"
+    ],
+    "quality": [
+      "quality assurance", "quality control", "iso", "compliance",
+      "auditing", "continuous improvement", "standard operating procedures"
+    ]
+  },
+  "design": {
+    "graphic_design": [
+      "adobe creative suite", "photoshop", "illustrator", "indesign",
+      "figma", "sketch", "canva", "typography", "branding", "logo design"
+    ],
+    "ux_ui": [
+      "user experience", "user interface", "wireframing", "prototyping",
+      "user research", "usability testing", "interaction design", "design systems"
+    ],
+    "web_design": [
+      "responsive design", "mobile-first", "css", "html", "javascript",
+      "wordpress", "webflow", "bootstrap", "material design"
+    ],
+    "tools": [
+      "figma", "sketch", "adobe xd", "invision", "principle", "framer",
+      "zeplin", "marvel", "balsamiq", "axure"
+    ]
+  }
+}

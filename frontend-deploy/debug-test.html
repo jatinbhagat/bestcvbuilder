@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug 500 Error</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        .result { margin: 10px 0; padding: 10px; border: 1px solid #ccc; background: #f9f9f9; }
+        .error { background: #ffe6e6; border-color: #ff9999; }
+        .success { background: #e6ffe6; border-color: #99ff99; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug 500 Error</h1>
+    
+    <button onclick="testDebugEndpoint()">Test Debug Endpoint</button>
+    <button onclick="testOriginalAPI()">Test Original CV Parser</button>
+    <button onclick="testWithSimpleData()">Test with Simple Data</button>
+    
+    <div id="results"></div>
+    
+    <script>
+        async function testDebugEndpoint() {
+            await makeRequest('/api/debug-500', { test: 'debug' }, 'Debug Endpoint');
+        }
+        
+        async function testOriginalAPI() {
+            await makeRequest('/api/cv-parser', { 
+                file_url: 'https://example.com/test.pdf',
+                analysis_type: 'ats_score'
+            }, 'Original CV Parser');
+        }
+        
+        async function testWithSimpleData() {
+            await makeRequest('/api/cv-parser', { 
+                test: true
+            }, 'CV Parser with Simple Data');
+        }
+        
+        async function makeRequest(url, data, testName) {
+            const results = document.getElementById('results');
+            
+            try {
+                console.log(`Testing ${testName}: ${url}`);
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                console.log(`Response status: ${response.status}`);
+                console.log(`Response headers:`, [...response.headers.entries()]);
+                
+                let responseData;
+                const contentType = response.headers.get('content-type');
+                
+                if (contentType && contentType.includes('application/json')) {
+                    responseData = await response.json();
+                } else {
+                    responseData = await response.text();
+                }
+                
+                console.log(`Response data:`, responseData);
+                
+                const resultClass = response.status === 200 ? 'success' : 'error';
+                
+                results.innerHTML += \`
+                    <div class="result \${resultClass}">
+                        <h3>\${response.status === 200 ? '✅' : '❌'} \${testName}</h3>
+                        <p><strong>Status:</strong> \${response.status}</p>
+                        <p><strong>URL:</strong> \${url}</p>
+                        <p><strong>Response:</strong></p>
+                        <pre>\${typeof responseData === 'object' ? JSON.stringify(responseData, null, 2) : responseData}</pre>
+                    </div>
+                \`;
+                
+            } catch (error) {
+                console.error(`❌ ${testName} failed:`, error);
+                
+                results.innerHTML += \`
+                    <div class="result error">
+                        <h3>❌ \${testName} - Network Error</h3>
+                        <p><strong>Error:</strong> \${error.message}</p>
+                        <p><strong>URL:</strong> \${url}</p>
+                    </div>
+                \`;
+            }
+        }
+        
+        // Auto-run debug test on load
+        window.onload = function() {
+            setTimeout(testDebugEndpoint, 1000);
+        }
+    </script>
+</body>
+</html>

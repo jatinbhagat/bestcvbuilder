@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: bestcvbuilder-api
+    env: python
+    buildCommand: pip install --upgrade pip && pip install -r requirements-render.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY  
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+    healthCheckPath: /health

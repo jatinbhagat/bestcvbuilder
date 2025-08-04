@@ -1,0 +1,23 @@
+# Critical PDF text extraction libraries for ATS analysis
+# These dependencies are REQUIRED for high-quality PDF processing
+
+# Basic PDF extraction (fallback)
+PyPDF2==3.0.1
+
+# Enhanced PDF extraction (better accuracy)
+pdfplumber==0.10.3
+
+# Comprehensive PDF extraction (most accurate)
+pdfminer.six==20221105
+
+# High-performance PDF extraction
+PyMuPDF==1.23.8
+
+# Document processing
+python-docx==1.1.0
+
+# Core dependencies for serverless function
+requests==2.31.0
+
+# Supabase integration (if needed)
+supabase==2.0.2
