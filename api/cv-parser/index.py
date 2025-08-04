@@ -1673,16 +1673,18 @@ def extract_personal_information(content: str) -> Dict[str, Any]:
     
     # Extract contact information
     contact_info = analyze_contact_information(content)
-    if contact_info['found_contacts']['email']:
-        extracted_data['email'] = contact_info['found_contacts']['email'][0]
-    if contact_info['found_contacts']['phone']:
-        extracted_data['phone'] = contact_info['found_contacts']['phone'][0]
-    if contact_info['found_contacts']['linkedin']:
-        extracted_data['linkedin_url'] = 'https://' + contact_info['found_contacts']['linkedin'][0]
-    if contact_info['found_contacts']['github']:
-        extracted_data['github_url'] = 'https://' + contact_info['found_contacts']['github'][0]
-    if contact_info['found_contacts']['website']:
-        extracted_data['website_url'] = contact_info['found_contacts']['website'][0]
+    found_contacts = contact_info.get('found_contacts', {})
+    
+    if found_contacts.get('email'):
+        extracted_data['email'] = found_contacts['email'][0]
+    if found_contacts.get('phone'):
+        extracted_data['phone'] = found_contacts['phone'][0]
+    if found_contacts.get('linkedin'):
+        extracted_data['linkedin_url'] = 'https://' + found_contacts['linkedin'][0]
+    if found_contacts.get('github'):
+        extracted_data['github_url'] = 'https://' + found_contacts['github'][0]
+    if found_contacts.get('website'):
+        extracted_data['website_url'] = found_contacts['website'][0]
     
     # Extract address information
     address_data = extract_address(content)
@@ -2352,8 +2354,10 @@ def analyze_resume_content(file_url: str) -> Dict[str, Any]:
     except (FileProcessingError, TextExtractionError):
         raise  # Re-raise specific errors
     except Exception as e:
+        import traceback
         logger.error(f"Unexpected error in resume analysis: {str(e)}")
-        raise ATSAnalysisError("An unexpected error occurred during analysis")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise ATSAnalysisError(f"An unexpected error occurred during analysis: {str(e)}")
 
 from http.server import BaseHTTPRequestHandler
 
