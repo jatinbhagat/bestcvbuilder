@@ -1712,14 +1712,18 @@ def extract_name(content: str) -> Optional[str]:
     lines = content.split('\n')
     
     # Try first non-empty line first
-    for line in lines[:5]:  # Check first 5 lines
+    for line in lines[:10]:  # Check first 10 lines
         line = line.strip()
         if line and len(line.split()) >= 2:
-            # Check if it looks like a name (Title case, reasonable length)
+            # More flexible name detection
             words = line.split()
-            if len(words) >= 2 and all(word[0].isupper() and word[1:].islower() for word in words[:2]):
-                if len(line) < 50:  # Names shouldn't be too long
-                    return line
+            if len(words) >= 2 and len(words) <= 4:  # Names are typically 2-4 words
+                # Check if first letter of each word is uppercase
+                if all(word and word[0].isupper() for word in words[:2]):
+                    if len(line) < 80 and not any(char in line for char in '@.com|+()'):  # Not email/phone/url
+                        # Additional checks to avoid headers
+                        if not any(keyword in line.upper() for keyword in ['CURRICULUM', 'RESUME', 'CV', 'PROFILE', 'CONTACT']):
+                            return line
     
     # Try regex patterns
     for pattern in NAME_PATTERNS:
@@ -1913,26 +1917,13 @@ def parse_experience_entry(exp_text: str) -> Optional[Dict[str, str]]:
 
 def estimate_years_of_experience(content: str) -> Optional[int]:
     """Estimate years of professional experience from CV content"""
-    # Look for years in experience section
-    years = []
-    year_pattern = r'(19\d{2}|20\d{2})'
     
-    matches = re.findall(year_pattern, content)
-    if matches:
-        years = [int(year) for year in matches]
-        years.sort()
-        
-        if len(years) >= 2:
-            # Calculate span from earliest to latest year
-            span = years[-1] - years[0]
-            if span > 0 and span < 50:  # Reasonable range
-                return span
-    
-    # Look for explicit experience statements
+    # First, try to find explicit experience statements
     exp_statements = [
-        r'(\d+)\s*\+?\s*years?\s+(?:of\s+)?experience',
-        r'experience.*?(\d+)\s*\+?\s*years?',
-        r'(\d+)\s*\+?\s*years?\s+(?:in|with)'
+        r'(\d+)\s*\+?\s*years?\s+(?:of\s+)?(?:professional\s+)?experience',
+        r'(?:professional\s+)?experience.*?(\d+)\s*\+?\s*years?',
+        r'(\d+)\s*\+?\s*years?\s+(?:in|with)',
+        r'over\s+(\d+)\s*years?\s+(?:of\s+)?(?:professional\s+)?experience'
     ]
     
     for pattern in exp_statements:
@@ -1941,6 +1932,33 @@ def estimate_years_of_experience(content: str) -> Optional[int]:
             years_exp = int(match.group(1))
             if 0 < years_exp < 50:
                 return years_exp
+    
+    # If no explicit statement, look for work experience years only (not education)
+    work_section = ""
+    work_patterns = [
+        r'(?:WORK\s+EXPERIENCE|PROFESSIONAL\s+EXPERIENCE|EMPLOYMENT\s+HISTORY|CAREER\s+SUMMARY)[\s:]*\n?(.*?)(?:\n\n|\n(?:EDUCATION|SKILLS|CERTIFICATIONS)|$)',
+        r'(?:EXPERIENCE|EMPLOYMENT)[\s:]*\n?(.*?)(?:\n\n|\n(?:EDUCATION|SKILLS)|$)'
+    ]
+    
+    for pattern in work_patterns:
+        match = re.search(pattern, content, re.IGNORECASE | re.DOTALL)
+        if match:
+            work_section = match.group(1)
+            break
+    
+    if work_section:
+        # Extract years from work experience section only
+        year_pattern = r'(19\d{2}|20\d{2})'
+        matches = re.findall(year_pattern, work_section)
+        if matches:
+            years = [int(year) for year in matches]
+            years.sort()
+            
+            if len(years) >= 2:
+                # Calculate span from earliest to latest work year
+                span = years[-1] - years[0]
+                if span > 0 and span < 50:  # Reasonable range
+                    return span
     
     return None
 
@@ -2193,26 +2211,42 @@ def save_analysis_results(email: str, resume_id: int, analysis_data: Dict[str, A
             
         supabase: Client = create_client(supabase_url, supabase_key)
         
+        # Clean analysis data to remove null bytes and other problematic characters
+        def clean_for_database(obj):
+            """Recursively clean data for database storage"""
+            if isinstance(obj, str):
+                # Remove null bytes and other problematic Unicode characters
+                return obj.replace('\x00', '').replace('\u0000', '').encode('utf-8', 'ignore').decode('utf-8')
+            elif isinstance(obj, dict):
+                return {k: clean_for_database(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [clean_for_database(item) for item in obj]
+            else:
+                return obj
+        
+        # Clean the analysis data
+        cleaned_analysis_data = clean_for_database(analysis_data)
+        
         # Prepare analysis data for database
         analysis_record = {
             'email': email,
             'resume_id': resume_id,
             'session_uuid': session_uuid,
-            'ats_score': analysis_data.get('ats_score', 0),
-            'score_category': analysis_data.get('category', 'poor'),
-            'structure_score': analysis_data.get('component_scores', {}).get('structure', 0),
-            'keywords_score': analysis_data.get('component_scores', {}).get('keywords', 0),
-            'contact_score': analysis_data.get('component_scores', {}).get('contact', 0),
-            'formatting_score': analysis_data.get('component_scores', {}).get('formatting', 0),
-            'achievements_score': analysis_data.get('component_scores', {}).get('achievements', 0),
-            'readability_score': analysis_data.get('component_scores', {}).get('readability', 0),
-            'strengths': analysis_data.get('strengths', []),
-            'improvements': analysis_data.get('improvements', []),
-            'missing_keywords': analysis_data.get('critical_issues', []),
-            'found_keywords': analysis_data.get('suggestions', []),
-            'detailed_analysis': analysis_data.get('detailed_analysis', {}),
-            'recommendations': analysis_data.get('next_steps', []),
-            'detected_industry': analysis_data.get('industry', 'general'),
+            'ats_score': cleaned_analysis_data.get('ats_score', 0),
+            'score_category': cleaned_analysis_data.get('category', 'poor'),
+            'structure_score': cleaned_analysis_data.get('component_scores', {}).get('structure', 0),
+            'keywords_score': cleaned_analysis_data.get('component_scores', {}).get('keywords', 0),
+            'contact_score': cleaned_analysis_data.get('component_scores', {}).get('contact', 0),
+            'formatting_score': cleaned_analysis_data.get('component_scores', {}).get('formatting', 0),
+            'achievements_score': cleaned_analysis_data.get('component_scores', {}).get('achievements', 0),
+            'readability_score': cleaned_analysis_data.get('component_scores', {}).get('readability', 0),
+            'strengths': cleaned_analysis_data.get('strengths', []),
+            'improvements': cleaned_analysis_data.get('improvements', []),
+            'missing_keywords': cleaned_analysis_data.get('critical_issues', []),
+            'found_keywords': cleaned_analysis_data.get('suggestions', []),
+            'detailed_analysis': cleaned_analysis_data.get('detailed_analysis', {}),
+            'recommendations': cleaned_analysis_data.get('next_steps', []),
+            'detected_industry': cleaned_analysis_data.get('industry', 'general'),
             'analysis_version': '2.0'
         }
         
@@ -2318,6 +2352,8 @@ def analyze_resume_content(file_url: str) -> Dict[str, Any]:
         logger.info(f"Non-empty extracted fields: {list(non_empty_fields.keys())}")
         logger.info(f"GitHub found: {personal_info.get('github_url', 'None')}")
         logger.info(f"Website found: {personal_info.get('website_url', 'None')}")
+        logger.info(f"Full name found: {personal_info.get('full_name', 'None')}")
+        logger.info(f"Years of experience: {personal_info.get('years_of_experience', 'None')}")
         
         # Perform comprehensive ATS analysis
         ats_analysis = calculate_comprehensive_ats_score(content)
