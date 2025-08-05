@@ -616,7 +616,7 @@
             
             // Update impact metrics
             const currentRate = getInterviewRate(data.score);
-            const potentialRate = getInterviewRate(Math.min(data.score + 35, 97));
+            const potentialRate = getInterviewRate(Math.min(data.score + 25, 90));
             const multiplier = Math.round(potentialRate / currentRate);
             
             document.getElementById('currentRate').textContent = currentRate + '%';
@@ -629,10 +629,10 @@
             document.getElementById('criticalCount').textContent = data.criticalIssues.length;
             
             const totalIssues = data.quickWins.length + data.criticalIssues.length;
-            const scoreBoost = Math.min(35, 97 - data.score);
+            const scoreBoost = Math.min(25, 90 - data.score);
             
             document.getElementById('totalIssuesCount').textContent = totalIssues;
-            document.getElementById('targetScore').textContent = Math.min(data.score + scoreBoost, 97);
+            document.getElementById('targetScore').textContent = Math.min(data.score + scoreBoost, 90);
             document.getElementById('scoreBoost').textContent = '+' + scoreBoost;
             document.getElementById('scoreImprovement').textContent = '+' + scoreBoost;
             
@@ -740,6 +740,29 @@
             }
         }
 
+        function toggleDetailedReport() {
+            const section = document.getElementById('detailedReportSection');
+            const btn = document.getElementById('viewDetailedReportBtn');
+            
+            if (section.classList.contains('hidden')) {
+                section.classList.remove('hidden');
+                btn.innerHTML = '📊 Hide Detailed Report';
+                // Populate detailed report
+                populateDetailedReport();
+                // Scroll to section
+                section.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                section.classList.add('hidden');
+                btn.innerHTML = '📊 View Detailed Report';
+            }
+        }
+
+        function populateDetailedReport() {
+            // This function will populate the detailed report section
+            // For now, we'll use the existing inline functionality
+            console.log('Detailed report populated');
+        }
+
         function setupEventListeners() {
             // Upgrade button
             document.getElementById('upgradeBtn')?.addEventListener('click', () => {
@@ -755,9 +778,15 @@
                 window.location.href = './index.html';
             });
             
-            // Download report button
-            document.getElementById('downloadReportBtn')?.addEventListener('click', () => {
-                downloadReport();
+            // View detailed report button
+            document.getElementById('viewDetailedReportBtn')?.addEventListener('click', () => {
+                toggleDetailedReport();
+            });
+            
+            // Fix issues button
+            document.getElementById('fixIssuesBtn')?.addEventListener('click', () => {
+                sessionStorage.setItem('upgradeAnalysis', JSON.stringify(sampleData));
+                window.location.href = './payment.html';
             });
         }
 
