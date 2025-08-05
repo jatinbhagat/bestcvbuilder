@@ -120,7 +120,7 @@ ALLOWED_ORIGINS = [
 CONTACT_PATTERNS = {
     'email': r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
     'phone': r'(\+\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}',
-    'linkedin': r'linkedin\.com/in/[\w-]+',
+    'linkedin': r'linkedin\.com/in/[\w-]+|linkedin\.com/in/[\w\.-]+|www\.linkedin\.com/in/[\w-]+',
     'website': r'https?://[\w.-]+\.[\w]{2,}',
     'github': r'github\.com/[\w-]+'
 }

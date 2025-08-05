@@ -18,21 +18,33 @@
     
     <style>
         :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --success-gradient: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-            --warning-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            --danger-gradient: linear-gradient(135deg, #fc466b 0%, #3f5efb 100%);
+            --primary-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            --success-gradient: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            --warning-gradient: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+            --danger-gradient: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
         }
         
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
             min-height: 100vh;
         }
         
         .score-circle {
-            background: conic-gradient(from 0deg, #e2e8f0 0deg, var(--score-color) var(--score-angle), #e2e8f0 var(--score-angle) 360deg);
-            animation: scoreReveal 1.5s ease-out;
+            background: conic-gradient(from 0deg, #ef4444 0deg, #ef4444 234deg, #e2e8f0 234deg 360deg);
+            position: relative;
+        }
+        
+        .score-circle::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 150px;
+            height: 150px;
+            background: white;
+            border-radius: 50%;
         }
         
         @keyframes scoreReveal {
@@ -45,9 +57,7 @@
             50% { transform: scale(1.05); }
         }
         
-        .pulse-animation {
-            animation: pulse 2s ease-in-out infinite;
-        }
+        /* Removed pulse animation for more sober design */
         
         .card-premium {
             background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
@@ -183,17 +193,16 @@
                     <!-- Score Circle -->
                     <div class="text-center">
                         <div class="relative mx-auto mb-6">
-                            <div class="score-circle w-48 h-48 rounded-full flex items-center justify-center p-4 relative" 
-                                 id="scoreCircle" style="--score: 65;">
-                                <div class="bg-white rounded-full w-36 h-36 flex flex-col items-center justify-center">
+                            <div class="score-circle w-48 h-48 rounded-full flex items-center justify-center relative" id="scoreCircle">
+                                <div class="relative z-10 flex flex-col items-center justify-center">
                                     <span class="text-4xl font-black text-gray-900" id="atsScore">65</span>
                                     <span class="text-lg text-gray-500">/100</span>
-                                    <div class="text-sm font-bold text-gray-600 mt-1" id="scoreLetter">D</div>
+                                    <div class="text-sm font-bold text-gray-600 mt-1" id="scoreLetter">Fair</div>
                                 </div>
                             </div>
                         </div>
-                        <h2 class="text-2xl font-bold text-gray-900 mb-2" id="scoreTitle">Your ATS Score: Fair</h2>
-                        <p class="text-gray-600" id="scoreDescription">Your resume needs optimization to pass ATS screening</p>
+                        <h2 class="text-2xl font-bold text-red-600 mb-2" id="scoreTitle">Your ATS Score: Fair</h2>
+                        <p class="text-red-700 font-semibold bg-red-50 px-4 py-2 rounded-lg border border-red-200" id="scoreDescription">⚠️ Your resume needs optimization to pass ATS screening</p>
                     </div>
                     
                     <!-- Impact Stats -->
@@ -229,7 +238,7 @@
                                 <div class="text-xs text-red-600 font-medium">Critical Issues</div>
                             </div>
                             <div class="bg-gradient-to-br from-green-100 to-green-200 rounded-xl p-4 text-center">
-                                <div class="text-2xl font-black text-green-700" id="scoreBoost">+32</div>
+                                <div class="text-2xl font-black text-green-700" id="scoreBoost">+25</div>
                                 <div class="text-xs text-green-600 font-medium">Score Boost</div>
                             </div>
                         </div>
@@ -240,7 +249,7 @@
 
         <!-- Main CTA Section -->
         <section class="mb-8" id="mainCTA">
-            <div class="card-premium rounded-3xl overflow-hidden pulse-animation">
+            <div class="card-premium rounded-3xl overflow-hidden">
                 <!-- Urgency Header -->
                 <div class="bg-gradient-to-r from-orange-400 via-red-400 to-pink-400 px-6 py-4">
                     <div class="flex items-center justify-center text-center">
@@ -257,7 +266,7 @@
                         </h2>
                         <p class="text-xl text-gray-700 mb-2">
                             Our AI will fix all <span id="totalIssuesCount" class="font-black text-red-600">8</span> issues and boost your score to 
-                            <span id="targetScore" class="font-black text-green-600">97+</span> in minutes
+                            <span id="targetScore" class="font-black text-green-600">90+</span> in minutes
                         </p>
                         <p class="text-gray-500">
                             ⏱️ <span id="estimatedTime">5 minutes</span> to complete • 
@@ -270,7 +279,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                         <div class="text-center p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl">
                             <div class="text-4xl mb-3">📈</div>
-                            <div class="text-3xl font-black text-green-600 mb-1" id="scoreImprovement">+35</div>
+                            <div class="text-3xl font-black text-green-600 mb-1" id="scoreImprovement">+25</div>
                             <div class="text-sm text-gray-600 font-medium">ATS Score Boost</div>
                         </div>
                         <div class="text-center p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl">
@@ -460,13 +469,58 @@
             </div>
         </section>
 
+        <!-- Detailed Report Section (Hidden by default) -->
+        <section id="detailedReportSection" class="hidden mb-8">
+            <div class="card-premium rounded-3xl p-6 md:p-8">
+                <h3 class="text-2xl font-bold text-gray-900 mb-6 text-center">
+                    📊 Complete ATS Analysis Report
+                </h3>
+                
+                <!-- Component Breakdown -->
+                <div class="mb-8">
+                    <h4 class="text-xl font-bold text-gray-900 mb-4">Score Breakdown by Component</h4>
+                    <div id="componentScores" class="space-y-4">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- Detailed Issues -->
+                <div class="mb-8">
+                    <h4 class="text-xl font-bold text-gray-900 mb-4">All Issues Identified</h4>
+                    <div id="allIssuesList" class="space-y-3">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- Recommendations -->
+                <div class="mb-8">
+                    <h4 class="text-xl font-bold text-gray-900 mb-4">Detailed Recommendations</h4>
+                    <div id="detailedRecommendations" class="space-y-4">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- Fix CTA -->
+                <div class="text-center p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl">
+                    <h4 class="text-xl font-bold text-gray-900 mb-3">Ready to Fix These Issues?</h4>
+                    <p class="text-gray-600 mb-4">Our AI will automatically fix all these issues and boost your ATS score in just 2 minutes</p>
+                    <button 
+                        id="fixIssuesBtn"
+                        class="bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 px-8 rounded-xl font-bold hover:from-blue-700 hover:to-blue-800 transition-colors transform hover:scale-105"
+                    >
+                        🚀 Fix These Issues in 2 Minutes - $29
+                    </button>
+                </div>
+            </div>
+        </section>
+
         <!-- Secondary Actions -->
         <section class="text-center mb-8">
             <button 
-                id="downloadReportBtn"
-                class="bg-white border-2 border-gray-300 text-gray-700 py-4 px-8 rounded-xl font-bold hover:bg-gray-50 transition-colors mb-4 w-full md:w-auto"
+                id="viewDetailedReportBtn"
+                class="bg-gray-100 border-2 border-gray-300 text-gray-700 py-4 px-8 rounded-xl font-bold hover:bg-gray-50 transition-colors mb-4 w-full md:w-auto"
             >
-                📄 Download Detailed Report
+                📊 View Detailed Report
             </button>
         </section>
     </main>

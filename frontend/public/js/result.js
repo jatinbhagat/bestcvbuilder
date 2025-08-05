@@ -17,7 +17,9 @@ const improvementsList = document.getElementById('improvementsList');
 const detailedAnalysis = document.getElementById('detailedAnalysis');
 const upgradeBtn = document.getElementById('upgradeBtn');
 const newAnalysisBtn = document.getElementById('newAnalysisBtn');
-const downloadReportBtn = document.getElementById('downloadReportBtn');
+const viewDetailedReportBtn = document.getElementById('viewDetailedReportBtn');
+const detailedReportSection = document.getElementById('detailedReportSection');
+const fixIssuesBtn = document.getElementById('fixIssuesBtn');
 
 // New enhanced UI elements
 const criticalAlert = document.getElementById('criticalAlert');
@@ -388,9 +390,14 @@ function setupEventListeners() {
         newAnalysisBtn.addEventListener('click', handleNewAnalysis);
     }
     
-    // Download report button
-    if (downloadReportBtn) {
-        downloadReportBtn.addEventListener('click', handleDownloadReport);
+    // View detailed report button
+    if (viewDetailedReportBtn) {
+        viewDetailedReportBtn.addEventListener('click', handleViewDetailedReport);
+    }
+    
+    // Fix issues button (in detailed report)
+    if (fixIssuesBtn) {
+        fixIssuesBtn.addEventListener('click', handleFixIssues);
     }
     
     // Detailed analysis toggle
@@ -473,18 +480,130 @@ function handleNewAnalysis() {
 }
 
 /**
- * Handle download report button click
+ * Handle view detailed report button click
  */
-async function handleDownloadReport() {
+function handleViewDetailedReport() {
     try {
-        console.log('Generating downloadable report');
+        console.log('Showing detailed report');
         
-        const report = generateDownloadableReport();
-        downloadReport(report);
+        // Toggle detailed report section
+        if (detailedReportSection.classList.contains('hidden')) {
+            detailedReportSection.classList.remove('hidden');
+            viewDetailedReportBtn.textContent = '📊 Hide Detailed Report';
+            
+            // Populate detailed report content
+            populateDetailedReport();
+            
+            // Scroll to detailed report
+            detailedReportSection.scrollIntoView({ behavior: 'smooth' });
+        } else {
+            detailedReportSection.classList.add('hidden');
+            viewDetailedReportBtn.textContent = '📊 View Detailed Report';
+        }
         
     } catch (error) {
-        console.error('Error generating report:', error);
-        showError('Failed to generate report.');
+        console.error('Error showing detailed report:', error);
+        showError('Failed to display detailed report.');
+    }
+}
+
+/**
+ * Handle fix issues button click - redirects to payment
+ */
+function handleFixIssues() {
+    try {
+        console.log('Redirecting to payment to fix issues');
+        
+        // Store current analysis for payment flow
+        sessionStorage.setItem('upgradeAnalysis', JSON.stringify(analysisData));
+        
+        // Redirect to payment page
+        window.location.href = './payment.html';
+        
+    } catch (error) {
+        console.error('Error handling fix issues request:', error);
+        showError('Failed to process fix request.');
+    }
+}
+
+/**
+ * Populate detailed report content
+ */
+function populateDetailedReport() {
+    if (!analysisData) return;
+    
+    // Populate component scores
+    const componentScores = document.getElementById('componentScores');
+    if (componentScores && analysisData.components) {
+        componentScores.innerHTML = '';
+        Object.entries(analysisData.components).forEach(([component, data]) => {
+            const percentage = Math.round((data.score / data.max_score) * 100);
+            const componentDiv = document.createElement('div');
+            componentDiv.className = 'bg-gray-50 rounded-lg p-4';
+            componentDiv.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <span class="font-medium text-gray-900 capitalize">${component.replace('_', ' ')}</span>
+                    <span class="font-bold text-gray-900">${data.score}/${data.max_score}</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div class="bg-blue-600 h-2 rounded-full" style="width: ${percentage}%"></div>
+                </div>
+                <div class="text-sm text-gray-600 mt-1">${percentage}% Complete</div>
+            `;
+            componentScores.appendChild(componentDiv);
+        });
+    }
+    
+    // Populate all issues
+    const allIssuesList = document.getElementById('allIssuesList');
+    if (allIssuesList) {
+        allIssuesList.innerHTML = '';
+        
+        // Combine all issues
+        const allIssues = [
+            ...(analysisData.quick_wins || []),
+            ...(analysisData.critical_issues || [])
+        ];
+        
+        allIssues.forEach(issue => {
+            const issueDiv = document.createElement('div');
+            issueDiv.className = `bg-gray-50 rounded-lg p-4 border-l-4 ${
+                issue.impact === 'Critical' ? 'border-red-400' : 'border-blue-400'
+            }`;
+            issueDiv.innerHTML = `
+                <div class="flex justify-between items-start mb-2">
+                    <h5 class="font-medium text-gray-900">${issue.title}</h5>
+                    <span class="text-xs font-bold px-2 py-1 rounded-full ${
+                        issue.impact === 'Critical' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                    }">
+                        +${issue.points_gain}pts
+                    </span>
+                </div>
+                <p class="text-sm text-gray-600 mb-1">${issue.issue}</p>
+                <p class="text-sm text-gray-800">${issue.solution}</p>
+                <div class="text-xs text-gray-500 mt-2">Time to fix: ${issue.time_to_fix}</div>
+            `;
+            allIssuesList.appendChild(issueDiv);
+        });
+    }
+    
+    // Populate recommendations
+    const detailedRecommendations = document.getElementById('detailedRecommendations');
+    if (detailedRecommendations && analysisData.recommendations) {
+        detailedRecommendations.innerHTML = '';
+        analysisData.recommendations.forEach((rec, index) => {
+            const recDiv = document.createElement('div');
+            recDiv.className = 'bg-blue-50 rounded-lg p-4';
+            recDiv.innerHTML = `
+                <div class="flex items-start">
+                    <div class="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3 mt-0.5">
+                        ${index + 1}
+                    </div>
+                    <p class="text-gray-800">${rec}</p>
+                </div>
+            `;
+            detailedRecommendations.appendChild(recDiv);
+        });
     }
 }
 
