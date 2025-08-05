@@ -14,12 +14,12 @@ import { analyzeResumeWithFallback, BUILD_ID, API_BASE_URL, CV_PARSER_ENDPOINT }
 
 // DOM Elements
 const uploadForm = document.getElementById('uploadForm');
-const resumeFileInput = document.getElementById('resumeFile');
-const uploadBtn = document.getElementById('uploadBtn');
+const resumeFileInput = document.getElementById('fileInput');
+const uploadBtn = document.getElementById('analyzeBtn');
 const loadingState = document.getElementById('loadingState');
 
 // File upload drop zone
-const dropZone = document.querySelector('.border-dashed');
+const dropZone = document.getElementById('uploadArea');
 
 /**
  * Initialize the application
@@ -69,10 +69,17 @@ function displayBuildInfo() {
  */
 function setupEventListeners() {
     // File input change
-    resumeFileInput.addEventListener('change', handleFileSelect);
+    if (resumeFileInput) {
+        resumeFileInput.addEventListener('change', handleFileSelect);
+    }
     
     // Form submission
-    uploadForm.addEventListener('submit', handleFormSubmit);
+    if (uploadForm) {
+        uploadForm.addEventListener('submit', handleFormSubmit);
+    }
+    
+    // Listen for custom resume upload event from inline script
+    document.addEventListener('resumeUpload', handleCustomUpload);
     
     // Drag and drop functionality
     if (dropZone) {
@@ -88,8 +95,13 @@ function setupEventListeners() {
  */
 function handleFileSelect(event) {
     const file = event.target.files[0];
-    if (file) {
-        validateAndProcessFile(file);
+    if (file && validateAndProcessFile(file)) {
+        // Update file display
+        const fileName = document.getElementById('fileName');
+        const fileInfo = document.getElementById('fileInfo');
+        if (fileName) fileName.textContent = file.name;
+        if (fileInfo) fileInfo.classList.remove('hidden');
+        if (uploadBtn) uploadBtn.disabled = false;
     }
 }
 
@@ -99,13 +111,23 @@ function handleFileSelect(event) {
 async function handleFormSubmit(event) {
     event.preventDefault();
     
-    const file = resumeFileInput.files[0];
+    const file = resumeFileInput ? resumeFileInput.files[0] : null;
     if (!file) {
         showError('Please select a resume file');
         return;
     }
     
     await processResumeUpload(file);
+}
+
+/**
+ * Handle custom upload event from inline script
+ */
+async function handleCustomUpload(event) {
+    const { file } = event.detail;
+    if (file && validateAndProcessFile(file)) {
+        await processResumeUpload(file);
+    }
 }
 
 /**
@@ -161,15 +183,11 @@ async function processResumeUpload(file) {
         // Show loading state
         setLoadingState(true);
         
-        // Step 1: Upload file with progress
+        // Step 1: Upload file
         console.log('📤 Step 1: Uploading file to storage...');
         showUploadProgress();
         const fileUrl = await uploadFile(file);
         console.log('✅ File uploaded successfully:', fileUrl);
-        
-        // Show upload complete
-        showUploadComplete();
-        await new Promise(resolve => setTimeout(resolve, 800)); // Brief pause to show completion
         
         // Step 2: Analyze resume (with user ID for database saving)
         console.log('🔍 Step 2: Starting ATS analysis...');
@@ -227,28 +245,39 @@ async function processResumeUpload(file) {
  */
 function handleDragOver(event) {
     event.preventDefault();
-    dropZone.classList.add('border-primary-500', 'bg-primary-50');
+    dropZone.classList.add('dragover');
 }
 
 function handleDragEnter(event) {
     event.preventDefault();
-    dropZone.classList.add('border-primary-500', 'bg-primary-50');
+    dropZone.classList.add('dragover');
 }
 
 function handleDragLeave(event) {
     event.preventDefault();
-    dropZone.classList.remove('border-primary-500', 'bg-primary-50');
+    dropZone.classList.remove('dragover');
 }
 
 function handleDrop(event) {
     event.preventDefault();
-    dropZone.classList.remove('border-primary-500', 'bg-primary-50');
+    dropZone.classList.remove('dragover');
     
     const files = event.dataTransfer.files;
     if (files.length > 0) {
         const file = files[0];
-        resumeFileInput.files = files;
-        validateAndProcessFile(file);
+        if (resumeFileInput) {
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            resumeFileInput.files = dt.files;
+        }
+        if (validateAndProcessFile(file)) {
+            // Update file display
+            const fileName = document.getElementById('fileName');
+            const fileInfo = document.getElementById('fileInfo');
+            if (fileName) fileName.textContent = file.name;
+            if (fileInfo) fileInfo.classList.remove('hidden');
+            if (uploadBtn) uploadBtn.disabled = false;
+        }
     }
 }
 
@@ -256,66 +285,39 @@ function handleDrop(event) {
  * Set loading state
  */
 function setLoadingState(isLoading) {
+    const buttonText = document.getElementById('buttonText');
+    const loadingText = document.getElementById('loadingText');
+    
     if (isLoading) {
-        uploadForm.classList.add('hidden');
-        loadingState.classList.remove('hidden');
-        uploadBtn.disabled = true;
-        resetProgressStates();
+        if (buttonText) buttonText.style.display = 'none';
+        if (loadingText) loadingText.style.display = 'flex';
+        if (uploadBtn) uploadBtn.disabled = true;
     } else {
-        uploadForm.classList.remove('hidden');
-        loadingState.classList.add('hidden');
-        uploadBtn.disabled = false;
+        if (buttonText) buttonText.style.display = 'inline';
+        if (loadingText) loadingText.style.display = 'none';
+        if (uploadBtn) uploadBtn.disabled = false;
     }
 }
 
 /**
- * Reset all progress states
- */
-function resetProgressStates() {
-    document.getElementById('uploadProgress').classList.remove('hidden');
-    document.getElementById('uploadComplete').classList.add('hidden');
-    document.getElementById('analysisProgress').classList.add('hidden');
-    document.getElementById('uploadBar').style.width = '0%';
-}
-
-/**
- * Show upload progress with animated progress bar
+ * Show upload progress (simplified for current UI)
  */
 function showUploadProgress() {
-    document.getElementById('uploadProgress').classList.remove('hidden');
-    document.getElementById('uploadComplete').classList.add('hidden');
-    document.getElementById('analysisProgress').classList.add('hidden');
-    
-    // Animate progress bar
-    let progress = 0;
-    const progressBar = document.getElementById('uploadBar');
-    const interval = setInterval(() => {
-        progress += Math.random() * 15;
-        if (progress >= 95) {
-            progress = 95;
-            clearInterval(interval);
-        }
-        progressBar.style.width = progress + '%';
-    }, 100);
+    console.log('📤 Upload progress started');
 }
 
 /**
- * Show upload complete state
+ * Show upload complete state (simplified for current UI)
  */
 function showUploadComplete() {
-    document.getElementById('uploadBar').style.width = '100%';
-    setTimeout(() => {
-        document.getElementById('uploadProgress').classList.add('hidden');
-        document.getElementById('uploadComplete').classList.remove('hidden');
-    }, 300);
+    console.log('✅ Upload completed');
 }
 
 /**
- * Show analysis progress
+ * Show analysis progress (simplified for current UI)
  */
 function showAnalysisProgress() {
-    document.getElementById('uploadComplete').classList.add('hidden');
-    document.getElementById('analysisProgress').classList.remove('hidden');
+    console.log('🔍 Analysis in progress');
 }
 
 /**
