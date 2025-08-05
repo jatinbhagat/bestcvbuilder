@@ -1,0 +1,16 @@
+DEPLOYMENT TRIGGER - 2025-08-05 22:30 UTC
+This file is created to force a fresh deployment on Render.com
+
+Issues being fixed:
+1. White text on white background in CTA metrics boxes
+2. LinkedIn detection not working properly  
+3. Point values still showing instead of labels
+4. Build system not properly deploying changes
+
+Expected fixes after this deployment:
+- CTA boxes should show visible text (green/blue/purple numbers with white labels)
+- LinkedIn issues should be hidden when LinkedIn URL exists in CV
+- Point values should be replaced with "Quick Fix" and "Critical" labels
+- ATS-focused language should be used throughout
+
+Deployment timestamp: 2025-08-05T22:30:00Z
