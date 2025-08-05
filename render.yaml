@@ -3,6 +3,7 @@ services:
   - type: web
     name: bestcvbuilder-frontend
     env: static
+    rootDir: frontend
     buildCommand: npm ci && npm run build
     staticPublishPath: ./dist
     routes:

@@ -28,7 +28,8 @@
       "Bash(python:*)",
       "Bash(mkdir:*)",
       "Bash(git init:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npx tailwindcss:*)"
     ],
     "deny": []
   }
