@@ -125,16 +125,16 @@
                 
                 <div class="grid md:grid-cols-3 gap-6 mb-8">
                     <div class="bg-white bg-opacity-20 rounded-xl p-4">
-                        <div class="text-3xl font-black text-green-300">+25</div>
-                        <div class="text-sm">ATS Score Boost</div>
+                        <div class="text-3xl font-black text-green-100">+25</div>
+                        <div class="text-sm text-white">ATS Score Boost</div>
                     </div>
                     <div class="bg-white bg-opacity-20 rounded-xl p-4">
-                        <div class="text-3xl font-black text-blue-300">5x</div>
-                        <div class="text-sm">More Interviews</div>
+                        <div class="text-3xl font-black text-blue-100">5x</div>
+                        <div class="text-sm text-white">More Interviews</div>
                     </div>
                     <div class="bg-white bg-opacity-20 rounded-xl p-4">
-                        <div class="text-3xl font-black text-purple-300">2min</div>
-                        <div class="text-sm">Time Saved</div>
+                        <div class="text-3xl font-black text-purple-100">2min</div>
+                        <div class="text-sm text-white">Time Saved</div>
                     </div>
                 </div>
 
@@ -156,16 +156,16 @@
                     <div>
                         <h4 class="text-lg font-bold text-blue-600 mb-4">✅ Quick Fixes (2 Minutes Each)</h4>
                         <div class="space-y-3">
-                            <div class="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-400">
+                            <div class="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-400" data-issue="linkedin">
                                 <div class="flex justify-between items-center">
-                                    <span class="text-gray-800 font-medium">Add LinkedIn profile URL</span>
-                                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-bold">+3pts</span>
+                                    <span class="text-gray-800 font-medium">ATS cannot effectively detect your LinkedIn profile</span>
+                                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-bold">Quick Fix</span>
                                 </div>
                             </div>
                             <div class="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-400">
                                 <div class="flex justify-between items-center">
-                                    <span class="text-gray-800 font-medium">Optimize bullet point formatting</span>
-                                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-bold">+4pts</span>
+                                    <span class="text-gray-800 font-medium">ATS struggles to parse your bullet point format</span>
+                                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-bold">Quick Fix</span>
                                 </div>
                             </div>
                         </div>
@@ -177,17 +177,17 @@
                         <div class="space-y-3">
                             <div class="bg-red-50 rounded-lg p-4 border-l-4 border-red-400">
                                 <div class="flex justify-between items-center mb-2">
-                                    <span class="text-gray-800 font-medium">Missing professional summary</span>
-                                    <span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-bold">+12pts</span>
+                                    <span class="text-gray-800 font-medium">ATS cannot find your professional summary</span>
+                                    <span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-bold">Critical</span>
                                 </div>
-                                <p class="text-sm text-gray-600">ATS systems look for a summary to understand your profile</p>
+                                <p class="text-sm text-gray-600">ATS systems look for a summary section to understand your profile</p>
                             </div>
                             <div class="bg-red-50 rounded-lg p-4 border-l-4 border-red-400">
                                 <div class="flex justify-between items-center mb-2">
-                                    <span class="text-gray-800 font-medium">Poor keyword optimization</span>
-                                    <span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-bold">+15pts</span>
+                                    <span class="text-gray-800 font-medium">ATS cannot match your skills to job requirements</span>
+                                    <span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-bold">Critical</span>
                                 </div>
-                                <p class="text-sm text-gray-600">Missing key terms that recruiters search for</p>
+                                <p class="text-sm text-gray-600">Missing key terms that ATS systems scan for</p>
                             </div>
                         </div>
                     </div>
@@ -229,6 +229,65 @@
                 <h3 class="text-2xl font-bold text-gray-900 mb-6 text-center">
                     📊 Complete Analysis Report
                 </h3>
+                <!-- Component Breakdown -->
+                <div class="mb-8">
+                    <h4 class="text-xl font-bold text-gray-900 mb-4">ATS Component Analysis</h4>
+                    <div id="componentBreakdown" class="space-y-4">
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-medium text-gray-900">Contact Information</span>
+                                <span class="font-bold text-gray-900">12/15</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-blue-600 h-2 rounded-full" style="width: 80%"></div>
+                            </div>
+                            <div class="text-sm text-gray-600 mt-1">80% ATS Compatible</div>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-medium text-gray-900">Keywords & Skills</span>
+                                <span class="font-bold text-gray-900">8/20</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-red-600 h-2 rounded-full" style="width: 40%"></div>
+                            </div>
+                            <div class="text-sm text-gray-600 mt-1">40% ATS Compatible - Needs Improvement</div>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-medium text-gray-900">Resume Structure</span>
+                                <span class="font-bold text-gray-900">15/25</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-yellow-600 h-2 rounded-full" style="width: 60%"></div>
+                            </div>
+                            <div class="text-sm text-gray-600 mt-1">60% ATS Compatible</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- All Issues List -->
+                <div class="mb-8">
+                    <h4 class="text-xl font-bold text-gray-900 mb-4">Issues Preventing ATS Success</h4>
+                    <div class="space-y-3">
+                        <div class="bg-red-50 rounded-lg p-4 border-l-4 border-red-400">
+                            <h5 class="font-medium text-gray-900 mb-1">ATS cannot find your professional summary</h5>
+                            <p class="text-sm text-gray-600 mb-2">ATS systems scan for a dedicated summary section at the top of your resume</p>
+                            <p class="text-sm text-blue-600 font-medium">🔧 Fix: Add a "Professional Summary" section with 2-3 key accomplishments</p>
+                        </div>
+                        <div class="bg-red-50 rounded-lg p-4 border-l-4 border-red-400">
+                            <h5 class="font-medium text-gray-900 mb-1">ATS cannot match your skills to job requirements</h5>
+                            <p class="text-sm text-gray-600 mb-2">Your resume lacks industry-specific keywords that ATS systems search for</p>
+                            <p class="text-sm text-blue-600 font-medium">🔧 Fix: Add relevant keywords throughout your experience and skills sections</p>
+                        </div>
+                        <div class="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-400" data-issue="linkedin-detailed">
+                            <h5 class="font-medium text-gray-900 mb-1">ATS cannot effectively detect your LinkedIn profile</h5>
+                            <p class="text-sm text-gray-600 mb-2">LinkedIn URL format may not be ATS-readable in current position</p>
+                            <p class="text-sm text-blue-600 font-medium">🔧 Fix: Move LinkedIn URL to contact header with proper formatting</p>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="text-center p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl">
                     <h4 class="text-xl font-bold text-gray-900 mb-3">Ready to Fix These Issues?</h4>
                     <p class="text-gray-600 mb-4">Our AI will automatically fix all these issues and boost your ATS score in just 2 minutes</p>
@@ -346,10 +405,29 @@
                         scoreElement.textContent = score;
                         console.log('Score updated to:', score);
                     }
+                    
+                    // Update issues based on actual analysis
+                    updateIssuesDisplay(data);
                 }
             } catch (error) {
                 console.error('Error loading score:', error);
             }
+        }
+
+        function updateIssuesDisplay(data) {
+            console.log('Analysis data:', data);
+            
+            // Check if LinkedIn URL exists in the personal info
+            if (data.personal_info && data.personal_info.linkedin_url) {
+                // LinkedIn exists, hide the LinkedIn issues
+                const linkedinIssues = document.querySelectorAll('[data-issue=\"linkedin\"], [data-issue=\"linkedin-detailed\"]');
+                linkedinIssues.forEach(issue => {
+                    issue.style.display = 'none';
+                });
+                console.log('LinkedIn URL found, hiding LinkedIn issues');
+            }
+            
+            // You can add more dynamic issue updates here based on actual analysis data
         }
 
         console.log('Script loaded successfully');
