@@ -1,7 +1,7 @@
-# Render.com Compatible Dependencies - Simplified
+# Render.com Compatible Dependencies with PyMuPDF
 requests==2.31.0
 python-docx==1.1.0
-PyMuPDF==1.23.26
+PyMuPDF==1.24.2
 pdfplumber==0.11.0
 supabase==2.4.2
 flask==3.0.2

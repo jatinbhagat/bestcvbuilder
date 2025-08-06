@@ -226,13 +226,13 @@ except ImportError as e:
     logger.warning(f"⚠️  pdfplumber not available: {e}")
     PDFPLUMBER_AVAILABLE = False
 
-# Check PyMuPDF/fitz (accurate text extraction)
+# Check PyMuPDF/fitz (primary PDF extraction)
 try:
-    import fitz
+    import fitz  # PyMuPDF
     PYMUPDF_AVAILABLE = True
-    logger.info("✅ PyMuPDF/fitz available (accurate PDF extraction)")
+    logger.info("✅ PyMuPDF available for PDF extraction")
 except ImportError as e:
-    logger.warning(f"⚠️  PyMuPDF not available: {e}")
+    logger.error(f"❌ CRITICAL: PyMuPDF not available: {e}")
     PYMUPDF_AVAILABLE = False
 
 # Check pdfminer (comprehensive extraction)

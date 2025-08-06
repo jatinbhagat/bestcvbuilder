@@ -15,7 +15,11 @@ services:
   - type: web
     name: bestcvbuilder-api
     env: python
-    buildCommand: pip install --upgrade pip && pip install -r requirements-render.txt
+    buildCommand: |
+      apt-get update
+      apt-get install -y build-essential swig python3-dev
+      pip install --upgrade pip setuptools wheel
+      pip install -r requirements-render.txt
     startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
     envVars:
       - key: SUPABASE_URL
