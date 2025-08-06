@@ -378,6 +378,16 @@ function setupEventListeners() {
     // Check if payment bypass is enabled
     checkPaymentBypass();
     
+    // Add keyboard shortcut for testing (Ctrl+Shift+B)
+    document.addEventListener('keydown', function(event) {
+        if (event.ctrlKey && event.shiftKey && event.key === 'B') {
+            console.log('🧪 Manual bypass activation via keyboard shortcut');
+            sessionStorage.setItem('BYPASS_PAYMENT', 'true');
+            checkPaymentBypass();
+            showSuccess('Payment bypass activated manually!');
+        }
+    });
+    
     // Upgrade button
     if (upgradeBtn) {
         upgradeBtn.addEventListener('click', handleUpgrade);
@@ -1138,15 +1148,47 @@ function updateUpgradeSection(insights) {
 function checkPaymentBypass() {
     // Check for environment variable or URL parameter
     const urlParams = new URLSearchParams(window.location.search);
-    const bypassEnabled = urlParams.get('bypass') === 'true' || 
-                         window.location.hostname === 'localhost' ||
-                         window.location.hostname.includes('preview') ||
-                         sessionStorage.getItem('BYPASS_PAYMENT') === 'true';
+    const currentHostname = window.location.hostname;
+    const bypassParam = urlParams.get('bypass') === 'true';
+    const bypassSession = sessionStorage.getItem('BYPASS_PAYMENT') === 'true';
     
-    if (bypassEnabled && bypassPaymentBtn) {
+    console.log('🔍 Checking payment bypass:');
+    console.log('  - Current hostname:', currentHostname);
+    console.log('  - URL bypass param:', bypassParam);
+    console.log('  - Session bypass:', bypassSession);
+    
+    const bypassEnabled = bypassParam || 
+                         bypassSession ||
+                         currentHostname === 'localhost' ||
+                         currentHostname === '127.0.0.1' ||
+                         currentHostname.includes('localhost') ||
+                         currentHostname.includes('preview') ||
+                         currentHostname.includes('render.com') ||
+                         currentHostname.includes('onrender.com') ||
+                         currentHostname.includes('vercel.app');
+    
+    console.log('  - Bypass enabled:', bypassEnabled);
+    
+    // TEMPORARY: Always show bypass button for testing
+    const ALWAYS_SHOW_BYPASS = true; // Set to false after testing
+    
+    if ((bypassEnabled || ALWAYS_SHOW_BYPASS) && bypassPaymentBtn) {
         bypassPaymentBtn.classList.remove('hidden');
-        console.log('🧪 Payment bypass enabled for testing');
+        console.log('🧪 Payment bypass button shown for testing');
+    } else {
+        console.log('🚫 Payment bypass not enabled');
+        if (!bypassPaymentBtn) {
+            console.log('  - bypassPaymentBtn element not found');
+        }
     }
+    
+    // Add global function for manual testing
+    window.enablePaymentBypass = function() {
+        sessionStorage.setItem('BYPASS_PAYMENT', 'true');
+        checkPaymentBypass();
+        console.log('🧪 Payment bypass enabled via console');
+        alert('Payment bypass enabled!');
+    };
 }
 
 /**

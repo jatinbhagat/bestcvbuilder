@@ -361,10 +361,21 @@ function initTestingControls() {
     const enableBypassBtn = document.getElementById('enableBypassBtn');
     const disableBypassBtn = document.getElementById('disableBypassBtn');
     
-    // Only show on localhost or preview environments
-    if (window.location.hostname === 'localhost' || 
-        window.location.hostname.includes('preview') ||
-        window.location.hostname.includes('render.com')) {
+    // Only show on development/staging environments
+    const currentHostname = window.location.hostname;
+    const showTestingControls = currentHostname === 'localhost' || 
+                               currentHostname === '127.0.0.1' ||
+                               currentHostname.includes('localhost') ||
+                               currentHostname.includes('preview') ||
+                               currentHostname.includes('render.com') ||
+                               currentHostname.includes('onrender.com') ||
+                               currentHostname.includes('vercel.app');
+    
+    console.log('🔍 Testing controls check:');
+    console.log('  - Current hostname:', currentHostname);
+    console.log('  - Show testing controls:', showTestingControls);
+    
+    if (showTestingControls) {
         
         if (testingControls) {
             testingControls.classList.remove('hidden');
