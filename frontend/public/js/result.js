@@ -419,6 +419,12 @@ function setupEventListeners() {
         fixIssuesBtn.addEventListener('click', handleFixIssues);
     }
     
+    // Fix issues button 2 (in detailed report section)
+    const fixIssuesBtn2 = document.getElementById('fixIssuesBtn2');
+    if (fixIssuesBtn2) {
+        fixIssuesBtn2.addEventListener('click', handleFixIssues);
+    }
+    
     // Detailed analysis toggle
     const toggleBtn = document.getElementById('toggleDetailedAnalysis');
     const detailsSection = document.getElementById('detailedAnalysisSection');
@@ -473,10 +479,28 @@ function setupStickyCtaVisibility() {
  * Handle upgrade button click - check for payment bypass first
  */
 function handleUpgrade() {
-    console.log('User clicked Fix My Resume Now - ALWAYS BYPASSING PAYMENT');
+    console.log('🚀 User clicked Fix My Resume Now - ALWAYS BYPASSING PAYMENT');
     
-    // TEMPORARY: Always bypass payment and go straight to success
-    createMockSuccessDataAndRedirect();
+    try {
+        // Show immediate feedback
+        if (upgradeBtn) {
+            upgradeBtn.disabled = true;
+            upgradeBtn.textContent = '🔄 Processing...';
+        }
+        
+        // TEMPORARY: Always bypass payment and go straight to success
+        createMockSuccessDataAndRedirect();
+        
+    } catch (error) {
+        console.error('❌ Error in handleUpgrade:', error);
+        showError('Something went wrong. Please try again.');
+        
+        // Reset button
+        if (upgradeBtn) {
+            upgradeBtn.disabled = false;
+            upgradeBtn.textContent = '🚀 Fix My Resume Now - $9';
+        }
+    }
 }
 
 /**
@@ -1245,25 +1269,29 @@ function createMockSuccessDataAndRedirect() {
         const mockRewriteData = {
             original_score: originalScore,
             new_score: Math.min(originalScore + 30, 95),
+            score_improvement: Math.min(30, 95 - originalScore),
             improved_resume_url: 'bypass-resume.pdf',
-            bypass_mode: true
+            bypass_mode: true,
+            completed_at: new Date().toISOString()
         };
         
         // Store in session
         sessionStorage.setItem('paymentResult', JSON.stringify(mockPaymentData));
         sessionStorage.setItem('cvRewriteResult', JSON.stringify(mockRewriteData));
         
-        console.log('✅ Mock data stored, redirecting to success...');
-        showSuccess('Bypass successful! Redirecting to success page...');
+        console.log('✅ Mock data stored:');
+        console.log('  - Payment:', mockPaymentData);
+        console.log('  - Rewrite:', mockRewriteData);
         
-        // Quick redirect
-        setTimeout(() => {
-            window.location.href = './success.html';
-        }, 1000);
+        showSuccess('Processing complete! Redirecting to success page...');
+        
+        // Immediate redirect (no delay)
+        console.log('🔄 Redirecting to success.html...');
+        window.location.href = './success.html';
         
     } catch (error) {
         console.error('❌ Bypass error:', error);
-        showError('Bypass failed: ' + error.message);
+        showError('Failed to process: ' + error.message);
     }
 }
 
