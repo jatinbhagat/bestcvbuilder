@@ -16,6 +16,7 @@ const strengthsList = document.getElementById('strengthsList');
 const improvementsList = document.getElementById('improvementsList');
 const detailedAnalysis = document.getElementById('detailedAnalysis');
 const upgradeBtn = document.getElementById('upgradeBtn');
+const bypassPaymentBtn = document.getElementById('bypassPaymentBtn');
 const newAnalysisBtn = document.getElementById('newAnalysisBtn');
 const viewDetailedReportBtn = document.getElementById('viewDetailedReportBtn');
 const detailedReportSection = document.getElementById('detailedReportSection');
@@ -374,9 +375,17 @@ function formatComponentDetails(data) {
  * Set up event listeners
  */
 function setupEventListeners() {
+    // Check if payment bypass is enabled
+    checkPaymentBypass();
+    
     // Upgrade button
     if (upgradeBtn) {
         upgradeBtn.addEventListener('click', handleUpgrade);
+    }
+    
+    // Bypass payment button (testing mode)
+    if (bypassPaymentBtn) {
+        bypassPaymentBtn.addEventListener('click', handleBypassPayment);
     }
     
     // Sticky mobile upgrade button
@@ -1121,6 +1130,105 @@ function updateUpgradeSection(insights) {
         }
         estimatedTime.textContent = timeEstimate;
     }
+}
+
+/**
+ * Check if payment bypass is enabled for testing
+ */
+function checkPaymentBypass() {
+    // Check for environment variable or URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const bypassEnabled = urlParams.get('bypass') === 'true' || 
+                         window.location.hostname === 'localhost' ||
+                         window.location.hostname.includes('preview') ||
+                         sessionStorage.getItem('BYPASS_PAYMENT') === 'true';
+    
+    if (bypassEnabled && bypassPaymentBtn) {
+        bypassPaymentBtn.classList.remove('hidden');
+        console.log('🧪 Payment bypass enabled for testing');
+    }
+}
+
+/**
+ * Handle bypass payment for testing
+ */
+function handleBypassPayment() {
+    console.log('🧪 Bypassing payment for testing');
+    
+    try {
+        // Create mock payment success data
+        const mockPaymentData = {
+            payment_id: `test_payment_${Date.now()}`,
+            amount: 2900, // $29.00 in cents
+            status: 'succeeded',
+            email: analysisData?.personal_information?.email || 'test@bestcvbuilder.com',
+            timestamp: new Date().toISOString()
+        };
+        
+        // Create mock CV rewrite result
+        const originalScore = analysisData?.ats_score || analysisData?.score || 65;
+        const mockRewriteResult = {
+            original_score: originalScore,
+            new_score: Math.min(originalScore + 25, 95),
+            score_improvement: Math.min(25, 95 - originalScore),
+            improved_resume_url: 'https://example.com/mock-improved-resume.pdf',
+            payment_id: mockPaymentData.payment_id,
+            completed_at: new Date().toISOString(),
+            bypass_mode: true
+        };
+        
+        // Store mock data in session storage
+        sessionStorage.setItem('paymentResult', JSON.stringify(mockPaymentData));
+        sessionStorage.setItem('cvRewriteResult', JSON.stringify(mockRewriteResult));
+        
+        // Show success message
+        showSuccess('Testing mode activated! Redirecting to success page...');
+        
+        // Redirect to success page after brief delay
+        setTimeout(() => {
+            window.location.href = './success.html';
+        }, 1500);
+        
+    } catch (error) {
+        console.error('Error in payment bypass:', error);
+        showError('Failed to activate testing mode. Please try again.');
+    }
+}
+
+/**
+ * Show success message
+ */
+function showSuccess(message) {
+    const successDiv = document.createElement('div');
+    successDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg z-50 flex items-center';
+    successDiv.innerHTML = `
+        <span class="mr-2">✅</span>
+        <div>
+            <div class="font-bold">Success!</div>
+            <div class="text-sm opacity-90">${message}</div>
+        </div>
+    `;
+    
+    document.body.appendChild(successDiv);
+    
+    setTimeout(() => {
+        successDiv.remove();
+    }, 3000);
+}
+
+/**
+ * Show error message
+ */
+function showError(message) {
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg z-50';
+    errorDiv.innerHTML = `<span class="mr-2">❌</span> ${message}`;
+    
+    document.body.appendChild(errorDiv);
+    
+    setTimeout(() => {
+        errorDiv.remove();
+    }, 5000);
 }
 
 // Initialize when DOM is loaded

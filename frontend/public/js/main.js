@@ -29,6 +29,7 @@ function init() {
     setupEventListeners();
     checkUserSession();
     displayBuildInfo();
+    initTestingControls();
 }
 
 /**
@@ -349,6 +350,63 @@ async function checkUserSession() {
         }
     } catch (error) {
         console.error('Error checking session:', error);
+    }
+}
+
+/**
+ * Initialize testing controls for payment bypass
+ */
+function initTestingControls() {
+    const testingControls = document.getElementById('testingControls');
+    const enableBypassBtn = document.getElementById('enableBypassBtn');
+    const disableBypassBtn = document.getElementById('disableBypassBtn');
+    
+    // Only show on localhost or preview environments
+    if (window.location.hostname === 'localhost' || 
+        window.location.hostname.includes('preview') ||
+        window.location.hostname.includes('render.com')) {
+        
+        if (testingControls) {
+            testingControls.classList.remove('hidden');
+        }
+        
+        // Check current bypass status
+        const bypassEnabled = sessionStorage.getItem('BYPASS_PAYMENT') === 'true';
+        updateBypassButtons(bypassEnabled);
+        
+        // Enable bypass button
+        if (enableBypassBtn) {
+            enableBypassBtn.addEventListener('click', () => {
+                sessionStorage.setItem('BYPASS_PAYMENT', 'true');
+                updateBypassButtons(true);
+                showSuccess('Payment bypass enabled for testing!');
+            });
+        }
+        
+        // Disable bypass button
+        if (disableBypassBtn) {
+            disableBypassBtn.addEventListener('click', () => {
+                sessionStorage.removeItem('BYPASS_PAYMENT');
+                updateBypassButtons(false);
+                showSuccess('Payment bypass disabled');
+            });
+        }
+    }
+}
+
+/**
+ * Update bypass button states
+ */
+function updateBypassButtons(enabled) {
+    const enableBypassBtn = document.getElementById('enableBypassBtn');
+    const disableBypassBtn = document.getElementById('disableBypassBtn');
+    
+    if (enabled) {
+        enableBypassBtn?.classList.add('hidden');
+        disableBypassBtn?.classList.remove('hidden');
+    } else {
+        enableBypassBtn?.classList.remove('hidden');
+        disableBypassBtn?.classList.add('hidden');
     }
 }
 
