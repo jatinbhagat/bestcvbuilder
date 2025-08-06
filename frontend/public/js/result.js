@@ -473,25 +473,10 @@ function setupStickyCtaVisibility() {
  * Handle upgrade button click - check for payment bypass first
  */
 function handleUpgrade() {
-    console.log('User clicked upgrade');
+    console.log('User clicked Fix My Resume Now - ALWAYS BYPASSING PAYMENT');
     
-    // Check if payment bypass is enabled
-    const bypassEnabled = sessionStorage.getItem('BYPASS_PAYMENT') === 'true';
-    
-    if (bypassEnabled) {
-        console.log('🧪 Payment bypass active - going directly to success');
-        createMockSuccessDataAndRedirect();
-        return;
-    }
-    
-    // Store analysis data for payment flow
-    if (analysisData) {
-        sessionStorage.setItem('upgradeAnalysis', JSON.stringify(analysisData));
-    }
-    
-    // Redirect to payment page
-    console.log('💳 Redirecting to payment page');
-    window.location.href = './payment.html';
+    // TEMPORARY: Always bypass payment and go straight to success
+    createMockSuccessDataAndRedirect();
 }
 
 /**
@@ -541,23 +526,10 @@ function handleViewDetailedReport() {
  */
 function handleFixIssues() {
     try {
-        console.log('User clicked fix issues');
+        console.log('User clicked fix issues - ALWAYS BYPASSING PAYMENT');
         
-        // Check if payment bypass is enabled
-        const bypassEnabled = sessionStorage.getItem('BYPASS_PAYMENT') === 'true';
-        
-        if (bypassEnabled) {
-            console.log('🧪 Payment bypass active - redirecting to bypass flow');
-            handleBypassPayment();
-            return;
-        }
-        
-        // Store current analysis for payment flow
-        sessionStorage.setItem('upgradeAnalysis', JSON.stringify(analysisData));
-        
-        // Redirect to payment page
-        console.log('💳 Redirecting to payment page to fix issues');
-        window.location.href = './payment.html';
+        // TEMPORARY: Always bypass payment and go straight to success
+        createMockSuccessDataAndRedirect();
         
     } catch (error) {
         console.error('Error handling fix issues request:', error);
@@ -1171,23 +1143,10 @@ function checkPaymentBypass() {
     console.log('🔍 Simple bypass check:');
     console.log('  - Session bypass:', bypassSession);
     
-    // Always show bypass button for testing (simplified)
+    // TEMPORARY: Hide bypass button since payment is always bypassed
     if (bypassPaymentBtn) {
-        bypassPaymentBtn.classList.remove('hidden');
-        console.log('🧪 Payment bypass button always shown for testing');
-        
-        // Update button text based on status
-        if (bypassSession) {
-            bypassPaymentBtn.textContent = '🧪 Bypass Active - Use It';
-            bypassPaymentBtn.classList.remove('bg-yellow-500');
-            bypassPaymentBtn.classList.add('bg-green-500');
-        } else {
-            bypassPaymentBtn.textContent = '🧪 Enable Bypass Mode';
-            bypassPaymentBtn.classList.remove('bg-green-500');
-            bypassPaymentBtn.classList.add('bg-yellow-500');
-        }
-    } else {
-        console.log('⚠️ bypassPaymentBtn element not found');
+        bypassPaymentBtn.classList.add('hidden');
+        console.log('🙈 Bypass button hidden - payment always bypassed');
     }
     
     // Add global function for manual testing
