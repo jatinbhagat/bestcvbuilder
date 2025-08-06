@@ -1203,42 +1203,6 @@ function handleBypassPayment() {
     checkPaymentBypass(); // Update UI
     showSuccess('Payment bypass enabled! Now click "Fix My Resume Now" to use it.');
 }
-    
-    try {
-        console.log('🚀 Creating mock payment data...');
-        
-        // Create simple mock data
-        const mockPaymentData = {
-            payment_id: `test_${Date.now()}`,
-            status: 'succeeded',
-            email: 'test@example.com'
-        };
-        
-        const originalScore = analysisData?.score || 65;
-        const mockRewriteResult = {
-            original_score: originalScore,
-            new_score: Math.min(originalScore + 30, 95),
-            improved_resume_url: 'test-resume.pdf',
-            bypass_mode: true
-        };
-        
-        // Store in session
-        sessionStorage.setItem('paymentResult', JSON.stringify(mockPaymentData));
-        sessionStorage.setItem('cvRewriteResult', JSON.stringify(mockRewriteResult));
-        
-        console.log('✅ Mock data stored, redirecting to success...');
-        showSuccess('Bypass successful! Redirecting...');
-        
-        // Quick redirect
-        setTimeout(() => {
-            window.location.href = './success.html';
-        }, 1000);
-        
-    } catch (error) {
-        console.error('❌ Bypass error:', error);
-        showError('Bypass failed: ' + error.message);
-    }
-}
 
 /**
  * Show success message
@@ -1303,18 +1267,6 @@ function createMockSuccessDataAndRedirect() {
         console.error('❌ Bypass error:', error);
         showError('Failed to process: ' + error.message);
     }
-}
-
-function showError(message) {
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg z-50';
-    errorDiv.innerHTML = `<span class="mr-2">❌</span> ${message}`;
-    
-    document.body.appendChild(errorDiv);
-    
-    setTimeout(() => {
-        errorDiv.remove();
-    }, 5000);
 }
 
 // Debug: Log when result.js loads
