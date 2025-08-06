@@ -14,3 +14,6 @@ textblob==0.17.1
 
 # Memory monitoring (optional - will fallback if not available)
 psutil==5.9.8
+
+# Gemini AI integration for CV optimization
+google-generativeai==0.3.2
