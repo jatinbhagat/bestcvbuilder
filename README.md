@@ -258,35 +258,70 @@ CONTACT_PATTERNS = {
 }
 ```
 
-## 🚀 Deployment Architecture
+## 🚀 Deployment on Render.com
 
-### Render.com Configuration
+### Render.yaml Configuration
+The project uses `render.yaml` for automated deployment:
+
 ```yaml
 services:
-  # Static Frontend
   - type: web
-    name: bestcvbuilder-frontend
-    env: static
-    rootDir: frontend
-    buildCommand: npm ci && npm run build
-    staticPublishPath: ./dist
-    
-  # Python API Service  
-  - type: web
-    name: bestcvbuilder-api
+    name: bestcvbuilder
     env: python
-    buildCommand: pip install --upgrade pip && pip install -r requirements-render.txt
-    startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
+    region: oregon
+    plan: free
+    buildCommand: |
+      apt-get update
+      apt-get install -y build-essential swig python3-dev
+      pip install --upgrade pip setuptools wheel
+      pip install -r requirements-render.txt
+      cd frontend && npm ci && npm run build && cd ..
+      cp -r frontend/dist/* .
+    startCommand: python -m http.server $PORT --directory .
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0
+      - key: NODE_VERSION  
+        value: 18.17.0
 ```
 
-### Environment Variables
-```bash
-# Production Environment
-SUPABASE_URL=https://your-project.supabase.co
-PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY=eyJ...
-STRIPE_SECRET_KEY=sk_live_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-```
+### Deployment Steps
+
+1. **Connect Repository**
+   ```bash
+   # Push your code to GitHub
+   git add -A
+   git commit -m "Deploy to Render"
+   git push origin main
+   ```
+
+2. **Create Render Service**
+   - Go to [Render.com](https://render.com) dashboard
+   - Click "New +" → "Web Service"
+   - Connect your GitHub repository
+   - Render will automatically detect `render.yaml`
+
+3. **Configure Environment Variables**
+   ```bash
+   # Add these in Render dashboard → Environment
+   SUPABASE_URL=https://rletapisdadphfdmqdxu.supabase.co
+   PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+   STRIPE_SECRET_KEY=sk_live_... # Your Stripe secret key
+   STRIPE_WEBHOOK_SECRET=whsec_... # Your webhook secret
+   ```
+
+4. **Deploy**
+   - Service will auto-deploy on every push to `main` branch
+   - Build time: ~5-8 minutes (includes PyMuPDF compilation)
+   - Access your app at: `https://your-service-name.onrender.com`
+
+### Build Process Details
+
+The deployment includes:
+- **System Dependencies**: build-essential, swig, python3-dev for PyMuPDF
+- **Python Dependencies**: All packages from `requirements-render.txt`
+- **Frontend Build**: Vite build process with Tailwind CSS compilation
+- **Static File Serving**: Python HTTP server serves built frontend + API
 
 ## 📊 Database Schema
 
