@@ -48,7 +48,7 @@ let analysisData = null;
  * Initialize the results page
  */
 function init() {
-    console.log('Results page initialized');
+    console.log('🚀 Results page initialized - result.js');
     loadAnalysisData();
     setupEventListeners();
 }
@@ -389,8 +389,12 @@ function setupEventListeners() {
     });
     
     // Upgrade button
+    console.log('🔍 Looking for upgradeBtn:', upgradeBtn ? 'FOUND' : 'NOT FOUND');
     if (upgradeBtn) {
+        console.log('✅ Adding click listener to upgradeBtn');
         upgradeBtn.addEventListener('click', handleUpgrade);
+    } else {
+        console.error('❌ upgradeBtn not found in DOM');
     }
     
     // Bypass payment button (testing mode)
@@ -1306,6 +1310,9 @@ function showError(message) {
         errorDiv.remove();
     }, 5000);
 }
+
+// Debug: Log when result.js loads
+console.log('🔄 result.js module loaded');
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', init); 
