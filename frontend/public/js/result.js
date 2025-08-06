@@ -479,8 +479,8 @@ function handleUpgrade() {
     const bypassEnabled = sessionStorage.getItem('BYPASS_PAYMENT') === 'true';
     
     if (bypassEnabled) {
-        console.log('🧪 Payment bypass active - redirecting to bypass flow');
-        handleBypassPayment();
+        console.log('🧪 Payment bypass active - going directly to success');
+        createMockSuccessDataAndRedirect();
         return;
     }
     
@@ -1203,17 +1203,13 @@ function checkPaymentBypass() {
  * Handle bypass payment for testing - SIMPLIFIED VERSION
  */
 function handleBypassPayment() {
-    console.log('🧪 PAYMENT BYPASS ACTIVATED');
+    console.log('🧪 BYPASS BUTTON CLICKED - enabling bypass');
     
-    // First check if bypass is enabled, if not enable it
-    const bypassEnabled = sessionStorage.getItem('BYPASS_PAYMENT') === 'true';
-    if (!bypassEnabled) {
-        console.log('🔧 Enabling bypass mode first...');
-        sessionStorage.setItem('BYPASS_PAYMENT', 'true');
-        checkPaymentBypass(); // Update UI
-        showSuccess('Payment bypass enabled! Click any Pay button again to use it.');
-        return;
-    }
+    // Enable bypass mode
+    sessionStorage.setItem('BYPASS_PAYMENT', 'true');
+    checkPaymentBypass(); // Update UI
+    showSuccess('Payment bypass enabled! Now click "Fix My Resume Now" to use it.');
+}
     
     try {
         console.log('🚀 Creating mock payment data...');
@@ -1275,6 +1271,43 @@ function showSuccess(message) {
 /**
  * Show error message
  */
+function createMockSuccessDataAndRedirect() {
+    console.log('🚀 Creating mock success data for bypass...');
+    
+    try {
+        // Create simple mock data
+        const mockPaymentData = {
+            payment_id: `bypass_${Date.now()}`,
+            status: 'succeeded',
+            email: 'bypass@example.com'
+        };
+        
+        const originalScore = analysisData?.score || 65;
+        const mockRewriteData = {
+            original_score: originalScore,
+            new_score: Math.min(originalScore + 30, 95),
+            improved_resume_url: 'bypass-resume.pdf',
+            bypass_mode: true
+        };
+        
+        // Store in session
+        sessionStorage.setItem('paymentResult', JSON.stringify(mockPaymentData));
+        sessionStorage.setItem('cvRewriteResult', JSON.stringify(mockRewriteData));
+        
+        console.log('✅ Mock data stored, redirecting to success...');
+        showSuccess('Bypass successful! Redirecting to success page...');
+        
+        // Quick redirect
+        setTimeout(() => {
+            window.location.href = './success.html';
+        }, 1000);
+        
+    } catch (error) {
+        console.error('❌ Bypass error:', error);
+        showError('Bypass failed: ' + error.message);
+    }
+}
+
 function showError(message) {
     const errorDiv = document.createElement('div');
     errorDiv.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg z-50';
