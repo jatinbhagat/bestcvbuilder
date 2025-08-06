@@ -13,26 +13,23 @@ from typing import Dict, Any, List, Tuple, Optional
 from collections import Counter
 import traceback
 
-# Import memory management utilities
-try:
-    from memory_utils import MemoryManager, memory_monitor, force_cleanup, get_memory_info
-    MEMORY_UTILS_AVAILABLE = True
-except ImportError:
-    # Fallback if memory_utils not available
-    MEMORY_UTILS_AVAILABLE = False
-    def memory_monitor(func):
-        return func
-    class MemoryManager:
-        def __init__(self, *args, **kwargs):
-            pass
-        def __enter__(self):
-            return self
-        def __exit__(self, *args):
-            pass
-    def force_cleanup():
+# Simple memory management without external dependencies
+def memory_monitor(func):
+    return func
+
+class MemoryManager:
+    def __init__(self, *args, **kwargs):
+        pass
+    def __enter__(self):
+        return self
+    def __exit__(self, *args):
         gc.collect()
-    def get_memory_info():
-        return {}
+
+def force_cleanup():
+    gc.collect()
+
+def get_memory_info():
+    return {}
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -80,10 +77,7 @@ def check_textblob_availability():
 
 def cleanup_memory():
     """Force garbage collection to free memory"""
-    if MEMORY_UTILS_AVAILABLE:
-        force_cleanup()
-    else:
-        gc.collect()
+    gc.collect()
     logger.debug("🧹 Memory cleanup performed")
 
 class JobAnalysisError(Exception):

@@ -45,7 +45,106 @@ def get_memory_usage():
     except ImportError:
         return None
 
-def extract_with_pypdf2_simple(file_content: bytes) -> str:
+def extract_tables_with_pdfplumber(file_content: bytes) -> str:
+    """Extract complex tables using pdfplumber when needed"""
+    try:
+        import pdfplumber
+        import io
+        
+        pdf_file = io.BytesIO(file_content)
+        table_texts = []
+        
+        with pdfplumber.open(pdf_file) as pdf:
+            for page_num, page in enumerate(pdf.pages):
+                tables = page.extract_tables()
+                
+                if tables:
+                    logger.info(f"📊 Page {page_num + 1}: Found {len(tables)} tables")
+                    
+                    for table_num, table in enumerate(tables):
+                        # Convert table to text format
+                        table_text = f"\n--- Table {table_num + 1} from Page {page_num + 1} ---\n"
+                        
+                        for row in table:
+                            if row and any(cell for cell in row if cell):
+                                # Clean and join cells
+                                clean_row = [str(cell).strip() if cell else '' for cell in row]
+                                table_text += ' | '.join(clean_row) + '\n'
+                        
+                        table_texts.append(table_text)
+        
+        result = '\n'.join(table_texts)
+        if result:
+            logger.info(f"✅ Table extraction complete: {len(result)} characters")
+        
+        return result
+        
+    except ImportError:
+        logger.warning("⚠️ pdfplumber not available - skipping table extraction")
+        return ""
+    except Exception as e:
+        logger.warning(f"⚠️ Table extraction failed: {e}")
+        return ""
+
+def extract_pdf_text_clean(file_content: bytes) -> str:
+    """Clean PDF extraction using PyMuPDF for text and pdfplumber for complex tables"""
+    if not PYMUPDF_AVAILABLE:
+        raise TextExtractionError("PyMuPDF (fitz) is required for PDF extraction")
+    
+    logger.info("📄 Starting clean PDF extraction with PyMuPDF")
+    
+    try:
+        import fitz
+        
+        # Check if text is extractable from first page
+        pdf_document = fitz.open(stream=file_content, filetype="pdf")
+        
+        if pdf_document.page_count == 0:
+            pdf_document.close()
+            raise TextExtractionError("PDF has no pages")
+        
+        # Check first page for text
+        first_page_text = pdf_document[0].get_text().strip()
+        if not first_page_text or len(first_page_text) < 50:
+            pdf_document.close()
+            raise TextExtractionError("Scanned or image-based resumes are not supported. Please upload a text-based PDF.")
+        
+        # Extract text from all pages using PyMuPDF
+        text_parts = []
+        has_complex_tables = False
+        
+        for page_num in range(pdf_document.page_count):
+            page = pdf_document[page_num]
+            page_text = page.get_text()
+            
+            if page_text and page_text.strip():
+                text_parts.append(page_text)
+                
+                # Check if this page might have complex tables
+                # (multiple tab characters or structured data patterns)
+                if '\t' in page_text or page_text.count('|') > 5 or page_text.count('\n') > 20:
+                    has_complex_tables = True
+        
+        pdf_document.close()
+        
+        # If complex tables detected, enhance with pdfplumber
+        if has_complex_tables and PDFPLUMBER_AVAILABLE:
+            logger.info("📊 Complex tables detected - using pdfplumber for table extraction")
+            table_text = extract_tables_with_pdfplumber(file_content)
+            if table_text:
+                text_parts.append(table_text)
+        
+        result = '\n\n'.join(text_parts)
+        logger.info(f"✅ PDF extraction complete: {len(result)} characters")
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"❌ PDF extraction failed: {e}")
+        raise TextExtractionError(f"PDF extraction failed: {str(e)}")
+
+# Legacy function - keeping for compatibility but not used
+def extract_with_pypdf2_simple_legacy(file_content: bytes) -> str:
     """Simple PyPDF2 extraction for large files - memory efficient"""
     try:
         pdf_file = io.BytesIO(file_content)
@@ -277,7 +376,7 @@ def validate_file_url(file_url: str) -> bool:
 
 def extract_text_from_file(file_content: bytes, file_url: str) -> str:
     """
-    Extract actual text content from uploaded files
+    Extract text content using ultra-safe methods to prevent worker timeouts
     
     Args:
         file_content: Raw file content
@@ -287,10 +386,14 @@ def extract_text_from_file(file_content: bytes, file_url: str) -> str:
         Extracted text content
     """
     file_extension = file_url.split('.')[-1].lower()
+    file_size_mb = len(file_content) / (1024 * 1024)
+    
+    logger.info(f"🔍 Extracting {file_extension.upper()} file ({file_size_mb:.1f}MB) with timeout protection")
     
     try:
         if file_extension == 'pdf':
-            return extract_pdf_text(file_content)
+            return extract_pdf_text_clean(file_content)
+                
         elif file_extension == 'docx':
             return extract_docx_text(file_content)
         elif file_extension == 'doc':
@@ -302,23 +405,8 @@ def extract_text_from_file(file_content: bytes, file_url: str) -> str:
         raise TextExtractionError(f"Could not extract text from file: {str(e)}")
 
 def extract_pdf_text(file_content: bytes) -> str:
-    """Extract text from PDF using multiple methods with fallbacks for better accuracy"""
-    
-    # Check file size first (prevent memory issues)
-    file_size_mb = len(file_content) / (1024 * 1024)
-    if file_size_mb > 6:  # 6MB limit for PDF processing
-        logger.warning(f"⚠️ Large PDF file: {file_size_mb:.1f}MB - using simplified extraction")
-        # For large files, use only the most memory-efficient method
-        if PYPDF2_AVAILABLE:
-            return extract_with_pypdf2_simple(file_content)
-        else:
-            raise TextExtractionError("File too large and no simple extraction available")
-    
-    # Force initial cleanup
-    cleanup_memory()
-    
-    # Log available methods
-    logger.info(f"🔍 Starting PDF extraction ({file_size_mb:.1f}MB) with prioritized methods...")
+    """Legacy function - redirects to clean extraction"""
+    return extract_pdf_text_clean(file_content)
     
     # Check if any extraction method is available
     if not any([PYPDF2_AVAILABLE, PDFPLUMBER_AVAILABLE, PYMUPDF_AVAILABLE, PDFMINER_AVAILABLE]):
