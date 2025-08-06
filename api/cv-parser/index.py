@@ -87,7 +87,7 @@ def extract_tables_with_pdfplumber(file_content: bytes) -> str:
         return ""
 
 def extract_pdf_text_clean(file_content: bytes) -> str:
-    """Clean PDF extraction using PyMuPDF for text and pdfplumber for complex tables"""
+    """Clean PDF extraction using only PyMuPDF (table extraction disabled)"""
     if not PYMUPDF_AVAILABLE:
         raise TextExtractionError("PyMuPDF (fitz) is required for PDF extraction")
     
@@ -109,9 +109,8 @@ def extract_pdf_text_clean(file_content: bytes) -> str:
             pdf_document.close()
             raise TextExtractionError("Scanned or image-based resumes are not supported. Please upload a text-based PDF.")
         
-        # Extract text from all pages using PyMuPDF
+        # Extract text from all pages using PyMuPDF only
         text_parts = []
-        has_complex_tables = False
         
         for page_num in range(pdf_document.page_count):
             page = pdf_document[page_num]
@@ -119,20 +118,8 @@ def extract_pdf_text_clean(file_content: bytes) -> str:
             
             if page_text and page_text.strip():
                 text_parts.append(page_text)
-                
-                # Check if this page might have complex tables
-                # (multiple tab characters or structured data patterns)
-                if '\t' in page_text or page_text.count('|') > 5 or page_text.count('\n') > 20:
-                    has_complex_tables = True
         
         pdf_document.close()
-        
-        # If complex tables detected, enhance with pdfplumber
-        if has_complex_tables and PDFPLUMBER_AVAILABLE:
-            logger.info("📊 Complex tables detected - using pdfplumber for table extraction")
-            table_text = extract_tables_with_pdfplumber(file_content)
-            if table_text:
-                text_parts.append(table_text)
         
         result = '\n\n'.join(text_parts)
         logger.info(f"✅ PDF extraction complete: {len(result)} characters")
