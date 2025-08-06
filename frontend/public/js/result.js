@@ -470,10 +470,19 @@ function setupStickyCtaVisibility() {
 }
 
 /**
- * Handle upgrade button click
+ * Handle upgrade button click - check for payment bypass first
  */
 function handleUpgrade() {
     console.log('User clicked upgrade');
+    
+    // Check if payment bypass is enabled
+    const bypassEnabled = sessionStorage.getItem('BYPASS_PAYMENT') === 'true';
+    
+    if (bypassEnabled) {
+        console.log('🧪 Payment bypass active - redirecting to bypass flow');
+        handleBypassPayment();
+        return;
+    }
     
     // Store analysis data for payment flow
     if (analysisData) {
@@ -481,6 +490,7 @@ function handleUpgrade() {
     }
     
     // Redirect to payment page
+    console.log('💳 Redirecting to payment page');
     window.location.href = './payment.html';
 }
 
@@ -527,16 +537,26 @@ function handleViewDetailedReport() {
 }
 
 /**
- * Handle fix issues button click - redirects to payment
+ * Handle fix issues button click - check for payment bypass first
  */
 function handleFixIssues() {
     try {
-        console.log('Redirecting to payment to fix issues');
+        console.log('User clicked fix issues');
+        
+        // Check if payment bypass is enabled
+        const bypassEnabled = sessionStorage.getItem('BYPASS_PAYMENT') === 'true';
+        
+        if (bypassEnabled) {
+            console.log('🧪 Payment bypass active - redirecting to bypass flow');
+            handleBypassPayment();
+            return;
+        }
         
         // Store current analysis for payment flow
         sessionStorage.setItem('upgradeAnalysis', JSON.stringify(analysisData));
         
         // Redirect to payment page
+        console.log('💳 Redirecting to payment page to fix issues');
         window.location.href = './payment.html';
         
     } catch (error) {
@@ -1143,97 +1163,91 @@ function updateUpgradeSection(insights) {
 }
 
 /**
- * Check if payment bypass is enabled for testing
+ * Check if payment bypass is enabled for testing - SIMPLIFIED VERSION
  */
 function checkPaymentBypass() {
-    // Check for environment variable or URL parameter
-    const urlParams = new URLSearchParams(window.location.search);
-    const currentHostname = window.location.hostname;
-    const bypassParam = urlParams.get('bypass') === 'true';
     const bypassSession = sessionStorage.getItem('BYPASS_PAYMENT') === 'true';
     
-    console.log('🔍 Checking payment bypass:');
-    console.log('  - Current hostname:', currentHostname);
-    console.log('  - URL bypass param:', bypassParam);
+    console.log('🔍 Simple bypass check:');
     console.log('  - Session bypass:', bypassSession);
     
-    const bypassEnabled = bypassParam || 
-                         bypassSession ||
-                         currentHostname === 'localhost' ||
-                         currentHostname === '127.0.0.1' ||
-                         currentHostname.includes('localhost') ||
-                         currentHostname.includes('preview') ||
-                         currentHostname.includes('render.com') ||
-                         currentHostname.includes('onrender.com') ||
-                         currentHostname.includes('vercel.app');
-    
-    console.log('  - Bypass enabled:', bypassEnabled);
-    
-    // TEMPORARY: Always show bypass button for testing
-    const ALWAYS_SHOW_BYPASS = true; // Set to false after testing
-    
-    if ((bypassEnabled || ALWAYS_SHOW_BYPASS) && bypassPaymentBtn) {
+    // Always show bypass button for testing (simplified)
+    if (bypassPaymentBtn) {
         bypassPaymentBtn.classList.remove('hidden');
-        console.log('🧪 Payment bypass button shown for testing');
-    } else {
-        console.log('🚫 Payment bypass not enabled');
-        if (!bypassPaymentBtn) {
-            console.log('  - bypassPaymentBtn element not found');
+        console.log('🧪 Payment bypass button always shown for testing');
+        
+        // Update button text based on status
+        if (bypassSession) {
+            bypassPaymentBtn.textContent = '🧪 Bypass Active - Use It';
+            bypassPaymentBtn.classList.remove('bg-yellow-500');
+            bypassPaymentBtn.classList.add('bg-green-500');
+        } else {
+            bypassPaymentBtn.textContent = '🧪 Enable Bypass Mode';
+            bypassPaymentBtn.classList.remove('bg-green-500');
+            bypassPaymentBtn.classList.add('bg-yellow-500');
         }
+    } else {
+        console.log('⚠️ bypassPaymentBtn element not found');
     }
     
     // Add global function for manual testing
     window.enablePaymentBypass = function() {
         sessionStorage.setItem('BYPASS_PAYMENT', 'true');
-        checkPaymentBypass();
         console.log('🧪 Payment bypass enabled via console');
-        alert('Payment bypass enabled!');
+        alert('Payment bypass enabled! Now click any Pay button.');
+        checkPaymentBypass(); // Update UI
     };
 }
 
 /**
- * Handle bypass payment for testing
+ * Handle bypass payment for testing - SIMPLIFIED VERSION
  */
 function handleBypassPayment() {
-    console.log('🧪 Bypassing payment for testing');
+    console.log('🧪 PAYMENT BYPASS ACTIVATED');
+    
+    // First check if bypass is enabled, if not enable it
+    const bypassEnabled = sessionStorage.getItem('BYPASS_PAYMENT') === 'true';
+    if (!bypassEnabled) {
+        console.log('🔧 Enabling bypass mode first...');
+        sessionStorage.setItem('BYPASS_PAYMENT', 'true');
+        checkPaymentBypass(); // Update UI
+        showSuccess('Payment bypass enabled! Click any Pay button again to use it.');
+        return;
+    }
     
     try {
-        // Create mock payment success data
+        console.log('🚀 Creating mock payment data...');
+        
+        // Create simple mock data
         const mockPaymentData = {
-            payment_id: `test_payment_${Date.now()}`,
-            amount: 2900, // $29.00 in cents
+            payment_id: `test_${Date.now()}`,
             status: 'succeeded',
-            email: analysisData?.personal_information?.email || 'test@bestcvbuilder.com',
-            timestamp: new Date().toISOString()
+            email: 'test@example.com'
         };
         
-        // Create mock CV rewrite result
-        const originalScore = analysisData?.ats_score || analysisData?.score || 65;
+        const originalScore = analysisData?.score || 65;
         const mockRewriteResult = {
             original_score: originalScore,
-            new_score: Math.min(originalScore + 25, 95),
-            score_improvement: Math.min(25, 95 - originalScore),
-            improved_resume_url: 'https://example.com/mock-improved-resume.pdf',
-            payment_id: mockPaymentData.payment_id,
-            completed_at: new Date().toISOString(),
+            new_score: Math.min(originalScore + 30, 95),
+            improved_resume_url: 'test-resume.pdf',
             bypass_mode: true
         };
         
-        // Store mock data in session storage
+        // Store in session
         sessionStorage.setItem('paymentResult', JSON.stringify(mockPaymentData));
         sessionStorage.setItem('cvRewriteResult', JSON.stringify(mockRewriteResult));
         
-        // Show success message
-        showSuccess('Testing mode activated! Redirecting to success page...');
+        console.log('✅ Mock data stored, redirecting to success...');
+        showSuccess('Bypass successful! Redirecting...');
         
-        // Redirect to success page after brief delay
+        // Quick redirect
         setTimeout(() => {
             window.location.href = './success.html';
-        }, 1500);
+        }, 1000);
         
     } catch (error) {
-        console.error('Error in payment bypass:', error);
-        showError('Failed to activate testing mode. Please try again.');
+        console.error('❌ Bypass error:', error);
+        showError('Bypass failed: ' + error.message);
     }
 }
 

@@ -8,50 +8,89 @@ import json
 import os
 import re
 import logging
+import gc
 from typing import Dict, Any, List, Tuple, Optional
 from collections import Counter
 import traceback
+
+# Import memory management utilities
+try:
+    from memory_utils import MemoryManager, memory_monitor, force_cleanup, get_memory_info
+    MEMORY_UTILS_AVAILABLE = True
+except ImportError:
+    # Fallback if memory_utils not available
+    MEMORY_UTILS_AVAILABLE = False
+    def memory_monitor(func):
+        return func
+    class MemoryManager:
+        def __init__(self, *args, **kwargs):
+            pass
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+    def force_cleanup():
+        gc.collect()
+    def get_memory_info():
+        return {}
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Check for NLP libraries availability
-NLTK_AVAILABLE = False
-TEXTBLOB_AVAILABLE = False
+# Lazy loading flags - don't import libraries until needed
+NLTK_AVAILABLE = None
+TEXTBLOB_AVAILABLE = None
 
-try:
-    import nltk
-    NLTK_AVAILABLE = True
-    logger.info("✅ NLTK available for job analysis")
-    
-    # Download required NLTK data if not present
-    try:
-        nltk.data.find('tokenizers/punkt')
-        nltk.data.find('corpora/stopwords')
-        nltk.data.find('taggers/averaged_perceptron_tagger')
-    except LookupError:
-        logger.info("📥 Downloading required NLTK data...")
-        nltk.download('punkt', quiet=True)
-        nltk.download('stopwords', quiet=True)
-        nltk.download('averaged_perceptron_tagger', quiet=True)
-        
-except ImportError as e:
-    logger.warning(f"⚠️  NLTK not available: {e}")
-    NLTK_AVAILABLE = False
+def check_nltk_availability():
+    """Lazy check for NLTK availability"""
+    global NLTK_AVAILABLE
+    if NLTK_AVAILABLE is None:
+        try:
+            import nltk
+            NLTK_AVAILABLE = True
+            logger.info("✅ NLTK available for job analysis")
+            
+            # Download required NLTK data if not present (only essential ones)
+            try:
+                nltk.data.find('tokenizers/punkt')
+                nltk.data.find('corpora/stopwords')
+            except LookupError:
+                logger.info("📥 Downloading essential NLTK data...")
+                nltk.download('punkt', quiet=True)
+                nltk.download('stopwords', quiet=True)
+                
+        except ImportError as e:
+            logger.warning(f"⚠️  NLTK not available: {e}")
+            NLTK_AVAILABLE = False
+    return NLTK_AVAILABLE
 
-try:
-    from textblob import TextBlob
-    TEXTBLOB_AVAILABLE = True
-    logger.info("✅ TextBlob available for sentiment analysis")
-except ImportError as e:
-    logger.warning(f"⚠️  TextBlob not available: {e}")
-    TEXTBLOB_AVAILABLE = False
+def check_textblob_availability():
+    """Lazy check for TextBlob availability"""
+    global TEXTBLOB_AVAILABLE
+    if TEXTBLOB_AVAILABLE is None:
+        try:
+            from textblob import TextBlob
+            TEXTBLOB_AVAILABLE = True
+            logger.info("✅ TextBlob available for sentiment analysis")
+        except ImportError as e:
+            logger.warning(f"⚠️  TextBlob not available: {e}")
+            TEXTBLOB_AVAILABLE = False
+    return TEXTBLOB_AVAILABLE
+
+def cleanup_memory():
+    """Force garbage collection to free memory"""
+    if MEMORY_UTILS_AVAILABLE:
+        force_cleanup()
+    else:
+        gc.collect()
+    logger.debug("🧹 Memory cleanup performed")
 
 class JobAnalysisError(Exception):
     """Custom exception for job analysis errors"""
     pass
 
+@memory_monitor
 def extract_job_requirements(job_description: str, role_title: str = "", company_name: str = "") -> Dict[str, Any]:
     """
     Extract job requirements from job description using NLP
@@ -74,14 +113,16 @@ def extract_job_requirements(job_description: str, role_title: str = "", company
         # Extract requirements using pattern matching (fallback method)
         requirements = extract_requirements_pattern_matching(cleaned_text)
         
-        # Enhance with NLP if available
-        if NLTK_AVAILABLE:
+        # Enhance with NLP if available (lazy loading)
+        if check_nltk_availability():
             nlp_analysis = analyze_with_nltk(cleaned_text)
             requirements.update(nlp_analysis)
+            cleanup_memory()  # Clean up after NLTK processing
         
-        if TEXTBLOB_AVAILABLE:
+        if check_textblob_availability():
             sentiment_analysis = analyze_sentiment(cleaned_text)
             requirements.update(sentiment_analysis)
+            cleanup_memory()  # Clean up after TextBlob processing
         
         # Extract specific job elements
         job_elements = extract_job_elements(cleaned_text)
@@ -225,20 +266,26 @@ def analyze_with_nltk(text: str) -> Dict[str, Any]:
         return {}
 
 def analyze_sentiment(text: str) -> Dict[str, Any]:
-    """Analyze job posting sentiment using TextBlob"""
-    if not TEXTBLOB_AVAILABLE:
+    """Analyze job posting sentiment using TextBlob with lazy loading"""
+    if not check_textblob_availability():
         return {}
     
     try:
+        # Lazy import TextBlob only when needed
+        from textblob import TextBlob
         blob = TextBlob(text)
         
-        return {
+        result = {
             'sentiment_analysis': {
                 'polarity': round(blob.sentiment.polarity, 3),  # -1 to 1
                 'subjectivity': round(blob.sentiment.subjectivity, 3),  # 0 to 1
                 'tone': 'positive' if blob.sentiment.polarity > 0.1 else 'negative' if blob.sentiment.polarity < -0.1 else 'neutral'
             }
         }
+        
+        # Clean up blob object to free memory
+        del blob
+        return result
         
     except Exception as e:
         logger.warning(f"⚠️  Sentiment analysis failed: {e}")

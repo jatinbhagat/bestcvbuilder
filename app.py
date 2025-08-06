@@ -5,10 +5,13 @@ Converts Vercel serverless functions to Render.com web service
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from werkzeug.serving import WSGIRequestHandler
 import sys
 import os
 import json
 import time
+import gc
+import signal
 
 # Add API modules to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'api', 'cv-parser'))
@@ -16,6 +19,22 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'api', 'job-analyzer'))
 
 app = Flask(__name__)
 CORS(app)
+
+# Configure timeout and memory management
+app.config.update(
+    # Request timeout settings
+    PERMANENT_SESSION_LIFETIME=300,  # 5 minutes
+    SEND_FILE_MAX_AGE_DEFAULT=0,
+)
+
+# Set request timeout for development
+WSGIRequestHandler.timeout = 60  # 60 seconds timeout
+
+# Timeout handler for production
+def timeout_handler(signum, frame):
+    raise TimeoutError("Request timeout - operation took too long")
+
+signal.signal(signal.SIGALRM, timeout_handler)
 
 # Import the CV parser functions directly
 try:
@@ -29,7 +48,7 @@ except ImportError as e:
 # Import the Job analyzer functions
 try:
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'api', 'job-analyzer'))
-    from index import analyze_job_description, JobAnalysisError, save_job_analysis_to_database
+    from job_analyzer import analyze_job_description, JobAnalysisError, save_job_analysis_to_database
     job_analyzer_available = True
     print("✅ Job analyzer functions imported successfully")
 except ImportError as e:
@@ -213,7 +232,7 @@ def cv_parser():
 
 @app.route('/api/job-analyzer', methods=['POST', 'OPTIONS'])
 def job_analyzer():
-    """Job Analyzer API endpoint"""
+    """Job Analyzer API endpoint with timeout and memory management"""
     if request.method == 'OPTIONS':
         response = jsonify({'status': 'ok'})
         response.headers.add('Access-Control-Allow-Origin', '*')
@@ -224,7 +243,13 @@ def job_analyzer():
     if not job_analyzer_available:
         return jsonify({"error": "Job analyzer not available"}), 500
     
+    # Set alarm for timeout (30 seconds for job analysis)
+    signal.alarm(30)
+    
     try:
+        # Force initial garbage collection
+        gc.collect()
+        
         # Get request data
         data = request.get_json()
         
@@ -261,6 +286,9 @@ def job_analyzer():
         print(f"✅ Job analysis completed successfully")
         print(f"🎯 Analysis Score: {result.get('analysis_score', 'Not found')}")
         
+        # Force garbage collection after analysis
+        gc.collect()
+        
         # Save to database (similar to cv-parser pattern)
         try:
             # For now, use a dummy email pattern similar to cv-parser
@@ -285,6 +313,12 @@ def job_analyzer():
         
         return response
         
+    except TimeoutError:
+        print(f"⏱️ Job analysis timeout - request took too long")
+        error_response = jsonify({"error": "Analysis timeout - please try with a shorter job description"})
+        error_response.headers.add('Access-Control-Allow-Origin', '*')
+        return error_response, 408  # Request Timeout
+        
     except JobAnalysisError as e:
         print(f"❌ Job Analysis Error: {e}")
         error_response = jsonify({"error": f"Analysis failed: {str(e)}"})
@@ -299,6 +333,11 @@ def job_analyzer():
         error_response = jsonify({"error": f"Internal server error: {str(e)}"})
         error_response.headers.add('Access-Control-Allow-Origin', '*')
         return error_response, 500
+    
+    finally:
+        # Always clear the alarm and force garbage collection
+        signal.alarm(0)
+        gc.collect()
 
 @app.route('/api/cv-rewrite', methods=['POST', 'OPTIONS'])
 def cv_rewrite():
@@ -326,4 +365,18 @@ def internal_error(error):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print(f"🚀 Starting BestCVBuilder API on port {port}")
-    app.run(host='0.0.0.0', port=port, debug=False)
+    
+    # Configure for memory efficiency
+    if os.environ.get('RENDER'):
+        # Production settings for Render
+        app.run(
+            host='0.0.0.0', 
+            port=port, 
+            debug=False,
+            threaded=True,
+            processes=1,  # Single process to limit memory usage
+            use_reloader=False
+        )
+    else:
+        # Development settings
+        app.run(host='0.0.0.0', port=port, debug=False)

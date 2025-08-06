@@ -12,3 +12,6 @@ flask-cors==4.0.0
 # NLP libraries for job analysis
 nltk==3.8.1
 textblob==0.17.1
+
+# Memory monitoring (optional - will fallback if not available)
+psutil==5.9.8

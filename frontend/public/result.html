@@ -329,15 +329,8 @@
                 });
             }
 
-            // Upgrade Button
-            const upgradeBtn = document.getElementById('upgradeBtn');
-            if (upgradeBtn) {
-                upgradeBtn.addEventListener('click', function() {
-                    console.log('Upgrade clicked');
-                    sessionStorage.setItem('upgradeAnalysis', JSON.stringify({score: 65}));
-                    window.location.href = './payment.html';
-                });
-            }
+            // Upgrade Button - handled by result.js
+            console.log('Upgrade button will be handled by result.js');
 
             // Show Detailed Analysis Button
             const showDetailedBtn = document.getElementById('showDetailedBtn');
@@ -372,25 +365,8 @@
                 });
             }
 
-            // Fix Issues Buttons
-            const fixIssuesBtn = document.getElementById('fixIssuesBtn');
-            const fixIssuesBtn2 = document.getElementById('fixIssuesBtn2');
-            
-            if (fixIssuesBtn) {
-                fixIssuesBtn.addEventListener('click', function() {
-                    console.log('Fix issues clicked');
-                    sessionStorage.setItem('upgradeAnalysis', JSON.stringify({score: 65}));
-                    window.location.href = './payment.html';
-                });
-            }
-            
-            if (fixIssuesBtn2) {
-                fixIssuesBtn2.addEventListener('click', function() {
-                    console.log('Fix issues 2 clicked');
-                    sessionStorage.setItem('upgradeAnalysis', JSON.stringify({score: 65}));
-                    window.location.href = './payment.html';
-                });
-            }
+            // Fix Issues Buttons - handled by result.js
+            console.log('Fix issues buttons will be handled by result.js');
 
             console.log('Event listeners setup complete');
         }
