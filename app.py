@@ -8,9 +8,11 @@ from flask_cors import CORS
 import sys
 import os
 import json
+import time
 
 # Add API modules to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'api', 'cv-parser'))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'api', 'job-analyzer'))
 
 app = Flask(__name__)
 CORS(app)
@@ -23,6 +25,16 @@ try:
 except ImportError as e:
     print(f"❌ Could not import CV parser functions: {e}")
     cv_parser_available = False
+
+# Import the Job analyzer functions
+try:
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'api', 'job-analyzer'))
+    from index import analyze_job_description, JobAnalysisError, save_job_analysis_to_database
+    job_analyzer_available = True
+    print("✅ Job analyzer functions imported successfully")
+except ImportError as e:
+    print(f"❌ Could not import Job analyzer functions: {e}")
+    job_analyzer_available = False
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -50,7 +62,8 @@ def health_check():
         "service": "bestcvbuilder-api",
         "handlers": {
             "cv_parser": cv_parser_available,
-            "cv_rewrite": False
+            "cv_rewrite": False,
+            "job_analyzer": job_analyzer_available
         },
         "supabase": supabase_status,
         "env_vars": {
@@ -191,6 +204,95 @@ def cv_parser():
         
     except Exception as e:
         print(f"❌ Unexpected error in cv_parser: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        error_response = jsonify({"error": f"Internal server error: {str(e)}"})
+        error_response.headers.add('Access-Control-Allow-Origin', '*')
+        return error_response, 500
+
+@app.route('/api/job-analyzer', methods=['POST', 'OPTIONS'])
+def job_analyzer():
+    """Job Analyzer API endpoint"""
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        return response
+    
+    if not job_analyzer_available:
+        return jsonify({"error": "Job analyzer not available"}), 500
+    
+    try:
+        # Get request data
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({"error": "No JSON data provided"}), 400
+        
+        # Extract required parameters
+        job_description = data.get('job_description')
+        if not job_description or len(job_description.strip()) < 50:
+            return jsonify({"error": "Job description is required and must be at least 50 characters"}), 400
+        
+        # Optional parameters
+        role_title = data.get('role_title', '')
+        company_name = data.get('company_name', '')
+        user_expectations = data.get('user_expectations', {})
+        
+        print(f"🔍 Processing job analysis request:")
+        print(f"   Role Title: {role_title}")
+        print(f"   Company: {company_name}")
+        print(f"   Description Length: {len(job_description)} chars")
+        print(f"   User Expectations: {bool(user_expectations)}")
+        
+        # Prepare job data
+        job_data = {
+            'job_description': job_description,
+            'role_title': role_title,
+            'company_name': company_name,
+            'user_expectations': user_expectations
+        }
+        
+        # Call the job analysis function
+        result = analyze_job_description(job_data)
+        
+        print(f"✅ Job analysis completed successfully")
+        print(f"🎯 Analysis Score: {result.get('analysis_score', 'Not found')}")
+        
+        # Save to database (similar to cv-parser pattern)
+        try:
+            # For now, use a dummy email pattern similar to cv-parser
+            session_uuid = f"job_analysis_{int(time.time() * 1000)}"
+            dummy_email = f"job_user_{session_uuid}@bestcvbuilder.com"
+            
+            job_analysis_id = save_job_analysis_to_database(dummy_email, result, session_uuid)
+            result['job_analysis_id'] = job_analysis_id
+            result['session_uuid'] = session_uuid
+            
+            print(f"📊 Job analysis saved with ID: {job_analysis_id}")
+            
+        except Exception as db_error:
+            print(f"❌ Database save failed: {str(db_error)}")
+            result['database_error'] = str(db_error)
+        
+        # Return results with CORS headers
+        response = jsonify(result)
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        
+        return response
+        
+    except JobAnalysisError as e:
+        print(f"❌ Job Analysis Error: {e}")
+        error_response = jsonify({"error": f"Analysis failed: {str(e)}"})
+        error_response.headers.add('Access-Control-Allow-Origin', '*')
+        return error_response, 400
+        
+    except Exception as e:
+        print(f"❌ Unexpected error in job_analyzer: {e}")
         import traceback
         traceback.print_exc()
         

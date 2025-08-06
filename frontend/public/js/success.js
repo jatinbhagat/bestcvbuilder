@@ -13,6 +13,7 @@ const downloadBtn = document.getElementById('downloadBtn');
 const submitFeedbackBtn = document.getElementById('submitFeedbackBtn');
 const newAnalysisBtn = document.getElementById('newAnalysisBtn');
 const homeBtn = document.getElementById('homeBtn');
+const optimizeForJobBtn = document.getElementById('optimizeForJobBtn');
 const feedbackComment = document.getElementById('feedbackComment');
 
 // Rating buttons
@@ -94,6 +95,11 @@ function setupEventListeners() {
     
     if (homeBtn) {
         homeBtn.addEventListener('click', handleGoHome);
+    }
+    
+    // Job optimization button
+    if (optimizeForJobBtn) {
+        optimizeForJobBtn.addEventListener('click', handleOptimizeForJob);
     }
     
     // Rating buttons
@@ -210,6 +216,21 @@ function handleNewAnalysis() {
 function handleGoHome() {
     console.log('User going to home page');
     window.location.href = './index.html';
+}
+
+/**
+ * Handle optimize for job button
+ */
+function handleOptimizeForJob() {
+    console.log('User wants to optimize for specific job');
+    
+    // Store current rewrite data for job optimization context
+    if (rewriteData) {
+        sessionStorage.setItem('currentRewriteData', JSON.stringify(rewriteData));
+    }
+    
+    // Navigate to job input page
+    window.location.href = './job-input.html';
 }
 
 /**

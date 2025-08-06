@@ -8,3 +8,7 @@ supabase==2.4.2
 flask==3.0.2
 gunicorn==21.2.0
 flask-cors==4.0.0
+
+# NLP libraries for job analysis
+nltk==3.8.1
+textblob==0.17.1

@@ -19,9 +19,9 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Analysis results table
-CREATE TABLE IF NOT EXISTS public.analysis_results (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+-- Resume analysis table
+CREATE TABLE IF NOT EXISTS public.resume_analysis (
+    id SERIAL PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     original_score INTEGER NOT NULL CHECK (original_score >= 0 AND original_score <= 100),
     analysis_data JSONB NOT NULL,
@@ -33,24 +33,24 @@ CREATE TABLE IF NOT EXISTS public.analysis_results (
 
 -- Payments table
 CREATE TABLE IF NOT EXISTS public.payments (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     payment_id TEXT UNIQUE NOT NULL, -- Stripe payment intent ID
     amount INTEGER NOT NULL, -- Amount in cents
     currency TEXT DEFAULT 'usd',
     status payment_status DEFAULT 'pending',
     payment_method TEXT,
-    analysis_id UUID REFERENCES public.analysis_results(id) ON DELETE SET NULL,
+    analysis_id INTEGER REFERENCES public.resume_analysis(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- CV rewrites table
-CREATE TABLE IF NOT EXISTS public.cv_rewrites (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+-- Resume improvements table
+CREATE TABLE IF NOT EXISTS public.resume_improvements (
+    id SERIAL PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-    original_analysis_id UUID REFERENCES public.analysis_results(id) ON DELETE CASCADE,
-    payment_id UUID REFERENCES public.payments(id) ON DELETE CASCADE,
+    original_analysis_id INTEGER REFERENCES public.resume_analysis(id) ON DELETE CASCADE,
+    payment_id INTEGER REFERENCES public.payments(id) ON DELETE CASCADE,
     original_score INTEGER NOT NULL,
     new_score INTEGER NOT NULL,
     score_improvement INTEGER NOT NULL,
@@ -62,10 +62,10 @@ CREATE TABLE IF NOT EXISTS public.cv_rewrites (
 
 -- Feedback table
 CREATE TABLE IF NOT EXISTS public.feedback (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-    analysis_id UUID REFERENCES public.analysis_results(id) ON DELETE SET NULL,
-    rewrite_id UUID REFERENCES public.cv_rewrites(id) ON DELETE SET NULL,
+    analysis_id INTEGER REFERENCES public.resume_analysis(id) ON DELETE SET NULL,
+    rewrite_id INTEGER REFERENCES public.resume_improvements(id) ON DELETE SET NULL,
     rating feedback_rating NOT NULL,
     comment TEXT,
     category TEXT, -- 'analysis', 'rewrite', 'overall'
@@ -83,19 +83,19 @@ CREATE TABLE IF NOT EXISTS public.user_sessions (
 );
 
 -- Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_analysis_results_user_id ON public.analysis_results(user_id);
-CREATE INDEX IF NOT EXISTS idx_analysis_results_created_at ON public.analysis_results(created_at);
+CREATE INDEX IF NOT EXISTS idx_resume_analysis_user_id ON public.resume_analysis(user_id);
+CREATE INDEX IF NOT EXISTS idx_resume_analysis_created_at ON public.resume_analysis(created_at);
 CREATE INDEX IF NOT EXISTS idx_payments_user_id ON public.payments(user_id);
 CREATE INDEX IF NOT EXISTS idx_payments_status ON public.payments(status);
-CREATE INDEX IF NOT EXISTS idx_cv_rewrites_user_id ON public.cv_rewrites(user_id);
+CREATE INDEX IF NOT EXISTS idx_resume_improvements_user_id ON public.resume_improvements(user_id);
 CREATE INDEX IF NOT EXISTS idx_feedback_user_id ON public.feedback(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON public.user_sessions(user_id);
 
 -- Create RLS (Row Level Security) policies
 ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.analysis_results ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.resume_analysis ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.cv_rewrites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.resume_improvements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.feedback ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_sessions ENABLE ROW LEVEL SECURITY;
 
@@ -109,14 +109,14 @@ CREATE POLICY "Users can update own profile" ON public.user_profiles
 CREATE POLICY "Users can insert own profile" ON public.user_profiles
     FOR INSERT WITH CHECK (auth.uid() = id);
 
--- Analysis results policies
-CREATE POLICY "Users can view own analysis results" ON public.analysis_results
+-- Resume analysis policies
+CREATE POLICY "Users can view own analysis results" ON public.resume_analysis
     FOR SELECT USING (auth.uid() = user_id);
 
-CREATE POLICY "Users can insert own analysis results" ON public.analysis_results
+CREATE POLICY "Users can insert own analysis results" ON public.resume_analysis
     FOR INSERT WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Users can update own analysis results" ON public.analysis_results
+CREATE POLICY "Users can update own analysis results" ON public.resume_analysis
     FOR UPDATE USING (auth.uid() = user_id);
 
 -- Payments policies
@@ -129,11 +129,11 @@ CREATE POLICY "Users can insert own payments" ON public.payments
 CREATE POLICY "Users can update own payments" ON public.payments
     FOR UPDATE USING (auth.uid() = user_id);
 
--- CV rewrites policies
-CREATE POLICY "Users can view own rewrites" ON public.cv_rewrites
+-- Resume improvements policies
+CREATE POLICY "Users can view own rewrites" ON public.resume_improvements
     FOR SELECT USING (auth.uid() = user_id);
 
-CREATE POLICY "Users can insert own rewrites" ON public.cv_rewrites
+CREATE POLICY "Users can insert own rewrites" ON public.resume_improvements
     FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- Feedback policies
@@ -164,8 +164,8 @@ CREATE TRIGGER update_user_profiles_updated_at
     BEFORE UPDATE ON public.user_profiles 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_analysis_results_updated_at 
-    BEFORE UPDATE ON public.analysis_results 
+CREATE TRIGGER update_resume_analysis_updated_at 
+    BEFORE UPDATE ON public.resume_analysis 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_payments_updated_at 
@@ -203,9 +203,9 @@ BEGIN
         'last_analysis', MAX(ar.created_at)
     ) INTO result
     FROM public.user_profiles up
-    LEFT JOIN public.analysis_results ar ON up.id = ar.user_id
+    LEFT JOIN public.resume_analysis ar ON up.id = ar.user_id
     LEFT JOIN public.payments p ON up.id = p.user_id AND p.status = 'succeeded'
-    LEFT JOIN public.cv_rewrites cr ON up.id = cr.user_id
+    LEFT JOIN public.resume_improvements cr ON up.id = cr.user_id
     WHERE up.id = user_uuid
     GROUP BY up.id;
     
