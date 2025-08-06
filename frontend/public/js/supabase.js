@@ -178,6 +178,47 @@ export class DatabaseService {
             throw error;
         }
     }
+
+    /**
+     * Log user activity for tracking and analytics
+     */
+    static async logActivity(userId, activityType, activityData = null) {
+        try {
+            // Get user info if userId not provided
+            if (!userId) {
+                const { data: { user } } = await supabase.auth.getUser();
+                userId = user?.id || 'anonymous';
+            }
+            
+            const activityRecord = {
+                user_id: userId,
+                activity_type: activityType,
+                activity_data: activityData,
+                ip_address: null, // Will be handled by server-side if needed
+                user_agent: navigator.userAgent,
+                timestamp: new Date().toISOString()
+            };
+            
+            console.log('📊 Logging activity:', activityType, activityData);
+            
+            const { data, error } = await supabase
+                .from('activity_logs')
+                .insert(activityRecord);
+            
+            if (error) {
+                console.error('❌ Activity logging failed:', error);
+                // Don't throw error for activity logging - it shouldn't break user flow
+                return null;
+            }
+            
+            console.log('✅ Activity logged successfully:', activityType);
+            return data;
+        } catch (error) {
+            console.error('Activity logging error:', error);
+            // Don't throw error for activity logging - it shouldn't break user flow
+            return null;
+        }
+    }
 }
 
 /**

@@ -28,6 +28,13 @@ let selectedRating = null;
  */
 function init() {
     console.log('Success page initialized');
+    
+    // Log success page visit
+    DatabaseService.logActivity(null, 'success_page_visited', {
+        source: 'upgrade_flow',
+        timestamp: new Date().toISOString()
+    });
+    
     loadRewriteData();
     setupEventListeners();
 }
@@ -223,6 +230,12 @@ function handleGoHome() {
  */
 function handleOptimizeForJob() {
     console.log('User wants to optimize for specific job');
+    
+    // Log job optimization button click
+    DatabaseService.logActivity(null, 'job_optimization_started', {
+        original_score: rewriteData?.original_score || 'unknown',
+        new_score: rewriteData?.new_score || 'unknown'
+    });
     
     // Store current rewrite data for job optimization context
     if (rewriteData) {

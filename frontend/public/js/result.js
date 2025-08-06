@@ -486,6 +486,12 @@ function handleUpgrade() {
     console.log('🚀 User clicked Fix My Resume Now - ALWAYS BYPASSING PAYMENT');
     
     try {
+        // Log upgrade button click
+        DatabaseService.logActivity(null, 'upgrade_button_clicked', {
+            bypass_mode: true,
+            original_score: analysisData?.score || 'unknown'
+        });
+        
         // Show immediate feedback
         if (upgradeBtn) {
             upgradeBtn.disabled = true;

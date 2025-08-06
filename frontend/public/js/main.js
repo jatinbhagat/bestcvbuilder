@@ -8,7 +8,7 @@
  * CRITICAL FIX v1.1.0: Remove query params, force rebuild
  */
 
-import { supabase } from './supabase.js';
+import { supabase, DatabaseService } from './supabase.js';
 import { uploadFile } from './fileUpload.js';
 import { analyzeResumeWithFallback, BUILD_ID, API_BASE_URL, CV_PARSER_ENDPOINT } from './atsAnalysis.js';
 
@@ -181,6 +181,13 @@ async function processResumeUpload(file) {
     try {
         console.log('🚀 Starting resume processing for:', file.name);
         
+        // Log file upload activity
+        await DatabaseService.logActivity(null, 'file_upload_started', {
+            filename: file.name,
+            filesize: file.size,
+            filetype: file.type
+        });
+        
         // Show loading state
         setLoadingState(true);
         
@@ -189,6 +196,12 @@ async function processResumeUpload(file) {
         showUploadProgress();
         const fileUrl = await uploadFile(file);
         console.log('✅ File uploaded successfully:', fileUrl);
+        
+        // Log successful file upload
+        await DatabaseService.logActivity(null, 'file_upload_completed', {
+            filename: file.name,
+            file_url: fileUrl
+        });
         
         // Step 2: Analyze resume (with user ID for database saving)
         console.log('🔍 Step 2: Starting ATS analysis...');
@@ -215,6 +228,14 @@ async function processResumeUpload(file) {
         if (!analysisResult || !analysisResult.score) {
             throw new Error('Invalid analysis result received');
         }
+        
+        // Log successful analysis
+        await DatabaseService.logActivity(userId, 'ats_analysis_completed', {
+            score: analysisResult.score,
+            scoreCategory: analysisResult.scoreCategory,
+            filename: file.name,
+            analysis_id: analysisResult.id || `analysis_${Date.now()}`
+        });
         
         // Store analysis result in session storage
         console.log('💾 Step 3: Storing results...');
