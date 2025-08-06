@@ -93,7 +93,7 @@ def health_check():
 
 @app.route('/api/cv-parser', methods=['POST', 'OPTIONS'])
 def cv_parser():
-    """CV Parser API endpoint"""
+    """CV Parser API endpoint with timeout and memory management"""
     if request.method == 'OPTIONS':
         response = jsonify({'status': 'ok'})
         response.headers.add('Access-Control-Allow-Origin', '*')
@@ -104,7 +104,12 @@ def cv_parser():
     if not cv_parser_available:
         return jsonify({"error": "CV parser not available"}), 500
     
+    # Set alarm for timeout (45 seconds for CV analysis - longer than job analysis)
+    signal.alarm(45)
+    
     try:
+        # Force initial garbage collection
+        gc.collect()
         # Get request data
         data = request.get_json()
         
@@ -131,6 +136,9 @@ def cv_parser():
         result = analyze_resume_content(file_url)
         
         print(f"✅ CV analysis completed successfully")
+        
+        # Force garbage collection after analysis
+        gc.collect()
         
         # Add database operations (from Vercel handler)
         try:
@@ -215,6 +223,12 @@ def cv_parser():
         
         return response
         
+    except TimeoutError:
+        print(f"⏱️ CV analysis timeout - request took too long")
+        error_response = jsonify({"error": "Analysis timeout - please try with a smaller resume file or different format"})
+        error_response.headers.add('Access-Control-Allow-Origin', '*')
+        return error_response, 408  # Request Timeout
+        
     except ATSAnalysisError as e:
         print(f"❌ ATS Analysis Error: {e}")
         error_response = jsonify({"error": f"Analysis failed: {str(e)}"})
@@ -229,6 +243,11 @@ def cv_parser():
         error_response = jsonify({"error": f"Internal server error: {str(e)}"})
         error_response.headers.add('Access-Control-Allow-Origin', '*')
         return error_response, 500
+    
+    finally:
+        # Always clear the alarm and force garbage collection
+        signal.alarm(0)
+        gc.collect()
 
 @app.route('/api/job-analyzer', methods=['POST', 'OPTIONS'])
 def job_analyzer():

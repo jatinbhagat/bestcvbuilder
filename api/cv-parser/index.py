@@ -15,10 +15,76 @@ from collections import Counter
 from urllib.parse import urlparse
 import math
 import uuid
+import gc
+import sys
 
 # Configure logging first
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Memory management utilities
+def cleanup_memory():
+    """Force garbage collection to free memory"""
+    try:
+        # Force multiple garbage collection passes
+        for _ in range(3):
+            collected = gc.collect()
+            if collected == 0:
+                break
+        logger.debug(f"🧹 CV parser memory cleanup - collected {collected} objects")
+    except Exception as e:
+        logger.warning(f"Memory cleanup failed: {e}")
+
+def get_memory_usage():
+    """Get current memory usage info if available"""
+    try:
+        import psutil
+        process = psutil.Process(os.getpid())
+        memory_mb = round(process.memory_info().rss / 1024 / 1024, 2)
+        return memory_mb
+    except ImportError:
+        return None
+
+def extract_with_pypdf2_simple(file_content: bytes) -> str:
+    """Simple PyPDF2 extraction for large files - memory efficient"""
+    try:
+        pdf_file = io.BytesIO(file_content)
+        reader = PyPDF2.PdfReader(pdf_file)
+        
+        text_parts = []
+        max_pages = min(len(reader.pages), 5)  # Limit to 5 pages for memory
+        
+        for i in range(max_pages):
+            try:
+                page = reader.pages[i]
+                page_text = page.extract_text()
+                if page_text and len(page_text.strip()) > 20:
+                    text_parts.append(page_text)
+                    
+                # Clean up page object
+                del page
+                
+                # Force cleanup every 2 pages
+                if i % 2 == 0:
+                    cleanup_memory()
+                    
+            except Exception as e:
+                logger.warning(f"Error extracting page {i+1}: {e}")
+                continue
+        
+        # Clean up reader and file objects
+        del reader
+        pdf_file.close()
+        cleanup_memory()
+        
+        result = '\n'.join(text_parts)
+        logger.info(f"Simple extraction completed: {len(result)} characters")
+        return result
+        
+    except Exception as e:
+        logger.error(f"Simple PDF extraction failed: {e}")
+        cleanup_memory()
+        raise TextExtractionError(f"Simple PDF extraction failed: {str(e)}")
 
 # Import configuration system
 from config.config_loader import (
@@ -238,8 +304,21 @@ def extract_text_from_file(file_content: bytes, file_url: str) -> str:
 def extract_pdf_text(file_content: bytes) -> str:
     """Extract text from PDF using multiple methods with fallbacks for better accuracy"""
     
+    # Check file size first (prevent memory issues)
+    file_size_mb = len(file_content) / (1024 * 1024)
+    if file_size_mb > 6:  # 6MB limit for PDF processing
+        logger.warning(f"⚠️ Large PDF file: {file_size_mb:.1f}MB - using simplified extraction")
+        # For large files, use only the most memory-efficient method
+        if PYPDF2_AVAILABLE:
+            return extract_with_pypdf2_simple(file_content)
+        else:
+            raise TextExtractionError("File too large and no simple extraction available")
+    
+    # Force initial cleanup
+    cleanup_memory()
+    
     # Log available methods
-    logger.info("🔍 Starting PDF extraction with prioritized methods...")
+    logger.info(f"🔍 Starting PDF extraction ({file_size_mb:.1f}MB) with prioritized methods...")
     
     # Check if any extraction method is available
     if not any([PYPDF2_AVAILABLE, PDFPLUMBER_AVAILABLE, PYMUPDF_AVAILABLE, PDFMINER_AVAILABLE]):
@@ -286,6 +365,14 @@ def extract_pdf_text(file_content: bytes) -> str:
                 if quality_score > best_score:
                     best_text = text
                     best_score = quality_score
+                    
+                    # Clean up to save memory
+                    cleanup_memory()
+                
+                # If we get excellent results, stop trying other methods
+                if quality_score >= 85:
+                    logger.info(f"✅ Excellent quality ({quality_score}) achieved with {method_name}, stopping here")
+                    break
                     best_method = method_name
                     logger.info(f"🏆 New best extraction method: {method_name} (score: {quality_score})")
                 
@@ -344,12 +431,15 @@ def extract_with_pypdf2_basic(file_content: bytes) -> str:
     return text
 
 def extract_with_pypdf2(file_content: bytes) -> str:
-    """Extract text using PyPDF2 - Enhanced for serverless deployment"""
+    """Extract text using PyPDF2 with memory management"""
     text = ""
     pdf_file = io.BytesIO(file_content)
     pdf_reader = PyPDF2.PdfReader(pdf_file)
     
-    for page in pdf_reader.pages:
+    page_count = 0
+    max_pages = min(len(pdf_reader.pages), 10)  # Limit pages for memory
+    
+    for page in pdf_reader.pages[:max_pages]:
         try:
             # Try different extraction methods for better quality
             page_text = page.extract_text()
@@ -364,10 +454,21 @@ def extract_with_pypdf2(file_content: bytes) -> str:
             
             if page_text:
                 text += page_text + "\n"
+            
+            page_count += 1
+            
+            # Clean up memory every 3 pages
+            if page_count % 3 == 0:
+                cleanup_memory()
                 
         except Exception as e:
             logger.warning(f"Failed to extract text from page: {e}")
             continue
+    
+    # Clean up reader and file
+    del pdf_reader
+    pdf_file.close()
+    cleanup_memory()
     
     # Enhanced cleaning for PyPDF2 specific issues
     cleaned_text = clean_extracted_text_enhanced(text)
@@ -2457,8 +2558,17 @@ def analyze_resume_content(file_url: str) -> Dict[str, Any]:
         
         file_content = response.content
         
-        # Extract text content
+        # Clean up response object
+        response.close()
+        del response
+        
+        # Extract text content with memory monitoring
+        logger.info(f"📝 Starting text extraction from file")
         content = extract_text_from_file(file_content, file_url)
+        
+        # Clean up file content immediately after extraction
+        del file_content
+        cleanup_memory()
         
         # Validate extracted content
         if not content or len(content.strip()) < 50:
