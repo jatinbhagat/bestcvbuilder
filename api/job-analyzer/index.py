@@ -570,6 +570,104 @@ def analyze_job_description(job_data: Dict[str, Any]) -> Dict[str, Any]:
         logger.error(f"❌ Job analysis failed: {str(e)}")
         raise JobAnalysisError(f"Analysis failed: {str(e)}")
 
+def cors_headers():
+    """Return CORS headers for API responses - following cv-rewrite pattern"""
+    return {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Max-Age": "86400"
+    }
+
+def handler(event, context):
+    """
+    Main handler function for Render.com serverless deployment
+    Following exact pattern from cv-rewrite/index.py
+    
+    Args:
+        event: HTTP request event
+        context: Lambda context (unused in Render)
+        
+    Returns:
+        HTTP response with CORS headers
+    """
+    
+    try:
+        # Handle CORS preflight requests
+        if event.get('httpMethod') == 'OPTIONS':
+            return {
+                'statusCode': 200,
+                'headers': cors_headers(),
+                'body': ''
+            }
+        
+        # Only accept POST requests
+        if event.get('httpMethod') != 'POST':
+            return {
+                'statusCode': 405,
+                'headers': cors_headers(),
+                'body': json.dumps({'error': 'Method not allowed'})
+            }
+        
+        # Parse request body
+        body = event.get('body')
+        if not body:
+            return {
+                'statusCode': 400,
+                'headers': cors_headers(),
+                'body': json.dumps({'error': 'Request body is required'})
+            }
+        
+        try:
+            request_data = json.loads(body)
+        except json.JSONDecodeError:
+            return {
+                'statusCode': 400,
+                'headers': cors_headers(),
+                'body': json.dumps({'error': 'Invalid JSON in request body'})
+            }
+        
+        # Validate required parameters
+        job_description = request_data.get('job_description')
+        if not job_description or len(job_description.strip()) < 50:
+            return {
+                'statusCode': 400,
+                'headers': cors_headers(),
+                'body': json.dumps({
+                    'error': 'Job description is required and must be at least 50 characters long'
+                })
+            }
+        
+        logger.info(f"🔍 Job analysis request for: {request_data.get('role_title', 'Unknown Role')}")
+        
+        # Perform job analysis
+        analysis_result = analyze_job_description(request_data)
+        
+        logger.info(f"✅ Job analysis completed successfully")
+        logger.info(f"📊 Analysis score: {analysis_result.get('analysis_score', 0)}")
+        
+        return {
+            'statusCode': 200,
+            'headers': cors_headers(),
+            'body': json.dumps(analysis_result)
+        }
+        
+    except JobAnalysisError as e:
+        logger.error(f"❌ Job analysis error: {e}")
+        return {
+            'statusCode': 400,
+            'headers': cors_headers(),
+            'body': json.dumps({'error': str(e)})
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Unexpected error in job analyzer: {e}")
+        return {
+            'statusCode': 500,
+            'headers': cors_headers(),
+            'body': json.dumps({'error': 'Internal server error'})
+        }
+
 # For local testing
 if __name__ == "__main__":
     # Test the function locally

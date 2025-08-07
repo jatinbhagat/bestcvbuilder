@@ -29,7 +29,8 @@
       "Bash(mkdir:*)",
       "Bash(git init:*)",
       "Bash(find:*)",
-      "Bash(npx tailwindcss:*)"
+      "Bash(npx tailwindcss:*)",
+      "Bash(touch:*)"
     ],
     "deny": []
   }

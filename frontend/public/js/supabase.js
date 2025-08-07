@@ -180,6 +180,40 @@ export class DatabaseService {
     }
 
     /**
+     * Save job analysis to database
+     */
+    static async saveJobAnalysis(userId, jobAnalysisData) {
+        try {
+            console.log('📊 Saving job analysis to database...');
+            
+            const { data, error } = await supabase
+                .from('job_analysis')
+                .insert({
+                    user_id: userId,
+                    role_title: jobAnalysisData.role_title,
+                    company_name: jobAnalysisData.company_name,
+                    job_description: jobAnalysisData.job_description,
+                    extracted_requirements: jobAnalysisData.extracted_requirements,
+                    user_expectations: jobAnalysisData.user_expectations,
+                    analysis_score: jobAnalysisData.analysis_score,
+                    matching_keywords: jobAnalysisData.matching_keywords,
+                    created_at: new Date().toISOString()
+                });
+            
+            if (error) {
+                console.error('❌ Job analysis save failed:', error);
+                throw error;
+            }
+            
+            console.log('✅ Job analysis saved successfully:', data);
+            return data;
+        } catch (error) {
+            console.error('Job analysis save error:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Log user activity for tracking and analytics
      */
     static async logActivity(userId, activityType, activityData = null) {
