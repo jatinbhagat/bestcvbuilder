@@ -398,20 +398,42 @@ def resume_fix():
     try:
         print(f"🚀 RESUME-FIX: Starting request processing...")
         
-        # Import the resume-fix handler from the correct module
-        import sys
-        resume_fix_path = os.path.join(os.path.dirname(__file__), 'api', 'resume-fix')
-        if resume_fix_path not in sys.path:
-            sys.path.append(resume_fix_path)
+        # Import the resume-fix handler - try multiple import strategies
+        process_resume_fix = None
         
-        import importlib.util
-        resume_fix_module_path = os.path.join(resume_fix_path, 'index.py')
-        spec = importlib.util.spec_from_file_location("resume_fix_module", resume_fix_module_path)
-        resume_fix_module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(resume_fix_module)
+        try:
+            # Strategy 1: Direct path import
+            import sys
+            resume_fix_path = os.path.join(os.path.dirname(__file__), 'api', 'resume-fix')
+            if resume_fix_path not in sys.path:
+                sys.path.insert(0, resume_fix_path)
+            
+            # Import the function directly
+            exec("from index import process_resume_fix as imported_func")
+            process_resume_fix = locals().get('imported_func')
+            print(f"✅ RESUME-FIX: Successfully imported via strategy 1")
+            
+        except Exception as e1:
+            print(f"⚠️ RESUME-FIX: Strategy 1 failed: {e1}")
+            
+            try:
+                # Strategy 2: Module loading
+                import importlib.util
+                resume_fix_module_path = os.path.join(os.path.dirname(__file__), 'api', 'resume-fix', 'index.py')
+                spec = importlib.util.spec_from_file_location("resume_fix_handler", resume_fix_module_path)
+                resume_fix_module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(resume_fix_module)
+                process_resume_fix = resume_fix_module.process_resume_fix
+                print(f"✅ RESUME-FIX: Successfully imported via strategy 2")
+                
+            except Exception as e2:
+                print(f"❌ RESUME-FIX: All import strategies failed")
+                print(f"   Strategy 1 error: {e1}")
+                print(f"   Strategy 2 error: {e2}")
+                raise Exception(f"Cannot import process_resume_fix: {e2}")
         
-        process_resume_fix = resume_fix_module.process_resume_fix
-        print(f"✅ RESUME-FIX: Successfully imported process_resume_fix from resume-fix module")
+        if not process_resume_fix:
+            raise Exception("process_resume_fix function not found after import")
         
         # Get request data
         data = request.get_json()
