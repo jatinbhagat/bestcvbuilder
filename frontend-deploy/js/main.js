@@ -1,11 +1,10 @@
 /**
  * Main JavaScript file for BestCVBuilder landing page
  * Handles file upload, ATS analysis, and user flow
- * DEPLOY TRIGGER: Force rebuild for CORS fix - v2.1.0
- * VERCEL AUTO-DEPLOY: Trigger change v3.0 - Critical fix
- * REDEPLOY REQUEST: August 2nd 2025 - API URL fix needed
- * UI UPDATE: Added clean upload progress loader v3.1
- * CRITICAL FIX v1.1.0: Remove query params, force rebuild
+ * Updated: 2025-08-08 - Render.com production deployment
+ * Features: Real Gemini AI integration, PDF generation, ATS scoring
+ * Backend: Flask API on Render.com with 45s timeout handling
+ * Status: Fully functional resume optimization system
  */
 
 import { supabase } from './supabase.js';

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BestCVBuilder - ATS Score Checker & CV Updater (v2.1-FORCE-DEPLOY)</title>
+    <meta name="description" content="Analyze your resume with AI-powered ATS scoring and get an improved version">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <!-- Tailwind CSS -->
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="./assets/favicon.ico">
+  <script type="module" crossorigin src="/assets/main-rdt_m30w-v2.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/supabase-BMp_lEby-v2.js">
+  <link rel="modulepreload" crossorigin href="/assets/atsAnalysis-DfDExjh9-v2.js">
+  <link rel="stylesheet" crossorigin href="/assets/supabase-Du5OjIYV-v2.css">
+</head>
+<body class="bg-gray-50 font-sans">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <h1 class="text-xl font-bold text-gray-900">BestCVBuilder</h1>
+                </div>
+                <nav class="hidden md:flex space-x-8">
+                    <a href="#" class="text-gray-500 hover:text-gray-900">How it works</a>
+                    <a href="#" class="text-gray-500 hover:text-gray-900">Pricing</a>
+                    <a href="#" class="text-gray-500 hover:text-gray-900">Contact</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Hero Section -->
+        <section class="text-center mb-12">
+            <h2 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+                Get Your Resume ATS-Ready
+            </h2>
+            <p class="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+                Upload your resume and get an instant ATS score analysis. 
+                Then upgrade to our AI-powered CV rewrite for better job matches.
+            </p>
+        </section>
+
+        <!-- Upload Section -->
+        <section class="max-w-2xl mx-auto mb-12">
+            <div class="bg-white rounded-lg shadow-lg p-6 md:p-8">
+                <h3 class="text-2xl font-semibold text-gray-900 mb-6 text-center">
+                    Upload Your Resume
+                </h3>
+                
+                <!-- File Upload Form -->
+                <form id="uploadForm" class="space-y-6">
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary-500 transition-colors">
+                        <div class="space-y-4">
+                            <div class="mx-auto w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
+                                <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <label for="resumeFile" class="cursor-pointer">
+                                    <span class="text-lg font-medium text-gray-900">Drop your resume here</span>
+                                    <span class="block text-sm text-gray-500 mt-1">or click to browse</span>
+                                </label>
+                                <input 
+                                    id="resumeFile" 
+                                    name="resumeFile" 
+                                    type="file" 
+                                    accept=".pdf,.docx,.doc"
+                                    class="hidden"
+                                    required
+                                >
+                            </div>
+                            <p class="text-xs text-gray-500">
+                                Supported formats: PDF, DOCX, DOC (Max 10MB)
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <button 
+                        type="submit" 
+                        class="w-full bg-primary-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        id="uploadBtn"
+                    >
+                        Analyze My Resume
+                    </button>
+                </form>
+                
+                <!-- Loading State -->
+                <div id="loadingState" class="hidden text-center py-8">
+                    <div class="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+                        <!-- Upload Progress -->
+                        <div id="uploadProgress" class="mb-6">
+                            <div class="flex items-center justify-center mb-4">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                                <span class="ml-3 text-gray-700 font-medium">Uploading resume...</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div id="uploadBar" class="bg-primary-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Upload Complete -->
+                        <div id="uploadComplete" class="hidden mb-6">
+                            <div class="flex items-center justify-center mb-3">
+                                <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </div>
+                                <span class="ml-3 text-green-700 font-medium">Upload complete!</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Analysis Progress -->
+                        <div id="analysisProgress" class="hidden">
+                            <div class="flex items-center justify-center mb-4">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                <span class="ml-3 text-gray-700 font-medium">Analyzing resume...</span>
+                            </div>
+                            <p class="text-sm text-gray-500">This may take a few seconds</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="grid md:grid-cols-3 gap-8 mb-12">
+            <div class="text-center">
+                <div class="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Instant ATS Score</h3>
+                <p class="text-gray-600">Get your resume's ATS compatibility score in seconds</p>
+            </div>
+            <div class="text-center">
+                <div class="w-12 h-12 bg-success-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-6 h-6 text-success-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">AI-Powered Rewrite</h3>
+                <p class="text-gray-600">Get an optimized version that beats ATS systems</p>
+            </div>
+            <div class="text-center">
+                <div class="w-12 h-12 bg-warning-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-6 h-6 text-warning-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Smart Recommendations</h3>
+                <p class="text-gray-600">Detailed feedback to improve your resume</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center">
+                <p class="text-gray-400">&copy; 2024 BestCVBuilder. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+</body>
+</html> 
