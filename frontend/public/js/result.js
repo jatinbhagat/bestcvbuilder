@@ -1243,16 +1243,33 @@ async function handleRealResumeImprovement() {
         console.log(`🚀 REAL-API: Calling resume-fix API at ${API_BASE_URL}/api/resume-fix`);
         console.log(`📋 REAL-API: Analysis data keys: ${Object.keys(analysisData)}`);
         
+        // Debug: Check what data we're sending
+        console.log(`🔍 REAL-API: Analysis data structure:`, analysisData);
+        console.log(`🔍 REAL-API: Has file_url: ${'file_url' in analysisData}`);
+        console.log(`🔍 REAL-API: Has content: ${'content' in analysisData}`);
+        console.log(`🔍 REAL-API: Has pdf_url: ${'pdf_url' in analysisData}`);
+        
+        if (analysisData.file_url) {
+            console.log(`📄 REAL-API: File URL: ${analysisData.file_url}`);
+        }
+        if (analysisData.content) {
+            console.log(`📄 REAL-API: Content length: ${analysisData.content.length}`);
+        }
+        
+        const requestPayload = {
+            original_analysis: analysisData,
+            user_email: 'user@bestcvbuilder.com',
+            payment_id: `real_${Date.now()}`
+        };
+        
+        console.log(`📤 REAL-API: Sending payload with keys: ${Object.keys(requestPayload.original_analysis)}`);
+        
         const response = await fetch(`${API_BASE_URL}/api/resume-fix`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                original_analysis: analysisData,
-                user_email: 'user@bestcvbuilder.com',
-                payment_id: `real_${Date.now()}`
-            })
+            body: JSON.stringify(requestPayload)
         });
         
         console.log(`📈 REAL-API: Response status: ${response.status}`);

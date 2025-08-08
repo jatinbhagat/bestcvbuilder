@@ -454,6 +454,25 @@ def resume_fix():
         print(f"💳 RESUME-FIX: Payment ID: {payment_id}")
         print(f"📋 RESUME-FIX: Analysis data has {len(original_analysis)} keys")
         
+        # Debug: Check what analysis data we received
+        print(f"🔍 RESUME-FIX: Analysis data keys: {list(original_analysis.keys())}")
+        print(f"🔍 RESUME-FIX: Has file_url: {'file_url' in original_analysis}")
+        print(f"🔍 RESUME-FIX: Has content: {'content' in original_analysis}")
+        print(f"🔍 RESUME-FIX: Has pdf_url: {'pdf_url' in original_analysis}")
+        
+        if 'file_url' in original_analysis:
+            print(f"📄 RESUME-FIX: File URL found: {original_analysis['file_url']}")
+        if 'content' in original_analysis:
+            print(f"📄 RESUME-FIX: Content found, length: {len(original_analysis['content'])}")
+        if 'pdf_url' in original_analysis:
+            print(f"📄 RESUME-FIX: PDF URL found: {original_analysis['pdf_url']}")
+            
+        # Show some sample data to understand the structure
+        if original_analysis:
+            print(f"📊 RESUME-FIX: Sample analysis data: {dict(list(original_analysis.items())[:3])}")
+        else:
+            print(f"❌ RESUME-FIX: original_analysis is empty!")
+        
         # Process the resume fix
         print(f"🔧 RESUME-FIX: Calling process_resume_fix function...")
         result = process_resume_fix(
