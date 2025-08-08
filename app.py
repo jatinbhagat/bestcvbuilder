@@ -398,9 +398,20 @@ def resume_fix():
     try:
         print(f"🚀 RESUME-FIX: Starting request processing...")
         
-        # Import the resume-fix handler
-        from index import process_resume_fix
-        print(f"✅ RESUME-FIX: Successfully imported process_resume_fix")
+        # Import the resume-fix handler from the correct module
+        import sys
+        resume_fix_path = os.path.join(os.path.dirname(__file__), 'api', 'resume-fix')
+        if resume_fix_path not in sys.path:
+            sys.path.append(resume_fix_path)
+        
+        import importlib.util
+        resume_fix_module_path = os.path.join(resume_fix_path, 'index.py')
+        spec = importlib.util.spec_from_file_location("resume_fix_module", resume_fix_module_path)
+        resume_fix_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(resume_fix_module)
+        
+        process_resume_fix = resume_fix_module.process_resume_fix
+        print(f"✅ RESUME-FIX: Successfully imported process_resume_fix from resume-fix module")
         
         # Get request data
         data = request.get_json()
