@@ -285,7 +285,9 @@ function updateCharacterCount() {
 async function analyzeJobRequirements(formData) {
     console.log('Calling job analyzer API...');
     
-    const response = await fetch(`${API_BASE_URL}/job-analyzer`, {
+    let response;
+    try {
+        response = await fetch(`${API_BASE_URL}/job-analyzer`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -300,15 +302,34 @@ async function analyzeJobRequirements(formData) {
                 additional_notes: formData.additionalNotes
             }
         })
-    });
-    
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}: Failed to analyze job requirements`);
+        });
+    } catch (networkError) {
+        console.error('Network error:', networkError);
+        throw new Error('Unable to connect to server - please check your internet connection and try again');
     }
     
-    const result = await response.json();
-    console.log('Job analysis completed:', result);
+    if (!response.ok) {
+        let errorMessage;
+        try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || `HTTP ${response.status}: Failed to analyze job requirements`;
+        } catch (jsonError) {
+            // Handle non-JSON error responses (like HTML error pages)
+            const textResponse = await response.text().catch(() => 'Unknown error');
+            console.error('Non-JSON error response:', textResponse);
+            errorMessage = `HTTP ${response.status}: Server error - please try again`;
+        }
+        throw new Error(errorMessage);
+    }
+    
+    let result;
+    try {
+        result = await response.json();
+        console.log('Job analysis completed:', result);
+    } catch (jsonError) {
+        console.error('Failed to parse JSON response:', jsonError);
+        throw new Error('Invalid response from server - please try again');
+    }
     
     return result;
 }
