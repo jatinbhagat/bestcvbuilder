@@ -2,19 +2,16 @@ import { defineConfig } from 'vite'
 import { resolve } from 'path'
 
 export default defineConfig({
-  root: 'public',
+  root: '.', 
   build: {
-    outDir: '../dist',
+    outDir: 'dist',
     emptyOutDir: true,
-    assetsInlineLimit: 0,
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'public/index.html'),
-        result: resolve(__dirname, 'public/result.html'),
-        payment: resolve(__dirname, 'public/payment.html'),
-        success: resolve(__dirname, 'public/success.html'),
-        jobInput: resolve(__dirname, 'public/job-input.html'),
-        optimizationResults: resolve(__dirname, 'public/optimization-results.html')
+        main: resolve(__dirname, 'index.html'),
+        result: resolve(__dirname, 'result.html'),
+        payment: resolve(__dirname, 'payment.html'),
+        success: resolve(__dirname, 'success.html')
       },
       output: {
         entryFileNames: `assets/[name]-[hash]-v2.js`,

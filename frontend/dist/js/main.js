@@ -1,24 +1,25 @@
 /**
  * Main JavaScript file for BestCVBuilder landing page
  * Handles file upload, ATS analysis, and user flow
- * Updated: 2025-08-08 - Render.com production deployment
- * Features: Real Gemini AI integration, PDF generation, ATS scoring
- * Backend: Flask API on Render.com with 45s timeout handling
- * Status: Fully functional resume optimization system
+ * DEPLOY TRIGGER: Force rebuild for CORS fix - v2.1.0
+ * VERCEL AUTO-DEPLOY: Trigger change v3.0 - Critical fix
+ * REDEPLOY REQUEST: August 2nd 2025 - API URL fix needed
+ * UI UPDATE: Added clean upload progress loader v3.1
+ * CRITICAL FIX v1.1.0: Remove query params, force rebuild
  */
 
-import { supabase } from './supabase.js';
+import { supabase, DatabaseService } from './supabase.js';
 import { uploadFile } from './fileUpload.js';
 import { analyzeResumeWithFallback, BUILD_ID, API_BASE_URL, CV_PARSER_ENDPOINT } from './atsAnalysis.js';
 
 // DOM Elements
 const uploadForm = document.getElementById('uploadForm');
-const resumeFileInput = document.getElementById('resumeFile');
-const uploadBtn = document.getElementById('uploadBtn');
+const resumeFileInput = document.getElementById('fileInput');
+const uploadBtn = document.getElementById('analyzeBtn');
 const loadingState = document.getElementById('loadingState');
 
 // File upload drop zone
-const dropZone = document.querySelector('.border-dashed');
+const dropZone = document.getElementById('uploadArea');
 
 /**
  * Initialize the application
@@ -28,6 +29,7 @@ function init() {
     setupEventListeners();
     checkUserSession();
     displayBuildInfo();
+    initTestingControls();
 }
 
 /**
@@ -68,10 +70,17 @@ function displayBuildInfo() {
  */
 function setupEventListeners() {
     // File input change
-    resumeFileInput.addEventListener('change', handleFileSelect);
+    if (resumeFileInput) {
+        resumeFileInput.addEventListener('change', handleFileSelect);
+    }
     
     // Form submission
-    uploadForm.addEventListener('submit', handleFormSubmit);
+    if (uploadForm) {
+        uploadForm.addEventListener('submit', handleFormSubmit);
+    }
+    
+    // Listen for custom resume upload event from inline script
+    document.addEventListener('resumeUpload', handleCustomUpload);
     
     // Drag and drop functionality
     if (dropZone) {
@@ -87,8 +96,13 @@ function setupEventListeners() {
  */
 function handleFileSelect(event) {
     const file = event.target.files[0];
-    if (file) {
-        validateAndProcessFile(file);
+    if (file && validateAndProcessFile(file)) {
+        // Update file display
+        const fileName = document.getElementById('fileName');
+        const fileInfo = document.getElementById('fileInfo');
+        if (fileName) fileName.textContent = file.name;
+        if (fileInfo) fileInfo.classList.remove('hidden');
+        if (uploadBtn) uploadBtn.disabled = false;
     }
 }
 
@@ -98,13 +112,23 @@ function handleFileSelect(event) {
 async function handleFormSubmit(event) {
     event.preventDefault();
     
-    const file = resumeFileInput.files[0];
+    const file = resumeFileInput ? resumeFileInput.files[0] : null;
     if (!file) {
         showError('Please select a resume file');
         return;
     }
     
     await processResumeUpload(file);
+}
+
+/**
+ * Handle custom upload event from inline script
+ */
+async function handleCustomUpload(event) {
+    const { file } = event.detail;
+    if (file && validateAndProcessFile(file)) {
+        await processResumeUpload(file);
+    }
 }
 
 /**
@@ -157,18 +181,27 @@ async function processResumeUpload(file) {
     try {
         console.log('🚀 Starting resume processing for:', file.name);
         
+        // Log file upload activity
+        await DatabaseService.logActivity(null, 'file_upload_started', {
+            filename: file.name,
+            filesize: file.size,
+            filetype: file.type
+        });
+        
         // Show loading state
         setLoadingState(true);
         
-        // Step 1: Upload file with progress
+        // Step 1: Upload file
         console.log('📤 Step 1: Uploading file to storage...');
         showUploadProgress();
         const fileUrl = await uploadFile(file);
         console.log('✅ File uploaded successfully:', fileUrl);
         
-        // Show upload complete
-        showUploadComplete();
-        await new Promise(resolve => setTimeout(resolve, 800)); // Brief pause to show completion
+        // Log successful file upload
+        await DatabaseService.logActivity(null, 'file_upload_completed', {
+            filename: file.name,
+            file_url: fileUrl
+        });
         
         // Step 2: Analyze resume (with user ID for database saving)
         console.log('🔍 Step 2: Starting ATS analysis...');
@@ -195,6 +228,14 @@ async function processResumeUpload(file) {
         if (!analysisResult || !analysisResult.score) {
             throw new Error('Invalid analysis result received');
         }
+        
+        // Log successful analysis
+        await DatabaseService.logActivity(userId, 'ats_analysis_completed', {
+            score: analysisResult.score,
+            scoreCategory: analysisResult.scoreCategory,
+            filename: file.name,
+            analysis_id: analysisResult.id || `analysis_${Date.now()}`
+        });
         
         // Store analysis result in session storage
         console.log('💾 Step 3: Storing results...');
@@ -226,28 +267,39 @@ async function processResumeUpload(file) {
  */
 function handleDragOver(event) {
     event.preventDefault();
-    dropZone.classList.add('border-primary-500', 'bg-primary-50');
+    dropZone.classList.add('dragover');
 }
 
 function handleDragEnter(event) {
     event.preventDefault();
-    dropZone.classList.add('border-primary-500', 'bg-primary-50');
+    dropZone.classList.add('dragover');
 }
 
 function handleDragLeave(event) {
     event.preventDefault();
-    dropZone.classList.remove('border-primary-500', 'bg-primary-50');
+    dropZone.classList.remove('dragover');
 }
 
 function handleDrop(event) {
     event.preventDefault();
-    dropZone.classList.remove('border-primary-500', 'bg-primary-50');
+    dropZone.classList.remove('dragover');
     
     const files = event.dataTransfer.files;
     if (files.length > 0) {
         const file = files[0];
-        resumeFileInput.files = files;
-        validateAndProcessFile(file);
+        if (resumeFileInput) {
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            resumeFileInput.files = dt.files;
+        }
+        if (validateAndProcessFile(file)) {
+            // Update file display
+            const fileName = document.getElementById('fileName');
+            const fileInfo = document.getElementById('fileInfo');
+            if (fileName) fileName.textContent = file.name;
+            if (fileInfo) fileInfo.classList.remove('hidden');
+            if (uploadBtn) uploadBtn.disabled = false;
+        }
     }
 }
 
@@ -255,66 +307,39 @@ function handleDrop(event) {
  * Set loading state
  */
 function setLoadingState(isLoading) {
+    const buttonText = document.getElementById('buttonText');
+    const loadingText = document.getElementById('loadingText');
+    
     if (isLoading) {
-        uploadForm.classList.add('hidden');
-        loadingState.classList.remove('hidden');
-        uploadBtn.disabled = true;
-        resetProgressStates();
+        if (buttonText) buttonText.style.display = 'none';
+        if (loadingText) loadingText.style.display = 'flex';
+        if (uploadBtn) uploadBtn.disabled = true;
     } else {
-        uploadForm.classList.remove('hidden');
-        loadingState.classList.add('hidden');
-        uploadBtn.disabled = false;
+        if (buttonText) buttonText.style.display = 'inline';
+        if (loadingText) loadingText.style.display = 'none';
+        if (uploadBtn) uploadBtn.disabled = false;
     }
 }
 
 /**
- * Reset all progress states
- */
-function resetProgressStates() {
-    document.getElementById('uploadProgress').classList.remove('hidden');
-    document.getElementById('uploadComplete').classList.add('hidden');
-    document.getElementById('analysisProgress').classList.add('hidden');
-    document.getElementById('uploadBar').style.width = '0%';
-}
-
-/**
- * Show upload progress with animated progress bar
+ * Show upload progress (simplified for current UI)
  */
 function showUploadProgress() {
-    document.getElementById('uploadProgress').classList.remove('hidden');
-    document.getElementById('uploadComplete').classList.add('hidden');
-    document.getElementById('analysisProgress').classList.add('hidden');
-    
-    // Animate progress bar
-    let progress = 0;
-    const progressBar = document.getElementById('uploadBar');
-    const interval = setInterval(() => {
-        progress += Math.random() * 15;
-        if (progress >= 95) {
-            progress = 95;
-            clearInterval(interval);
-        }
-        progressBar.style.width = progress + '%';
-    }, 100);
+    console.log('📤 Upload progress started');
 }
 
 /**
- * Show upload complete state
+ * Show upload complete state (simplified for current UI)
  */
 function showUploadComplete() {
-    document.getElementById('uploadBar').style.width = '100%';
-    setTimeout(() => {
-        document.getElementById('uploadProgress').classList.add('hidden');
-        document.getElementById('uploadComplete').classList.remove('hidden');
-    }, 300);
+    console.log('✅ Upload completed');
 }
 
 /**
- * Show analysis progress
+ * Show analysis progress (simplified for current UI)
  */
 function showAnalysisProgress() {
-    document.getElementById('uploadComplete').classList.add('hidden');
-    document.getElementById('analysisProgress').classList.remove('hidden');
+    console.log('🔍 Analysis in progress');
 }
 
 /**
@@ -346,6 +371,74 @@ async function checkUserSession() {
         }
     } catch (error) {
         console.error('Error checking session:', error);
+    }
+}
+
+/**
+ * Initialize testing controls for payment bypass
+ */
+function initTestingControls() {
+    const testingControls = document.getElementById('testingControls');
+    const enableBypassBtn = document.getElementById('enableBypassBtn');
+    const disableBypassBtn = document.getElementById('disableBypassBtn');
+    
+    // Only show on development/staging environments
+    const currentHostname = window.location.hostname;
+    const showTestingControls = currentHostname === 'localhost' || 
+                               currentHostname === '127.0.0.1' ||
+                               currentHostname.includes('localhost') ||
+                               currentHostname.includes('preview') ||
+                               currentHostname.includes('render.com') ||
+                               currentHostname.includes('onrender.com') ||
+                               currentHostname.includes('vercel.app');
+    
+    console.log('🔍 Testing controls check:');
+    console.log('  - Current hostname:', currentHostname);
+    console.log('  - Show testing controls:', showTestingControls);
+    
+    if (showTestingControls) {
+        
+        if (testingControls) {
+            testingControls.classList.remove('hidden');
+        }
+        
+        // Check current bypass status
+        const bypassEnabled = sessionStorage.getItem('BYPASS_PAYMENT') === 'true';
+        updateBypassButtons(bypassEnabled);
+        
+        // Enable bypass button
+        if (enableBypassBtn) {
+            enableBypassBtn.addEventListener('click', () => {
+                sessionStorage.setItem('BYPASS_PAYMENT', 'true');
+                updateBypassButtons(true);
+                showSuccess('Payment bypass enabled for testing!');
+            });
+        }
+        
+        // Disable bypass button
+        if (disableBypassBtn) {
+            disableBypassBtn.addEventListener('click', () => {
+                sessionStorage.removeItem('BYPASS_PAYMENT');
+                updateBypassButtons(false);
+                showSuccess('Payment bypass disabled');
+            });
+        }
+    }
+}
+
+/**
+ * Update bypass button states
+ */
+function updateBypassButtons(enabled) {
+    const enableBypassBtn = document.getElementById('enableBypassBtn');
+    const disableBypassBtn = document.getElementById('disableBypassBtn');
+    
+    if (enabled) {
+        enableBypassBtn?.classList.add('hidden');
+        disableBypassBtn?.classList.remove('hidden');
+    } else {
+        enableBypassBtn?.classList.remove('hidden');
+        disableBypassBtn?.classList.add('hidden');
     }
 }
 

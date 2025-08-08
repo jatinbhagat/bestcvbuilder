@@ -7,6 +7,7 @@
     <meta name="description" content="Add job description to optimize your resume for specific roles">
     
     <!-- Tailwind CSS -->
+    <link href="./css/output.css" rel="stylesheet">
     
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="./assets/favicon.ico">
@@ -45,11 +46,6 @@
             position: relative;
         }
         
-        .form-floating-label textarea:not(:-moz-placeholder) + label, .form-floating-label input:not(:-moz-placeholder) + label {
-            transform: translateY(-12px) scale(0.8);
-            color: #4f46e5;
-        }
-        
         .form-floating-label textarea:focus + label,
         .form-floating-label textarea:not(:placeholder-shown) + label,
         .form-floating-label input:focus + label,
@@ -69,9 +65,6 @@
             padding: 0 4px;
         }
     </style>
-  <script type="module" crossorigin src="/assets/jobInput-BVqPkv23-v2.js"></script>
-  <link rel="modulepreload" crossorigin href="/assets/supabase-BWdB_AVO-v2.js">
-  <link rel="stylesheet" crossorigin href="/assets/supabase-BQoH_Vvs-v2.css">
 </head>
 <body>
     <!-- Header -->
@@ -308,5 +301,6 @@
     </main>
 
     <!-- Load job input JavaScript -->
+    <script type="module" src="./js/jobInput.js"></script>
 </body>
 </html>

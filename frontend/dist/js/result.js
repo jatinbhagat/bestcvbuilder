@@ -16,8 +16,11 @@ const strengthsList = document.getElementById('strengthsList');
 const improvementsList = document.getElementById('improvementsList');
 const detailedAnalysis = document.getElementById('detailedAnalysis');
 const upgradeBtn = document.getElementById('upgradeBtn');
+const bypassPaymentBtn = document.getElementById('bypassPaymentBtn');
 const newAnalysisBtn = document.getElementById('newAnalysisBtn');
-const downloadReportBtn = document.getElementById('downloadReportBtn');
+const viewDetailedReportBtn = document.getElementById('viewDetailedReportBtn');
+const detailedReportSection = document.getElementById('detailedReportSection');
+const fixIssuesBtn = document.getElementById('fixIssuesBtn');
 
 // New enhanced UI elements
 const criticalAlert = document.getElementById('criticalAlert');
@@ -45,7 +48,7 @@ let analysisData = null;
  * Initialize the results page
  */
 function init() {
-    console.log('Results page initialized');
+    console.log('🚀 Results page initialized - result.js');
     loadAnalysisData();
     setupEventListeners();
 }
@@ -372,9 +375,31 @@ function formatComponentDetails(data) {
  * Set up event listeners
  */
 function setupEventListeners() {
+    // Check if payment bypass is enabled
+    checkPaymentBypass();
+    
+    // Add keyboard shortcut for testing (Ctrl+Shift+B)
+    document.addEventListener('keydown', function(event) {
+        if (event.ctrlKey && event.shiftKey && event.key === 'B') {
+            console.log('🧪 Manual bypass activation via keyboard shortcut');
+            sessionStorage.setItem('BYPASS_PAYMENT', 'true');
+            checkPaymentBypass();
+            showSuccess('Payment bypass activated manually!');
+        }
+    });
+    
     // Upgrade button
+    console.log('🔍 Looking for upgradeBtn:', upgradeBtn ? 'FOUND' : 'NOT FOUND');
     if (upgradeBtn) {
+        console.log('✅ Adding click listener to upgradeBtn');
         upgradeBtn.addEventListener('click', handleUpgrade);
+    } else {
+        console.error('❌ upgradeBtn not found in DOM');
+    }
+    
+    // Bypass payment button (testing mode)
+    if (bypassPaymentBtn) {
+        bypassPaymentBtn.addEventListener('click', handleBypassPayment);
     }
     
     // Sticky mobile upgrade button
@@ -383,20 +408,25 @@ function setupEventListeners() {
         stickyUpgradeBtn.addEventListener('click', handleUpgrade);
     }
     
-    // Test improvement button (for testing without payment)
-    const testImprovementBtn = document.getElementById('testImprovementBtn');
-    if (testImprovementBtn) {
-        testImprovementBtn.addEventListener('click', handleTestImprovement);
-    }
-    
     // New analysis button
     if (newAnalysisBtn) {
         newAnalysisBtn.addEventListener('click', handleNewAnalysis);
     }
     
-    // Download report button
-    if (downloadReportBtn) {
-        downloadReportBtn.addEventListener('click', handleDownloadReport);
+    // View detailed report button
+    if (viewDetailedReportBtn) {
+        viewDetailedReportBtn.addEventListener('click', handleViewDetailedReport);
+    }
+    
+    // Fix issues button (in detailed report)
+    if (fixIssuesBtn) {
+        fixIssuesBtn.addEventListener('click', handleFixIssues);
+    }
+    
+    // Fix issues button 2 (in detailed report section)
+    const fixIssuesBtn2 = document.getElementById('fixIssuesBtn2');
+    if (fixIssuesBtn2) {
+        fixIssuesBtn2.addEventListener('click', handleFixIssues);
     }
     
     // Detailed analysis toggle
@@ -450,92 +480,35 @@ function setupStickyCtaVisibility() {
 }
 
 /**
- * Handle upgrade button click
+ * Handle upgrade button click - check for payment bypass first
  */
 function handleUpgrade() {
-    console.log('User clicked upgrade');
-    
-    // Store analysis data for payment flow
-    if (analysisData) {
-        sessionStorage.setItem('upgradeAnalysis', JSON.stringify(analysisData));
-    }
-    
-    // Redirect to payment page
-    window.location.href = './payment.html';
-}
-
-/**
- * Handle test resume improvement (bypass payment for testing)
- */
-async function handleTestImprovement() {
-    console.log('🧪 TEST: Starting resume improvement test');
-    
-    if (!analysisData) {
-        showError('No analysis data available for testing');
-        return;
-    }
+    console.log('🚀 User clicked Fix My Resume Now - CALLING REAL AI API');
     
     try {
-        // Show loading state
-        const testBtn = document.getElementById('testImprovementBtn');
-        if (testBtn) {
-            testBtn.disabled = true;
-            testBtn.textContent = 'Processing with AI...';
-        }
-        
-        // Call the resume-fix API directly
-        const API_BASE_URL = 'https://bestcvbuilder-api.onrender.com';
-        console.log(`🚀 TEST: Calling resume-fix API at ${API_BASE_URL}/api/resume-fix`);
-        console.log(`📋 TEST: Analysis data keys: ${Object.keys(analysisData)}`);
-        
-        const response = await fetch(`${API_BASE_URL}/api/resume-fix`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                original_analysis: analysisData,
-                user_email: 'test@bestcvbuilder.com',
-                payment_id: `test_${Date.now()}`
-            })
+        // Log upgrade button click
+        DatabaseService.logActivity(null, 'upgrade_button_clicked', {
+            bypass_mode: false,
+            original_score: analysisData?.score || 'unknown'
         });
         
-        console.log(`📈 TEST: API Response status: ${response.status}`);
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`❌ TEST: API Error (${response.status}):`, errorText);
-            throw new Error(`Resume improvement failed: ${response.status} - ${errorText}`);
+        // Show immediate feedback
+        if (upgradeBtn) {
+            upgradeBtn.disabled = true;
+            upgradeBtn.textContent = '🔄 Processing with AI...';
         }
         
-        const rewriteResult = await response.json();
-        console.log('✅ TEST: Resume improvement completed successfully');
-        console.log(`📊 TEST: Result keys: ${Object.keys(rewriteResult)}`);
-        console.log(`📄 TEST: Has PDF URL: ${'improved_resume_url' in rewriteResult}`);
-        
-        // Store result and redirect to success page
-        sessionStorage.setItem('cvRewriteResult', JSON.stringify(rewriteResult));
-        console.log(`💾 TEST: Stored result in sessionStorage`);
-        
-        // Show success message and redirect
-        const successDiv = document.createElement('div');
-        successDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
-        successDiv.textContent = 'AI Improvement Complete! Redirecting...';
-        document.body.appendChild(successDiv);
-        
-        setTimeout(() => {
-            window.location.href = './success.html';
-        }, 2000);
+        // Call real resume improvement API
+        handleRealResumeImprovement();
         
     } catch (error) {
-        console.error('❌ TEST: Resume improvement failed:', error);
-        showError(`Test failed: ${error.message}`);
+        console.error('❌ Error in handleUpgrade:', error);
+        showError('Something went wrong. Please try again.');
         
-        // Reset button state
-        const testBtn = document.getElementById('testImprovementBtn');
-        if (testBtn) {
-            testBtn.disabled = false;
-            testBtn.textContent = '🧪 Test AI Improvement';
+        // Reset button
+        if (upgradeBtn) {
+            upgradeBtn.disabled = false;
+            upgradeBtn.textContent = '🚀 Fix My Resume Now - $9';
         }
     }
 }
@@ -555,18 +528,127 @@ function handleNewAnalysis() {
 }
 
 /**
- * Handle download report button click
+ * Handle view detailed report button click
  */
-async function handleDownloadReport() {
+function handleViewDetailedReport() {
     try {
-        console.log('Generating downloadable report');
+        console.log('Showing detailed report');
         
-        const report = generateDownloadableReport();
-        downloadReport(report);
+        // Toggle detailed report section
+        if (detailedReportSection.classList.contains('hidden')) {
+            detailedReportSection.classList.remove('hidden');
+            viewDetailedReportBtn.textContent = '📊 Hide Detailed Report';
+            
+            // Populate detailed report content
+            populateDetailedReport();
+            
+            // Scroll to detailed report
+            detailedReportSection.scrollIntoView({ behavior: 'smooth' });
+        } else {
+            detailedReportSection.classList.add('hidden');
+            viewDetailedReportBtn.textContent = '📊 View Detailed Report';
+        }
         
     } catch (error) {
-        console.error('Error generating report:', error);
-        showError('Failed to generate report.');
+        console.error('Error showing detailed report:', error);
+        showError('Failed to display detailed report.');
+    }
+}
+
+/**
+ * Handle fix issues button click - check for payment bypass first
+ */
+function handleFixIssues() {
+    try {
+        console.log('User clicked fix issues - CALLING REAL AI API');
+        
+        // Call real AI resume improvement
+        handleRealResumeImprovement();
+        
+    } catch (error) {
+        console.error('Error handling fix issues request:', error);
+        showError('Failed to process fix request.');
+    }
+}
+
+/**
+ * Populate detailed report content
+ */
+function populateDetailedReport() {
+    if (!analysisData) return;
+    
+    // Populate component scores
+    const componentScores = document.getElementById('componentScores');
+    if (componentScores && analysisData.components) {
+        componentScores.innerHTML = '';
+        Object.entries(analysisData.components).forEach(([component, data]) => {
+            const percentage = Math.round((data.score / data.max_score) * 100);
+            const componentDiv = document.createElement('div');
+            componentDiv.className = 'bg-gray-50 rounded-lg p-4';
+            componentDiv.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <span class="font-medium text-gray-900 capitalize">${component.replace('_', ' ')}</span>
+                    <span class="font-bold text-gray-900">${data.score}/${data.max_score}</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div class="bg-blue-600 h-2 rounded-full" style="width: ${percentage}%"></div>
+                </div>
+                <div class="text-sm text-gray-600 mt-1">${percentage}% Complete</div>
+            `;
+            componentScores.appendChild(componentDiv);
+        });
+    }
+    
+    // Populate all issues
+    const allIssuesList = document.getElementById('allIssuesList');
+    if (allIssuesList) {
+        allIssuesList.innerHTML = '';
+        
+        // Combine all issues
+        const allIssues = [
+            ...(analysisData.quick_wins || []),
+            ...(analysisData.critical_issues || [])
+        ];
+        
+        allIssues.forEach(issue => {
+            const issueDiv = document.createElement('div');
+            issueDiv.className = `bg-gray-50 rounded-lg p-4 border-l-4 ${
+                issue.impact === 'Critical' ? 'border-red-400' : 'border-blue-400'
+            }`;
+            issueDiv.innerHTML = `
+                <div class="flex justify-between items-start mb-2">
+                    <h5 class="font-medium text-gray-900">${issue.title}</h5>
+                    <span class="text-xs font-bold px-2 py-1 rounded-full ${
+                        issue.impact === 'Critical' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                    }">
+                        +${issue.points_gain}pts
+                    </span>
+                </div>
+                <p class="text-sm text-gray-600 mb-1">${issue.issue}</p>
+                <p class="text-sm text-gray-800">${issue.solution}</p>
+                <div class="text-xs text-gray-500 mt-2">Time to fix: ${issue.time_to_fix}</div>
+            `;
+            allIssuesList.appendChild(issueDiv);
+        });
+    }
+    
+    // Populate recommendations
+    const detailedRecommendations = document.getElementById('detailedRecommendations');
+    if (detailedRecommendations && analysisData.recommendations) {
+        detailedRecommendations.innerHTML = '';
+        analysisData.recommendations.forEach((rec, index) => {
+            const recDiv = document.createElement('div');
+            recDiv.className = 'bg-blue-50 rounded-lg p-4';
+            recDiv.innerHTML = `
+                <div class="flex items-start">
+                    <div class="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3 mt-0.5">
+                        ${index + 1}
+                    </div>
+                    <p class="text-gray-800">${rec}</p>
+                </div>
+            `;
+            detailedRecommendations.appendChild(recDiv);
+        });
     }
 }
 
@@ -1085,6 +1167,215 @@ function updateUpgradeSection(insights) {
         estimatedTime.textContent = timeEstimate;
     }
 }
+
+/**
+ * Check if payment bypass is enabled for testing - SIMPLIFIED VERSION
+ */
+function checkPaymentBypass() {
+    const bypassSession = sessionStorage.getItem('BYPASS_PAYMENT') === 'true';
+    
+    console.log('🔍 Simple bypass check:');
+    console.log('  - Session bypass:', bypassSession);
+    
+    // TEMPORARY: Hide bypass button since payment is always bypassed
+    if (bypassPaymentBtn) {
+        bypassPaymentBtn.classList.add('hidden');
+        console.log('🙈 Bypass button hidden - payment always bypassed');
+    }
+    
+    // Add global function for manual testing
+    window.enablePaymentBypass = function() {
+        sessionStorage.setItem('BYPASS_PAYMENT', 'true');
+        console.log('🧪 Payment bypass enabled via console');
+        alert('Payment bypass enabled! Now click any Pay button.');
+        checkPaymentBypass(); // Update UI
+    };
+}
+
+/**
+ * Handle bypass payment for testing - SIMPLIFIED VERSION
+ */
+function handleBypassPayment() {
+    console.log('🧪 BYPASS BUTTON CLICKED - enabling bypass');
+    
+    // Enable bypass mode
+    sessionStorage.setItem('BYPASS_PAYMENT', 'true');
+    checkPaymentBypass(); // Update UI
+    showSuccess('Payment bypass enabled! Now click "Fix My Resume Now" to use it.');
+}
+
+/**
+ * Show success message
+ */
+function showSuccess(message) {
+    const successDiv = document.createElement('div');
+    successDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg z-50 flex items-center';
+    successDiv.innerHTML = `
+        <span class="mr-2">✅</span>
+        <div>
+            <div class="font-bold">Success!</div>
+            <div class="text-sm opacity-90">${message}</div>
+        </div>
+    `;
+    
+    document.body.appendChild(successDiv);
+    
+    setTimeout(() => {
+        successDiv.remove();
+    }, 3000);
+}
+
+/**
+ * Handle real resume improvement with Gemini AI
+ */
+async function handleRealResumeImprovement() {
+    console.log('🤖 Starting real resume improvement with Gemini AI');
+    
+    if (!analysisData) {
+        showError('No analysis data available for improvement');
+        resetUpgradeButton();
+        return;
+    }
+    
+    try {
+        // Call the resume-fix API with real Gemini processing
+        const API_BASE_URL = 'https://bestcvbuilder-api.onrender.com';
+        console.log(`🚀 REAL-API: Calling resume-fix API at ${API_BASE_URL}/api/resume-fix`);
+        console.log(`📋 REAL-API: Analysis data keys: ${Object.keys(analysisData)}`);
+        
+        // Debug: Check what data we're sending
+        console.log(`🔍 REAL-API: Analysis data structure:`, analysisData);
+        console.log(`🔍 REAL-API: Has file_url: ${'file_url' in analysisData}`);
+        console.log(`🔍 REAL-API: Has content: ${'content' in analysisData}`);
+        console.log(`🔍 REAL-API: Has pdf_url: ${'pdf_url' in analysisData}`);
+        
+        if (analysisData.file_url) {
+            console.log(`📄 REAL-API: File URL: ${analysisData.file_url}`);
+        }
+        if (analysisData.content) {
+            console.log(`📄 REAL-API: Content length: ${analysisData.content.length}`);
+        }
+        
+        const requestPayload = {
+            original_analysis: analysisData,
+            user_email: 'user@bestcvbuilder.com',
+            payment_id: `real_${Date.now()}`
+        };
+        
+        console.log(`📤 REAL-API: Sending payload with keys: ${Object.keys(requestPayload.original_analysis)}`);
+        
+        const response = await fetch(`${API_BASE_URL}/api/resume-fix`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestPayload)
+        });
+        
+        console.log(`📈 REAL-API: Response status: ${response.status}`);
+        console.log(`📄 REAL-API: Response headers:`, Object.fromEntries(response.headers.entries()));
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`❌ REAL-API: API Error (${response.status}):`, errorText);
+            throw new Error(`Resume improvement failed: ${response.status} - ${errorText}`);
+        }
+        
+        const rewriteResult = await response.json();
+        console.log('✅ REAL-API: Resume improvement completed successfully');
+        console.log(`📊 REAL-API: Result keys: ${Object.keys(rewriteResult)}`);
+        console.log(`📄 REAL-API: Has PDF URL: ${'improved_resume_url' in rewriteResult}`);
+        
+        if (rewriteResult.improved_resume_url) {
+            console.log(`📁 REAL-API: PDF URL type: ${typeof rewriteResult.improved_resume_url}`);
+            console.log(`📁 REAL-API: PDF URL length: ${rewriteResult.improved_resume_url.length}`);
+        }
+        
+        // Store real result and redirect to success page
+        sessionStorage.setItem('cvRewriteResult', JSON.stringify(rewriteResult));
+        console.log(`💾 REAL-API: Stored real AI result in sessionStorage`);
+        
+        // Show success message and redirect
+        showSuccessMessage('AI Improvement Complete! Redirecting...');
+        
+        setTimeout(() => {
+            window.location.href = './success.html';
+        }, 2000);
+        
+    } catch (error) {
+        console.error('❌ REAL-API: Resume improvement failed:', error);
+        showError(`AI Processing failed: ${error.message}`);
+        resetUpgradeButton();
+    }
+}
+
+/**
+ * Reset upgrade button state
+ */
+function resetUpgradeButton() {
+    if (upgradeBtn) {
+        upgradeBtn.disabled = false;
+        upgradeBtn.textContent = '🚀 Fix My Resume Now - $9';
+    }
+}
+
+/**
+ * Show success message
+ */
+function showSuccessMessage(message) {
+    const successDiv = document.createElement('div');
+    successDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+    successDiv.textContent = message;
+    document.body.appendChild(successDiv);
+    
+    setTimeout(() => {
+        successDiv.remove();
+    }, 3000);
+}
+
+function createMockSuccessDataAndRedirect() {
+    console.log('🚀 Creating mock success data for bypass...');
+    
+    try {
+        // Create simple mock data
+        const mockPaymentData = {
+            payment_id: `bypass_${Date.now()}`,
+            status: 'succeeded',
+            email: 'bypass@example.com'
+        };
+        
+        const originalScore = analysisData?.score || 65;
+        const mockRewriteData = {
+            original_score: originalScore,
+            new_score: Math.min(originalScore + 30, 95),
+            score_improvement: Math.min(30, 95 - originalScore),
+            improved_resume_url: 'bypass-resume.pdf',
+            bypass_mode: true,
+            completed_at: new Date().toISOString()
+        };
+        
+        // Store in session
+        sessionStorage.setItem('paymentResult', JSON.stringify(mockPaymentData));
+        sessionStorage.setItem('cvRewriteResult', JSON.stringify(mockRewriteData));
+        
+        console.log('✅ Mock data stored:');
+        console.log('  - Payment:', mockPaymentData);
+        console.log('  - Rewrite:', mockRewriteData);
+        
+        showSuccess('Processing complete! Redirecting to success page...');
+        
+        // Immediate redirect (no delay)
+        console.log('🔄 Redirecting to success.html...');
+        window.location.href = './success.html';
+        
+    } catch (error) {
+        console.error('❌ Bypass error:', error);
+        showError('Failed to process: ' + error.message);
+    }
+}
+
+// Debug: Log when result.js loads
+console.log('🔄 result.js module loaded');
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', init); 

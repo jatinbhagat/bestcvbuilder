@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>EMERGENCY CORS TEST</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+        .error { background: #f8d7da; border-color: #f5c6cb; }
+    </style>
+</head>
+<body>
+    <h1>🚨 EMERGENCY CORS TEST</h1>
+    <p>Testing if API endpoints work at all...</p>
+    
+    <button onclick="testCORS()">🔧 Test CORS Fix</button>
+    <button onclick="testOriginal()">📝 Test Original CV Parser</button>
+    
+    <div id="results"></div>
+    
+    <script>
+        async function testCORS() {
+            const results = document.getElementById('results');
+            
+            try {
+                console.log('Testing /api/fix-cors');
+                
+                const response = await fetch('/api/fix-cors', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ test: 'cors-fix' })
+                });
+                
+                const data = await response.json();
+                
+                results.innerHTML += `
+                    <div class="result success">
+                        <h3>✅ CORS FIX ENDPOINT SUCCESS</h3>
+                        <p>Status: ${response.status}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                `;
+                
+            } catch (error) {
+                results.innerHTML += `
+                    <div class="result error">
+                        <h3>❌ CORS FIX FAILED</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        async function testOriginal() {
+            const results = document.getElementById('results');
+            
+            try {
+                console.log('Testing /api/cv-parser');
+                
+                const response = await fetch('/api/cv-parser', {
+                    method: 'POST', 
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        file_url: 'test',
+                        analysis_type: 'ats_score'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                results.innerHTML += `
+                    <div class="result success">
+                        <h3>✅ ORIGINAL CV PARSER SUCCESS</h3>
+                        <p>Status: ${response.status}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                `;
+                
+            } catch (error) {
+                results.innerHTML += `
+                    <div class="result error">
+                        <h3>❌ ORIGINAL CV PARSER FAILED</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Auto-run tests on load
+        window.onload = function() {
+            console.log('🔍 Auto-testing CORS endpoints...');
+            setTimeout(testCORS, 1000);
+            setTimeout(testOriginal, 2000);
+        }
+    </script>
+</body>
+</html>

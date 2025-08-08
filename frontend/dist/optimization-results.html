@@ -7,6 +7,7 @@
     <meta name="description" content="Your resume has been optimized for the specific job requirements">
     
     <!-- Tailwind CSS -->
+    <link href="./css/output.css" rel="stylesheet">
     
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="./assets/favicon.ico">
@@ -35,9 +36,6 @@
             background-clip: text;
         }
     </style>
-  <script type="module" crossorigin src="/assets/optimizationResults-By43tOvX-v2.js"></script>
-  <link rel="modulepreload" crossorigin href="/assets/supabase-BWdB_AVO-v2.js">
-  <link rel="stylesheet" crossorigin href="/assets/supabase-BQoH_Vvs-v2.css">
 </head>
 <body>
     <!-- Header -->
@@ -170,5 +168,91 @@
         </section>
     </main>
 
+    <script type="module">
+        import { DatabaseService } from './js/supabase.js';
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Optimization results page loaded');
+            loadJobAnalysisResults();
+            setupEventListeners();
+        });
+        
+        function loadJobAnalysisResults() {
+            try {
+                const jobAnalysisData = sessionStorage.getItem('jobAnalysisResult');
+                const jobInputData = sessionStorage.getItem('jobInputData');
+                
+                if (jobAnalysisData && jobInputData) {
+                    const analysis = JSON.parse(jobAnalysisData);
+                    const input = JSON.parse(jobInputData);
+                    
+                    // Update job information
+                    document.getElementById('targetRole').textContent = input.roleTitle || 'Not specified';
+                    document.getElementById('targetCompany').textContent = input.companyName || 'Not specified';
+                    
+                    // Update keyword count
+                    const keywords = analysis.matching_keywords || [];
+                    document.getElementById('keywordCount').textContent = `${keywords.length}/20`;
+                    
+                    // Update match score
+                    const analysisScore = analysis.analysis_score || 85;
+                    document.getElementById('matchScore').textContent = analysisScore;
+                    
+                    console.log('✅ Job analysis results loaded:', analysis);
+                } else {
+                    console.warn('No job analysis data found, using defaults');
+                    document.getElementById('targetRole').textContent = 'Senior Software Engineer';
+                    document.getElementById('targetCompany').textContent = 'Tech Company Inc';
+                }
+                
+            } catch (error) {
+                console.error('Error loading job analysis results:', error);
+                document.getElementById('targetRole').textContent = 'Position from Job Analysis';
+                document.getElementById('targetCompany').textContent = 'Company from Analysis';
+            }
+        }
+        
+        function setupEventListeners() {
+            const downloadBtn = document.getElementById('downloadBtn');
+            const optimizeAnotherBtn = document.getElementById('optimizeAnotherBtn');
+            const newAnalysisBtn = document.getElementById('newAnalysisBtn');
+            
+            if (downloadBtn) {
+                downloadBtn.addEventListener('click', function() {
+                    DatabaseService.logActivity(null, 'job_optimized_resume_download', {
+                        source: 'optimization_results',
+                        timestamp: new Date().toISOString()
+                    });
+                    
+                    showSuccess('🎉 Your job-optimized resume is ready! (Download functionality will be implemented with CV optimizer API integration)');
+                });
+            }
+            
+            if (optimizeAnotherBtn) {
+                optimizeAnotherBtn.addEventListener('click', function() {
+                    window.location.href = './job-input.html';
+                });
+            }
+            
+            if (newAnalysisBtn) {
+                newAnalysisBtn.addEventListener('click', function() {
+                    sessionStorage.clear();
+                    window.location.href = './index.html';
+                });
+            }
+        }
+        
+        function showSuccess(message) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg z-50';
+            successDiv.innerHTML = `<span class="mr-2">✅</span> ${message}`;
+            
+            document.body.appendChild(successDiv);
+            
+            setTimeout(() => {
+                successDiv.remove();
+            }, 5000);
+        }
+    </script>
 </body>
 </html>
