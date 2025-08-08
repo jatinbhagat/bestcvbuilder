@@ -383,6 +383,12 @@ function setupEventListeners() {
         stickyUpgradeBtn.addEventListener('click', handleUpgrade);
     }
     
+    // Test improvement button (for testing without payment)
+    const testImprovementBtn = document.getElementById('testImprovementBtn');
+    if (testImprovementBtn) {
+        testImprovementBtn.addEventListener('click', handleTestImprovement);
+    }
+    
     // New analysis button
     if (newAnalysisBtn) {
         newAnalysisBtn.addEventListener('click', handleNewAnalysis);
@@ -456,6 +462,82 @@ function handleUpgrade() {
     
     // Redirect to payment page
     window.location.href = './payment.html';
+}
+
+/**
+ * Handle test resume improvement (bypass payment for testing)
+ */
+async function handleTestImprovement() {
+    console.log('🧪 TEST: Starting resume improvement test');
+    
+    if (!analysisData) {
+        showError('No analysis data available for testing');
+        return;
+    }
+    
+    try {
+        // Show loading state
+        const testBtn = document.getElementById('testImprovementBtn');
+        if (testBtn) {
+            testBtn.disabled = true;
+            testBtn.textContent = 'Processing with AI...';
+        }
+        
+        // Call the resume-fix API directly
+        const API_BASE_URL = 'https://bestcvbuilder-api-znsg.onrender.com';
+        console.log(`🚀 TEST: Calling resume-fix API at ${API_BASE_URL}/api/resume-fix`);
+        console.log(`📋 TEST: Analysis data keys: ${Object.keys(analysisData)}`);
+        
+        const response = await fetch(`${API_BASE_URL}/api/resume-fix`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                original_analysis: analysisData,
+                user_email: 'test@bestcvbuilder.com',
+                payment_id: `test_${Date.now()}`
+            })
+        });
+        
+        console.log(`📈 TEST: API Response status: ${response.status}`);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`❌ TEST: API Error (${response.status}):`, errorText);
+            throw new Error(`Resume improvement failed: ${response.status} - ${errorText}`);
+        }
+        
+        const rewriteResult = await response.json();
+        console.log('✅ TEST: Resume improvement completed successfully');
+        console.log(`📊 TEST: Result keys: ${Object.keys(rewriteResult)}`);
+        console.log(`📄 TEST: Has PDF URL: ${'improved_resume_url' in rewriteResult}`);
+        
+        // Store result and redirect to success page
+        sessionStorage.setItem('cvRewriteResult', JSON.stringify(rewriteResult));
+        console.log(`💾 TEST: Stored result in sessionStorage`);
+        
+        // Show success message and redirect
+        const successDiv = document.createElement('div');
+        successDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+        successDiv.textContent = 'AI Improvement Complete! Redirecting...';
+        document.body.appendChild(successDiv);
+        
+        setTimeout(() => {
+            window.location.href = './success.html';
+        }, 2000);
+        
+    } catch (error) {
+        console.error('❌ TEST: Resume improvement failed:', error);
+        showError(`Test failed: ${error.message}`);
+        
+        // Reset button state
+        const testBtn = document.getElementById('testImprovementBtn');
+        if (testBtn) {
+            testBtn.disabled = false;
+            testBtn.textContent = '🧪 Test AI Improvement';
+        }
+    }
 }
 
 /**
