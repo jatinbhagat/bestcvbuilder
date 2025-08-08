@@ -396,30 +396,58 @@ def resume_fix():
         return response
     
     try:
+        print(f"🚀 RESUME-FIX: Starting request processing...")
+        
         # Import the resume-fix handler
         from index import process_resume_fix
+        print(f"✅ RESUME-FIX: Successfully imported process_resume_fix")
         
         # Get request data
         data = request.get_json()
         if not data:
+            print(f"❌ RESUME-FIX: No JSON data provided in request")
             error_response = jsonify({"error": "No JSON data provided"})
             error_response.headers.add('Access-Control-Allow-Origin', '*')
             return error_response, 400
         
+        print(f"📊 RESUME-FIX: Request data received - keys: {list(data.keys())}")
+        
+        # Extract data
+        original_analysis = data.get('original_analysis', {})
+        user_email = data.get('user_email', 'unknown@email.com')
+        payment_id = data.get('payment_id', f'flask_{int(time.time())}')
+        
+        print(f"📧 RESUME-FIX: Processing for user: {user_email}")
+        print(f"💳 RESUME-FIX: Payment ID: {payment_id}")
+        print(f"📋 RESUME-FIX: Analysis data has {len(original_analysis)} keys")
+        
         # Process the resume fix
+        print(f"🔧 RESUME-FIX: Calling process_resume_fix function...")
         result = process_resume_fix(
-            original_analysis=data.get('original_analysis', {}),
-            user_email=data.get('user_email', 'unknown@email.com'),
-            payment_id=data.get('payment_id', f'flask_{int(time.time())}')
+            original_analysis=original_analysis,
+            user_email=user_email,
+            payment_id=payment_id
         )
+        
+        print(f"✅ RESUME-FIX: Processing completed successfully!")
+        print(f"📊 RESUME-FIX: Result keys: {list(result.keys()) if isinstance(result, dict) else 'Not a dict'}")
+        
+        if isinstance(result, dict) and 'improved_resume_url' in result:
+            print(f"📄 RESUME-FIX: PDF URL generated: {result['improved_resume_url']}")
+        else:
+            print(f"⚠️ RESUME-FIX: No PDF URL found in result!")
         
         # Return success response
         response = jsonify(result)
         response.headers.add('Access-Control-Allow-Origin', '*')
+        print(f"🎯 RESUME-FIX: Sending response back to client")
         return response
         
     except Exception as e:
-        print(f"❌ Resume fix error: {e}")
+        print(f"❌ RESUME-FIX: Fatal error occurred: {str(e)}")
+        import traceback
+        print(f"❌ RESUME-FIX: Full traceback: {traceback.format_exc()}")
+        
         error_response = jsonify({"error": f"Resume fix failed: {str(e)}"})
         error_response.headers.add('Access-Control-Allow-Origin', '*')
         return error_response, 500

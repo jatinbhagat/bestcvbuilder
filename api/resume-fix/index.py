@@ -143,41 +143,62 @@ def process_resume_fix(original_analysis: Dict[str, Any], user_email: str, payme
     """
     Main resume fix processing pipeline
     """
+    print(f"🏁 PROCESS-RESUME-FIX: Starting processing for {user_email}")
     logger.info(f"📝 Processing resume fix for {user_email}")
     
     try:
         # Step 1: Extract original PDF and text
+        print(f"📄 PROCESS-RESUME-FIX: Step 1 - Extracting original PDF...")
         logger.info("📄 Step 1: Extracting original PDF...")
         original_pdf_bytes, original_text = extract_original_pdf(original_analysis)
+        print(f"✅ PROCESS-RESUME-FIX: PDF extracted - {len(original_pdf_bytes)} bytes, text length: {len(original_text)}")
         
         # Step 2: Generate feedback from analysis
+        print(f"🔍 PROCESS-RESUME-FIX: Step 2 - Generating improvement feedback...")
         logger.info("🔍 Step 2: Generating improvement feedback...")
         feedback_list = generate_feedback_from_analysis(original_analysis)
+        print(f"✅ PROCESS-RESUME-FIX: Generated {len(feedback_list)} feedback items: {feedback_list}")
         logger.info(f"Generated {len(feedback_list)} feedback items")
         
         # Step 3: Parse PDF layout
+        print(f"🗂️ PROCESS-RESUME-FIX: Step 3 - Parsing PDF layout...")
         logger.info("🗂️ Step 3: Parsing PDF layout...")
         layout_info = parse_pdf_layout(original_pdf_bytes)
+        print(f"✅ PROCESS-RESUME-FIX: Layout parsed - {layout_info.get('total_blocks', 0)} text blocks")
         
         # Step 4: Improve text with LLM
+        print(f"🧠 PROCESS-RESUME-FIX: Step 4 - Improving resume text with Gemini...")
         logger.info("🧠 Step 4: Improving resume text...")
+        
+        # Check environment before calling Gemini
+        import os
+        gemini_key = os.getenv('GEMINI_API_KEY')
+        print(f"🔑 PROCESS-RESUME-FIX: Gemini API key status: {'SET' if gemini_key else 'MISSING'}")
+        
         improved_text = improve_resume_with_llm(original_text, feedback_list)
+        print(f"✅ PROCESS-RESUME-FIX: Text improved - length: {len(improved_text)}")
         
         # Step 5: Create improved PDF
+        print(f"📄 PROCESS-RESUME-FIX: Step 5 - Creating improved PDF...")
         logger.info("📄 Step 5: Creating improved PDF...")
         improved_pdf_bytes = update_pdf_text(
             original_pdf_bytes, original_text, improved_text, layout_info
         )
+        print(f"✅ PROCESS-RESUME-FIX: Improved PDF created - {len(improved_pdf_bytes)} bytes")
         
         # Step 6: Save improved PDF and get URL
+        print(f"💾 PROCESS-RESUME-FIX: Step 6 - Saving improved PDF...")
         logger.info("💾 Step 6: Saving improved PDF...")
         improved_pdf_url = save_improved_pdf(improved_pdf_bytes, user_email, payment_id)
+        print(f"✅ PROCESS-RESUME-FIX: PDF saved with URL: {improved_pdf_url}")
         
         # Step 7: Calculate new ATS score
+        print(f"📊 PROCESS-RESUME-FIX: Step 7 - Calculating new ATS score...")
         logger.info("📊 Step 7: Calculating new ATS score...")
         original_score = original_analysis.get('score', original_analysis.get('ats_score', 65))
         new_score = calculate_new_ats_score(improved_text, original_analysis)
         score_improvement = max(0, new_score - original_score)
+        print(f"✅ PROCESS-RESUME-FIX: Score calculated - {original_score} → {new_score} (+{score_improvement})")
         
         # Step 8: Prepare result
         result = {
@@ -192,10 +213,15 @@ def process_resume_fix(original_analysis: Dict[str, Any], user_email: str, payme
             'user_email': user_email
         }
         
+        print(f"🎉 PROCESS-RESUME-FIX: Complete! Result has {len(result)} keys")
+        print(f"📊 PROCESS-RESUME-FIX: Final result structure: {list(result.keys())}")
         logger.info(f"🎉 Resume improvement complete: {original_score} → {new_score} (+{score_improvement})")
         return result
         
     except Exception as e:
+        print(f"❌ PROCESS-RESUME-FIX: FATAL ERROR: {str(e)}")
+        import traceback
+        print(f"❌ PROCESS-RESUME-FIX: Full traceback: {traceback.format_exc()}")
         logger.error(f"❌ Resume processing failed: {e}")
         raise Exception(f"Failed to process resume: {str(e)}")
 
@@ -314,25 +340,30 @@ def save_improved_pdf(pdf_bytes: bytes, user_email: str, payment_id: str) -> str
     try:
         import tempfile
         import os
+        import base64
         
         # Create filename
         filename = f"improved_resume_{payment_id}_{user_email.split('@')[0]}.pdf"
         
-        # Save to temporary file for now (in production, upload to Supabase storage)
-        temp_dir = tempfile.gettempdir()
-        temp_path = os.path.join(temp_dir, filename)
+        print(f"💾 SAVE-PDF: Creating PDF file: {filename}")
+        print(f"💾 SAVE-PDF: PDF size: {len(pdf_bytes)} bytes")
         
-        with open(temp_path, 'wb') as f:
-            f.write(pdf_bytes)
+        # For production on Render.com, we need to either:
+        # 1. Upload to Supabase storage, OR  
+        # 2. Return base64 data URL for immediate download
         
-        # In production, this would upload to Supabase storage and return the public URL
-        # For now, return the local path
-        public_url = f"file://{temp_path}"
+        # Option 2: Create data URL for immediate download
+        pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
+        data_url = f"data:application/pdf;base64,{pdf_base64}"
         
-        logger.info(f"📁 PDF saved to: {temp_path}")
-        return public_url
+        print(f"💾 SAVE-PDF: Created data URL (length: {len(data_url)})")
+        print(f"✅ SAVE-PDF: PDF ready for download")
+        
+        logger.info(f"📁 PDF converted to data URL for download")
+        return data_url
         
     except Exception as e:
+        print(f"❌ SAVE-PDF: Error: {str(e)}")
         logger.error(f"Failed to save improved PDF: {e}")
         raise Exception(f"Failed to save improved PDF: {str(e)}")
 

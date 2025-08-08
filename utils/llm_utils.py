@@ -13,18 +13,73 @@ import re
 
 logger = logging.getLogger(__name__)
 
-# Import Gemini client from cv-optimizer
+# Simple Gemini client implementation to avoid import issues
 try:
-    # Add cv-optimizer path for imports
-    cv_optimizer_path = os.path.join(os.path.dirname(__file__), '..', 'api', 'cv-optimizer')
-    sys.path.append(cv_optimizer_path)
+    import google.generativeai as genai
+    GEMINI_LIB_AVAILABLE = True
+except ImportError:
+    GEMINI_LIB_AVAILABLE = False
+
+class SimpleGeminiOptimizer:
+    """Simple Gemini client for resume improvement"""
     
-    from gemini_client import GeminiOptimizer, OptimizationResult
-    GEMINI_AVAILABLE = True
-    logger.info("✅ Gemini Flash 2.0 client loaded successfully")
-except ImportError as e:
-    GEMINI_AVAILABLE = False
-    logger.warning(f"⚠️ Gemini client not available: {e}")
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.model_name = "gemini-1.5-flash"
+        
+        if GEMINI_LIB_AVAILABLE and api_key:
+            try:
+                genai.configure(api_key=api_key)
+                self.model = genai.GenerativeModel(self.model_name)
+                self.available = True
+            except Exception as e:
+                logger.error(f"Failed to initialize Gemini: {e}")
+                self.available = False
+        else:
+            self.available = False
+    
+    def _make_gemini_request(self, prompt: str, max_tokens: int = 2048):
+        """Make request to Gemini API with cost tracking"""
+        if not self.available:
+            raise RuntimeError("Gemini not available - check API key and library installation")
+        
+        try:
+            generation_config = genai.types.GenerationConfig(
+                max_output_tokens=max_tokens,
+                temperature=0.1,
+                top_p=0.8,
+                top_k=40
+            )
+            
+            response = self.model.generate_content(prompt, generation_config=generation_config)
+            
+            if response.text:
+                # Simple cost estimation
+                input_tokens = len(prompt.split()) * 1.3
+                output_tokens = len(response.text.split()) * 1.3
+                estimated_cost = ((input_tokens / 1000) * 0.00015) + ((output_tokens / 1000) * 0.0006)
+                
+                # Create simple cost info object
+                cost_info = type('CostInfo', (), {
+                    'input_tokens': int(input_tokens),
+                    'output_tokens': int(output_tokens),
+                    'estimated_cost_usd': estimated_cost
+                })()
+                
+                return response.text, cost_info
+            else:
+                raise RuntimeError("Empty response from Gemini API")
+                
+        except Exception as e:
+            logger.error(f"Gemini API request failed: {e}")
+            raise RuntimeError(f"Gemini API request failed: {str(e)}")
+
+# Check Gemini availability
+GEMINI_AVAILABLE = GEMINI_LIB_AVAILABLE
+if GEMINI_AVAILABLE:
+    logger.info("✅ Gemini library available")
+else:
+    logger.warning("⚠️ google-generativeai library not available")
 
 # Gemini API key
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
@@ -43,35 +98,63 @@ def improve_resume_with_llm(resume_text: str, feedback_list: List[str]) -> str:
     Raises:
         RuntimeError: If Gemini API is not available or fails
     """
+    print(f"🧠 LLM-UTILS: Starting Gemini improvement with {len(feedback_list)} feedback items")
     logger.info(f"🧠 Improving resume with Gemini Flash 2.0 - {len(feedback_list)} feedback items")
     
+    print(f"📋 LLM-UTILS: Feedback items: {feedback_list}")
+    print(f"📄 LLM-UTILS: Original text length: {len(resume_text)}")
+    
     if not GEMINI_AVAILABLE:
+        print(f"❌ LLM-UTILS: Gemini library not available")
         raise RuntimeError("Gemini AI library not available. Please install google-generativeai package.")
     
+    print(f"✅ LLM-UTILS: Gemini library is available")
+    
     if not GEMINI_API_KEY:
+        print(f"❌ LLM-UTILS: Gemini API key not set")
         raise RuntimeError("GEMINI_API_KEY environment variable not set. AI resume improvement requires valid API key.")
     
+    print(f"✅ LLM-UTILS: Gemini API key is set")
+    
     # Initialize Gemini optimizer
-    optimizer = GeminiOptimizer(api_key=GEMINI_API_KEY)
+    print(f"🔧 LLM-UTILS: Initializing Gemini optimizer...")
+    optimizer = SimpleGeminiOptimizer(api_key=GEMINI_API_KEY)
+    
+    if not optimizer.available:
+        print(f"❌ LLM-UTILS: Gemini optimizer not available")
+        raise RuntimeError("Gemini optimizer initialization failed.")
     
     # Create a comprehensive prompt for resume improvement
+    print(f"📝 LLM-UTILS: Creating improvement prompt...")
     improvement_prompt = _create_resume_improvement_prompt(resume_text, feedback_list)
+    print(f"📝 LLM-UTILS: Prompt length: {len(improvement_prompt)} characters")
     
     # Make Gemini request
+    print(f"🚀 LLM-UTILS: Sending request to Gemini API...")
     response_text, cost_info = optimizer._make_gemini_request(improvement_prompt, max_tokens=2500)
     
+    print(f"📨 LLM-UTILS: Received response from Gemini")
+    print(f"📊 LLM-UTILS: Response length: {len(response_text) if response_text else 0}")
+    
     if not response_text or len(response_text.strip()) < 50:
+        print(f"❌ LLM-UTILS: Gemini response too short or empty")
         raise RuntimeError("Gemini API returned empty or invalid response")
     
+    print(f"💰 LLM-UTILS: Gemini cost: ${cost_info.estimated_cost_usd:.4f}")
+    print(f"📊 LLM-UTILS: Tokens - Input: {cost_info.input_tokens}, Output: {cost_info.output_tokens}")
     logger.info(f"💰 Gemini cost: ${cost_info.estimated_cost_usd:.4f}")
     logger.info(f"📊 Tokens - Input: {cost_info.input_tokens}, Output: {cost_info.output_tokens}")
     
     # Parse and format the response
+    print(f"🔄 LLM-UTILS: Parsing Gemini response...")
     improved_text = _parse_gemini_improvement_response(response_text, resume_text)
+    print(f"✅ LLM-UTILS: Parsed improved text length: {len(improved_text)}")
     
     if len(improved_text) < len(resume_text) * 0.5:
+        print(f"❌ LLM-UTILS: Improved text too short: {len(improved_text)} vs {len(resume_text)}")
         raise RuntimeError("Gemini response was too short or invalid. Resume improvement failed.")
     
+    print(f"🎉 LLM-UTILS: Gemini improvement completed successfully!")
     logger.info(f"✅ Gemini improvement complete: {len(improved_text)} characters")
     return improved_text
 

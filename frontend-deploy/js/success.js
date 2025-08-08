@@ -36,15 +36,30 @@ function init() {
  */
 function loadRewriteData() {
     try {
+        console.log('🔍 SUCCESS-PAGE: Looking for CV rewrite data in sessionStorage...');
         const storedData = sessionStorage.getItem('cvRewriteResult');
+        
         if (!storedData) {
-            console.warn('No CV rewrite data found');
-            showError('No CV rewrite data available.');
+            console.warn('❌ SUCCESS-PAGE: No CV rewrite data found in sessionStorage');
+            console.log('🔍 SUCCESS-PAGE: Available sessionStorage keys:', Object.keys(sessionStorage));
+            showError('No CV rewrite data available. Please try the process again.');
             return;
         }
         
+        console.log('✅ SUCCESS-PAGE: Found CV rewrite data in sessionStorage');
+        console.log('📊 SUCCESS-PAGE: Raw data length:', storedData.length);
+        
         rewriteData = JSON.parse(storedData);
-        console.log('Loaded CV rewrite data:', rewriteData);
+        console.log('📄 SUCCESS-PAGE: Parsed CV rewrite data:', rewriteData);
+        console.log('🔑 SUCCESS-PAGE: Data keys:', Object.keys(rewriteData));
+        
+        if (rewriteData.improved_resume_url) {
+            console.log('📄 SUCCESS-PAGE: PDF URL found:', rewriteData.improved_resume_url);
+            console.log('📄 SUCCESS-PAGE: PDF URL type:', typeof rewriteData.improved_resume_url);
+            console.log('📄 SUCCESS-PAGE: PDF URL starts with:', rewriteData.improved_resume_url.substring(0, 50));
+        } else {
+            console.warn('⚠️ SUCCESS-PAGE: No improved_resume_url found in data!');
+        }
         
         displayRewriteResults();
         
