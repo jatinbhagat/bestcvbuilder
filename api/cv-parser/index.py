@@ -2690,6 +2690,10 @@ def analyze_resume_content(file_url: str) -> Dict[str, Any]:
             'extracted_text_length': len(content),
             'analysis_timestamp': json.dumps({}).__class__.__module__, # Simple timestamp
             
+            # CRITICAL: Include original file data for resume improvement API
+            'file_url': file_url,  # Original PDF URL for re-processing
+            'content': content,    # Extracted text content
+            
             # Enhanced algorithm features
             'letter_grade': get_letter_grade(ats_analysis['ats_score']),
             'interview_metrics': interview_metrics,
