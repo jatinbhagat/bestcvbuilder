@@ -12,7 +12,9 @@ export default defineConfig({
         main: resolve(__dirname, 'public/index.html'),
         result: resolve(__dirname, 'public/result.html'),
         payment: resolve(__dirname, 'public/payment.html'),
-        success: resolve(__dirname, 'public/success.html')
+        success: resolve(__dirname, 'public/success.html'),
+        jobInput: resolve(__dirname, 'public/job-input.html'),
+        optimizationResults: resolve(__dirname, 'public/optimization-results.html')
       },
       output: {
         entryFileNames: `assets/[name]-[hash]-v2.js`,

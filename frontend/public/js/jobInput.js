@@ -19,7 +19,7 @@ const additionalNotes = document.getElementById('additionalNotes');
 // API Configuration
 const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
     ? '/api' 
-    : 'https://bestcvbuilder-api.onrender.com/api';
+    : '/api';
 
 let currentUserId = null;
 
