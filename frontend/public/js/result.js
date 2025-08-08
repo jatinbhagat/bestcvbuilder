@@ -483,23 +483,23 @@ function setupStickyCtaVisibility() {
  * Handle upgrade button click - check for payment bypass first
  */
 function handleUpgrade() {
-    console.log('🚀 User clicked Fix My Resume Now - ALWAYS BYPASSING PAYMENT');
+    console.log('🚀 User clicked Fix My Resume Now - CALLING REAL AI API');
     
     try {
         // Log upgrade button click
         DatabaseService.logActivity(null, 'upgrade_button_clicked', {
-            bypass_mode: true,
+            bypass_mode: false,
             original_score: analysisData?.score || 'unknown'
         });
         
         // Show immediate feedback
         if (upgradeBtn) {
             upgradeBtn.disabled = true;
-            upgradeBtn.textContent = '🔄 Processing...';
+            upgradeBtn.textContent = '🔄 Processing with AI...';
         }
         
-        // TEMPORARY: Always bypass payment and go straight to success
-        createMockSuccessDataAndRedirect();
+        // Call real resume improvement API
+        handleRealResumeImprovement();
         
     } catch (error) {
         console.error('❌ Error in handleUpgrade:', error);
@@ -560,10 +560,10 @@ function handleViewDetailedReport() {
  */
 function handleFixIssues() {
     try {
-        console.log('User clicked fix issues - ALWAYS BYPASSING PAYMENT');
+        console.log('User clicked fix issues - CALLING REAL AI API');
         
-        // TEMPORARY: Always bypass payment and go straight to success
-        createMockSuccessDataAndRedirect();
+        // Call real AI resume improvement
+        handleRealResumeImprovement();
         
     } catch (error) {
         console.error('Error handling fix issues request:', error);
@@ -1228,6 +1228,109 @@ function showSuccess(message) {
 /**
  * Show error message
  */
+function showError(message) {
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+    errorDiv.textContent = message;
+    
+    document.body.appendChild(errorDiv);
+    
+    setTimeout(() => {
+        errorDiv.remove();
+    }, 5000);
+}
+
+/**
+ * Handle real resume improvement with Gemini AI
+ */
+async function handleRealResumeImprovement() {
+    console.log('🤖 Starting real resume improvement with Gemini AI');
+    
+    if (!analysisData) {
+        showError('No analysis data available for improvement');
+        resetUpgradeButton();
+        return;
+    }
+    
+    try {
+        // Call the resume-fix API with real Gemini processing
+        const API_BASE_URL = 'https://bestcvbuilder-api-znsg.onrender.com';
+        console.log(`🚀 REAL-API: Calling resume-fix API at ${API_BASE_URL}/api/resume-fix`);
+        console.log(`📋 REAL-API: Analysis data keys: ${Object.keys(analysisData)}`);
+        
+        const response = await fetch(`${API_BASE_URL}/api/resume-fix`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                original_analysis: analysisData,
+                user_email: 'user@bestcvbuilder.com',
+                payment_id: `real_${Date.now()}`
+            })
+        });
+        
+        console.log(`📈 REAL-API: Response status: ${response.status}`);
+        console.log(`📄 REAL-API: Response headers:`, Object.fromEntries(response.headers.entries()));
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`❌ REAL-API: API Error (${response.status}):`, errorText);
+            throw new Error(`Resume improvement failed: ${response.status} - ${errorText}`);
+        }
+        
+        const rewriteResult = await response.json();
+        console.log('✅ REAL-API: Resume improvement completed successfully');
+        console.log(`📊 REAL-API: Result keys: ${Object.keys(rewriteResult)}`);
+        console.log(`📄 REAL-API: Has PDF URL: ${'improved_resume_url' in rewriteResult}`);
+        
+        if (rewriteResult.improved_resume_url) {
+            console.log(`📁 REAL-API: PDF URL type: ${typeof rewriteResult.improved_resume_url}`);
+            console.log(`📁 REAL-API: PDF URL length: ${rewriteResult.improved_resume_url.length}`);
+        }
+        
+        // Store real result and redirect to success page
+        sessionStorage.setItem('cvRewriteResult', JSON.stringify(rewriteResult));
+        console.log(`💾 REAL-API: Stored real AI result in sessionStorage`);
+        
+        // Show success message and redirect
+        showSuccessMessage('AI Improvement Complete! Redirecting...');
+        
+        setTimeout(() => {
+            window.location.href = './success.html';
+        }, 2000);
+        
+    } catch (error) {
+        console.error('❌ REAL-API: Resume improvement failed:', error);
+        showError(`AI Processing failed: ${error.message}`);
+        resetUpgradeButton();
+    }
+}
+
+/**
+ * Reset upgrade button state
+ */
+function resetUpgradeButton() {
+    if (upgradeBtn) {
+        upgradeBtn.disabled = false;
+        upgradeBtn.textContent = '🚀 Fix My Resume Now - $9';
+    }
+}
+
+/**
+ * Show success message
+ */
+function showSuccessMessage(message) {
+    const successDiv = document.createElement('div');
+    successDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+    successDiv.textContent = message;
+    document.body.appendChild(successDiv);
+    
+    setTimeout(() => {
+        successDiv.remove();
+    }, 3000);
+}
+
 function createMockSuccessDataAndRedirect() {
     console.log('🚀 Creating mock success data for bypass...');
     
