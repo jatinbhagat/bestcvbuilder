@@ -141,4 +141,4 @@ The application requires these environment variables:
 - Use descriptive migration names
 - Include rollback statements where applicable
 - Test migrations locally before deployment
-- Document schema changes in migration comments
+- Document schema changes in migration comments`

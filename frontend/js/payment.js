@@ -219,8 +219,8 @@ async function triggerCVRewrite() {
     try {
         console.log('Triggering CV rewrite...');
         
-        // Call the Python API to rewrite the CV
-        const response = await fetch('/api/cv-rewrite', {
+        // Call the Python API to fix/improve the resume
+        const response = await fetch('/api/resume-fix', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

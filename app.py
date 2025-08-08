@@ -47,8 +47,18 @@ except ImportError as e:
 
 # Import the Job analyzer functions
 try:
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'api', 'job-analyzer'))
-    from index import analyze_job_description, JobAnalysisError, save_job_analysis_to_database
+    # Import from job analyzer specifically 
+    import importlib.util
+    job_analyzer_path = os.path.join(os.path.dirname(__file__), 'api', 'job-analyzer', 'index.py')
+    spec = importlib.util.spec_from_file_location("job_analyzer_module", job_analyzer_path)
+    job_analyzer_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(job_analyzer_module)
+    
+    # Get the functions we need
+    analyze_job_description = job_analyzer_module.analyze_job_description
+    JobAnalysisError = job_analyzer_module.JobAnalysisError
+    save_job_analysis_to_database = job_analyzer_module.save_job_analysis_to_database
+    
     job_analyzer_available = True
     print("✅ Job analyzer functions imported successfully")
 except ImportError as e:

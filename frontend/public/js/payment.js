@@ -217,10 +217,10 @@ async function savePaymentRecord(paymentResult) {
  */
 async function triggerCVRewrite() {
     try {
-        console.log('Triggering CV rewrite...');
+        console.log('Triggering resume improvement...');
         
-        // Call the Python API to rewrite the CV
-        const response = await fetch('/api/cv-rewrite', {
+        // Call the Python API to fix/improve the resume
+        const response = await fetch('/api/resume-fix', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -233,11 +233,11 @@ async function triggerCVRewrite() {
         });
         
         if (!response.ok) {
-            throw new Error('CV rewrite failed');
+            throw new Error('Resume improvement failed');
         }
         
         const rewriteResult = await response.json();
-        console.log('CV rewrite completed:', rewriteResult);
+        console.log('Resume improvement completed:', rewriteResult);
         
         // Store rewrite result for success page
         sessionStorage.setItem('cvRewriteResult', JSON.stringify(rewriteResult));
