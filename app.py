@@ -16,6 +16,8 @@ import signal
 # Add API modules to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'api', 'cv-parser'))
 sys.path.append(os.path.join(os.path.dirname(__file__), 'api', 'job-analyzer'))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'api', 'resume-fix'))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'utils'))
 
 app = Flask(__name__)
 CORS(app)
@@ -382,6 +384,45 @@ def cv_rewrite():
     error_response = jsonify({"error": "CV rewrite not implemented yet"})
     error_response.headers.add('Access-Control-Allow-Origin', '*')
     return error_response, 501
+
+@app.route('/api/resume-fix', methods=['POST', 'OPTIONS'])
+def resume_fix():
+    """Resume Fix API endpoint with Gemini AI integration"""
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        return response
+    
+    try:
+        # Import the resume-fix handler
+        from index import process_resume_fix
+        
+        # Get request data
+        data = request.get_json()
+        if not data:
+            error_response = jsonify({"error": "No JSON data provided"})
+            error_response.headers.add('Access-Control-Allow-Origin', '*')
+            return error_response, 400
+        
+        # Process the resume fix
+        result = process_resume_fix(
+            original_analysis=data.get('original_analysis', {}),
+            user_email=data.get('user_email', 'unknown@email.com'),
+            payment_id=data.get('payment_id', f'flask_{int(time.time())}')
+        )
+        
+        # Return success response
+        response = jsonify(result)
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
+        
+    except Exception as e:
+        print(f"❌ Resume fix error: {e}")
+        error_response = jsonify({"error": f"Resume fix failed: {str(e)}"})
+        error_response.headers.add('Access-Control-Allow-Origin', '*')
+        return error_response, 500
 
 @app.errorhandler(404)
 def not_found(error):

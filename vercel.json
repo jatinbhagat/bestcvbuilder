@@ -1,7 +1,20 @@
 {
+  "version": 2,
   "framework": "vite",
   "buildCommand": "rm -rf dist node_modules/.vite && npm ci && npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm ci",
-  "devCommand": "npm run dev"
+  "devCommand": "npm run dev",
+  "functions": {
+    "api/cv-parser/index.py": {
+      "runtime": "python3.9"
+    },
+    "api/resume-fix/index.py": {
+      "runtime": "python3.9",
+      "maxDuration": 60
+    },
+    "api/fix-cors.py": {
+      "runtime": "python3.9"
+    }
+  }
 }
