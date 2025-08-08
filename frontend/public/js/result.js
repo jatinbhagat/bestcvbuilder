@@ -1239,7 +1239,7 @@ async function handleRealResumeImprovement() {
     
     try {
         // Call the resume-fix API with real Gemini processing
-        const API_BASE_URL = 'https://bestcvbuilder-api-znsg.onrender.com';
+        const API_BASE_URL = 'https://bestcvbuilder-api.onrender.com';
         console.log(`🚀 REAL-API: Calling resume-fix API at ${API_BASE_URL}/api/resume-fix`);
         console.log(`📋 REAL-API: Analysis data keys: ${Object.keys(analysisData)}`);
         
