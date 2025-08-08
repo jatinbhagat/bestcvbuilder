@@ -1226,21 +1226,6 @@ function showSuccess(message) {
 }
 
 /**
- * Show error message
- */
-function showError(message) {
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
-    errorDiv.textContent = message;
-    
-    document.body.appendChild(errorDiv);
-    
-    setTimeout(() => {
-        errorDiv.remove();
-    }, 5000);
-}
-
-/**
  * Handle real resume improvement with Gemini AI
  */
 async function handleRealResumeImprovement() {
