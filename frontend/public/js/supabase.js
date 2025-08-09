@@ -221,11 +221,11 @@ export class DatabaseService {
             // Get user info if userId not provided
             if (!userId) {
                 const { data: { user } } = await supabase.auth.getUser();
-                userId = user?.id || 'anonymous';
+                userId = user?.id || null; // Use null instead of 'anonymous' for UUID field
             }
             
             const activityRecord = {
-                user_id: userId,
+                user_id: userId, // This will be null for anonymous users
                 activity_type: activityType,
                 activity_data: activityData,
                 ip_address: null, // Will be handled by server-side if needed

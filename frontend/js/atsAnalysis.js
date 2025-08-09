@@ -1,10 +1,12 @@
 /**
  * ATS Analysis module for communicating with the Python CV parser API
  * Handles resume analysis and score calculation
- * Updated: 2025-08-08 - Enhanced UI with real Gemini AI integration
- * Production: Full-featured resume optimization on Render.com
- * API: Working backend with comprehensive ATS analysis
- * Status: Enhanced dashboard UI with modern design elements
+ * Updated: 2025-08-02 - Fixed CORS with relative URLs
+ * Force Deploy: Timestamp $(date) - Ensuring fresh deployment
+ * TEST: Vercel auto-deploy trigger - Cache bust v2.1
+ * DEPLOY NOW: Force rebuild v3.0 - CORS fix critical
+ * VERCEL REDEPLOY: Change detection trigger - August 2nd 2025
+ * CACHE BUST v1.1.0: Build timestamp 20250803-0417 - Force refresh
  */
 
 // API Configuration - Render.com deployment - TIMESTAMP: 2025-08-05
@@ -60,7 +62,7 @@ export async function analyzeResume(fileUrl, userId = null) {
         const analysisResult = await response.json();
         console.log('ATS analysis completed:', analysisResult);
         
-        return processAnalysisResult(analysisResult);
+        return processAnalysisResult(analysisResult, fileUrl);
         
     } catch (error) {
         console.error('ATS analysis failed:', error);
@@ -71,9 +73,10 @@ export async function analyzeResume(fileUrl, userId = null) {
 /**
  * Process and format the analysis result
  * @param {Object} rawResult - Raw API response
+ * @param {string} fileUrl - Original file URL for rewrite API
  * @returns {Object} Formatted analysis result
  */
-function processAnalysisResult(rawResult) {
+function processAnalysisResult(rawResult, fileUrl) {
     return {
         score: rawResult.ats_score || 0,
         scoreCategory: getScoreCategory(rawResult.ats_score),
@@ -84,6 +87,7 @@ function processAnalysisResult(rawResult) {
         missingKeywords: rawResult.missing_keywords || [],
         formattingIssues: rawResult.formatting_issues || [],
         suggestions: rawResult.suggestions || [],
+        originalFileUrl: fileUrl, // Include original file URL for rewrite API
         timestamp: new Date().toISOString()
     };
 }
