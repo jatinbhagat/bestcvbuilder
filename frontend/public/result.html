@@ -27,20 +27,20 @@
             align-items: center;
             justify-content: center;
             position: relative;
-            background: conic-gradient(from 0deg, #ef4444 0deg, #ef4444 234deg, #e2e8f0 234deg 360deg);
+            background: #f8fafc;
+            border: 8px solid #e2e8f0;
         }
         
-        .score-circle::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 150px;
-            height: 150px;
-            background: white;
-            border-radius: 50%;
-            z-index: 1;
+        .score-circle-fair {
+            border-color: #f59e0b;
+        }
+        
+        .score-circle-good {
+            border-color: #10b981;
+        }
+        
+        .score-circle-poor {
+            border-color: #ef4444;
         }
         
         .score-content {
@@ -53,7 +53,7 @@
 <body>
     <!-- Header -->
     <header class="bg-white shadow-sm">
-        <div class="max-width-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div class="flex justify-between items-center">
                 <h1 class="text-2xl font-bold text-blue-600">BestCVBuilder</h1>
                 <button id="newAnalysisBtn" class="text-blue-600 hover:text-blue-700 font-medium">
@@ -80,15 +80,15 @@
                 <div class="grid lg:grid-cols-2 gap-8 items-center">
                     <!-- Score Circle -->
                     <div class="text-center">
-                        <div class="score-circle mx-auto mb-6">
+                        <div id="scoreCircle" class="score-circle score-circle-fair mx-auto mb-6">
                             <div class="score-content">
-                                <div class="text-4xl font-black text-gray-900" id="atsScore">65</div>
+                                <div class="text-4xl font-black text-yellow-600" id="atsScore">65</div>
                                 <div class="text-lg text-gray-500">/100</div>
-                                <div class="text-sm font-bold text-gray-600 mt-1">Fair</div>
+                                <div class="text-lg font-bold text-yellow-600 mt-1" id="scoreLetter">C</div>
                             </div>
                         </div>
-                        <h3 class="text-2xl font-bold text-red-600 mb-2">Your ATS Score: Fair</h3>
-                        <div class="text-red-700 font-semibold bg-red-50 px-4 py-2 rounded-lg border border-red-200">
+                        <h3 id="scoreTitle" class="text-2xl font-bold text-yellow-600 mb-2">Your ATS Score: Fair</h3>
+                        <div id="scoreDescription" class="text-yellow-700 font-semibold bg-yellow-50 px-4 py-2 rounded-lg border border-yellow-200">
                             ⚠️ Your resume needs optimization to pass ATS screening
                         </div>
                     </div>
@@ -99,14 +99,14 @@
                         <div class="space-y-4">
                             <div class="flex justify-between items-center">
                                 <span class="text-gray-600">Current interview rate:</span>
-                                <span class="text-2xl font-bold text-red-600">3%</span>
+                                <span class="text-2xl font-bold text-red-600" id="currentRate">3%</span>
                             </div>
                             <div class="flex justify-between items-center">
                                 <span class="text-gray-600">Potential interview rate:</span>
-                                <span class="text-2xl font-bold text-green-600">15%</span>
+                                <span class="text-2xl font-bold text-green-600" id="potentialRate">15%</span>
                             </div>
                             <div class="bg-green-100 rounded-lg p-3 text-center">
-                                <div class="text-lg font-bold text-green-700">That's 5x more interviews possible!</div>
+                                <div class="text-lg font-bold text-green-700" id="impactText">That's 5x more interviews possible!</div>
                             </div>
                         </div>
                     </div>
@@ -120,12 +120,12 @@
                 <h3 class="text-2xl font-bold mb-4">🔥 LIMITED TIME: Fix All Issues Automatically 🔥</h3>
                 <div class="mb-6">
                     <div class="text-4xl font-black mb-2">Get Your Interview-Ready Resume</div>
-                    <p class="text-lg opacity-90">Our AI will fix all 8 issues and boost your score to 90+ in minutes</p>
+                    <p class="text-lg opacity-90">Our AI will fix all <span id="totalIssuesCount">8</span> issues and boost your score to <span id="targetScore">90</span>+ in minutes</p>
                 </div>
                 
                 <div class="grid md:grid-cols-3 gap-6 mb-8">
                     <div class="bg-white bg-opacity-20 rounded-xl p-4">
-                        <div class="text-3xl font-black text-green-700">+25</div>
+                        <div class="text-3xl font-black text-green-700" id="scoreImprovement">+25</div>
                         <div class="text-sm text-gray-900">ATS Score Boost</div>
                     </div>
                     <div class="bg-white bg-opacity-20 rounded-xl p-4">
@@ -133,7 +133,7 @@
                         <div class="text-sm text-gray-900">More Interviews</div>
                     </div>
                     <div class="bg-white bg-opacity-20 rounded-xl p-4">
-                        <div class="text-3xl font-black text-purple-700">2min</div>
+                        <div class="text-3xl font-black text-purple-700" id="estimatedTime">2min</div>
                         <div class="text-sm text-gray-900">Time Saved</div>
                     </div>
                 </div>
@@ -159,18 +159,18 @@
                 <div class="grid md:grid-cols-2 gap-6 mb-6">
                     <!-- Quick Wins -->
                     <div>
-                        <h4 class="text-lg font-bold text-blue-600 mb-4">✅ Quick Fixes (2 Minutes Each)</h4>
-                        <div class="space-y-3">
+                        <h4 class="text-lg font-bold text-blue-600 mb-4">✅ Quick Fixes (<span id="quickWinsCount">2</span> Issues)</h4>
+                        <div id="quickWinsList" class="space-y-3">
                             <div class="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-400" data-issue="linkedin">
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-800 font-medium">ATS cannot effectively detect your LinkedIn profile</span>
-                                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-bold">Quick Fix</span>
+                                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-bold">+3pts</span>
                                 </div>
                             </div>
                             <div class="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-400">
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-800 font-medium">ATS struggles to parse your bullet point format</span>
-                                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-bold">Quick Fix</span>
+                                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-bold">+5pts</span>
                                 </div>
                             </div>
                         </div>
@@ -178,19 +178,19 @@
 
                     <!-- Critical Issues -->
                     <div>
-                        <h4 class="text-lg font-bold text-red-600 mb-4">🚨 Critical Issues</h4>
-                        <div class="space-y-3">
+                        <h4 class="text-lg font-bold text-red-600 mb-4">🚨 Critical Issues (<span id="criticalIssuesCount">2</span> Issues)</h4>
+                        <div id="criticalIssuesList" class="space-y-3">
                             <div class="bg-red-50 rounded-lg p-4 border-l-4 border-red-400">
                                 <div class="flex justify-between items-center mb-2">
                                     <span class="text-gray-800 font-medium">ATS cannot find your professional summary</span>
-                                    <span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-bold">Critical</span>
+                                    <span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-bold">+12pts</span>
                                 </div>
                                 <p class="text-sm text-gray-600">ATS systems look for a summary section to understand your profile</p>
                             </div>
                             <div class="bg-red-50 rounded-lg p-4 border-l-4 border-red-400">
                                 <div class="flex justify-between items-center mb-2">
                                     <span class="text-gray-800 font-medium">ATS cannot match your skills to job requirements</span>
-                                    <span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-bold">Critical</span>
+                                    <span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-bold">+15pts</span>
                                 </div>
                                 <p class="text-sm text-gray-600">Missing key terms that ATS systems scan for</p>
                             </div>
@@ -206,20 +206,6 @@
             </div>
         </section>
 
-        <!-- Detailed Analysis (Hidden) -->
-        <section id="detailedAnalysis" class="hidden mb-8">
-            <div class="bg-white rounded-3xl p-8 shadow-lg">
-                <h3 class="text-2xl font-bold text-gray-900 mb-6 text-center">
-                    📊 Complete ATS Analysis Report
-                </h3>
-                <div class="text-center p-6">
-                    <p class="text-gray-600 mb-4">Detailed component breakdown, recommendations, and step-by-step fixes.</p>
-                    <button id="fixIssuesBtn" class="bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 px-8 rounded-xl font-bold hover:from-blue-700 hover:to-blue-800 transition-colors">
-                        🚀 Fix These Issues in 2 Minutes - $9
-                    </button>
-                </div>
-            </div>
-        </section>
 
         <!-- View Detailed Report -->
         <section class="text-center mb-8">
@@ -237,7 +223,7 @@
                 <!-- Component Breakdown -->
                 <div class="mb-8">
                     <h4 class="text-xl font-bold text-gray-900 mb-4">ATS Component Analysis</h4>
-                    <div id="componentBreakdown" class="space-y-4">
+                    <div id="componentScores" class="space-y-4">
                         <div class="bg-gray-50 rounded-lg p-4">
                             <div class="flex justify-between items-center mb-2">
                                 <span class="font-medium text-gray-900">Contact Information</span>
@@ -274,7 +260,7 @@
                 <!-- All Issues List -->
                 <div class="mb-8">
                     <h4 class="text-xl font-bold text-gray-900 mb-4">Issues Preventing ATS Success</h4>
-                    <div class="space-y-3">
+                    <div id="allIssuesList" class="space-y-3">
                         <div class="bg-red-50 rounded-lg p-4 border-l-4 border-red-400">
                             <h5 class="font-medium text-gray-900 mb-1">ATS cannot find your professional summary</h5>
                             <p class="text-sm text-gray-600 mb-2">ATS systems scan for a dedicated summary section at the top of your resume</p>
@@ -293,6 +279,29 @@
                     </div>
                 </div>
 
+                <!-- Recommendations -->
+                <div class="mb-8">
+                    <h4 class="text-xl font-bold text-gray-900 mb-4">Detailed Recommendations</h4>
+                    <div id="detailedRecommendations" class="space-y-3">
+                        <div class="bg-blue-50 rounded-lg p-4">
+                            <div class="flex items-start">
+                                <div class="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3 mt-0.5">
+                                    1
+                                </div>
+                                <p class="text-gray-800">Add a professional summary section with 2-3 sentences highlighting your key qualifications and career goals</p>
+                            </div>
+                        </div>
+                        <div class="bg-blue-50 rounded-lg p-4">
+                            <div class="flex items-start">
+                                <div class="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3 mt-0.5">
+                                    2
+                                </div>
+                                <p class="text-gray-800">Optimize your resume with industry-specific keywords from job descriptions you're targeting</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="text-center p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl">
                     <h4 class="text-xl font-bold text-gray-900 mb-3">Ready to Fix These Issues?</h4>
                     <p class="text-gray-600 mb-4">Our AI will automatically fix all these issues and boost your ATS score in just 2 minutes</p>
@@ -303,6 +312,17 @@
             </div>
         </section>
     </main>
+
+    <!-- Hidden elements for JS functionality -->
+    <div id="strengthsList" class="hidden"></div>
+    <div id="improvementsList" class="hidden"></div>
+    <div id="detailedAnalysis" class="hidden"></div>
+    <div id="criticalAlert" class="hidden"></div>
+    <div id="criticalAlertText" class="hidden"></div>
+    <div id="mainDescription" class="hidden"></div>
+    <div id="componentBreakdown" class="hidden"></div>
+    <div id="beforeList" class="hidden"></div>
+    <div id="afterList" class="hidden"></div>
 
     <script>
         console.log('Script starting...');
