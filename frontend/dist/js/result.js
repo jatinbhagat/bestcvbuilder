@@ -81,6 +81,9 @@ async function loadAnalysisData() {
         
         displayAnalysisResults();
         
+        // Check payment bypass after data is loaded
+        checkPaymentBypass();
+        
         // Save analysis to database if user is authenticated
         await saveAnalysisToDatabase();
         
@@ -375,8 +378,7 @@ function formatComponentDetails(data) {
  * Set up event listeners
  */
 function setupEventListeners() {
-    // Check if payment bypass is enabled
-    checkPaymentBypass();
+    // Note: checkPaymentBypass() is now called after data loads in loadAnalysisData()
     
     // Add keyboard shortcut for testing (Ctrl+Shift+B)
     document.addEventListener('keydown', function(event) {
@@ -488,7 +490,11 @@ function handleUpgrade() {
     try {
         // Check if payment bypass is enabled
         const bypassPayment = sessionStorage.getItem('BYPASS_PAYMENT') === 'true';
-        console.log('💳 Payment bypass enabled:', bypassPayment);
+        const bypassValue = sessionStorage.getItem('BYPASS_PAYMENT');
+        console.log('💳 Payment bypass check:');
+        console.log('  - Raw value:', bypassValue);
+        console.log('  - Parsed boolean:', bypassPayment);
+        console.log('  - Session storage keys:', Object.keys(sessionStorage));
         
         // Log upgrade button click (non-blocking)
         try {
@@ -1234,22 +1240,47 @@ function checkPaymentBypass() {
     };
     
     // Auto-enable bypass in production if no real file data available
-    if (!bypassSession && !analysisData?.file_url && !analysisData?.content) {
+    if (!bypassSession && analysisData && !analysisData.file_url && !analysisData.content) {
         console.log('🔄 No real file data found - auto-enabling bypass for testing');
+        console.log('📊 Analysis data:', analysisData);
         sessionStorage.setItem('BYPASS_PAYMENT', 'true');
+        console.log('✅ Auto-bypass enabled');
+    } else if (!bypassSession) {
+        console.log('🔍 Analysis data check:');
+        console.log('  - Has analysisData:', !!analysisData);
+        console.log('  - Has file_url:', analysisData?.file_url);
+        console.log('  - Has content:', !!analysisData?.content);
+        console.log('  - Bypass session:', bypassSession);
     }
 }
 
 /**
- * Handle bypass payment for testing - SIMPLIFIED VERSION
+ * Handle bypass payment for testing
  */
 function handleBypassPayment() {
     console.log('🧪 BYPASS BUTTON CLICKED - enabling bypass');
     
     // Enable bypass mode
     sessionStorage.setItem('BYPASS_PAYMENT', 'true');
+    console.log('✅ Bypass payment stored in session');
+    
+    // Update button text to show it's enabled
+    if (bypassPaymentBtn) {
+        bypassPaymentBtn.textContent = '✅ Testing Mode Enabled';
+        bypassPaymentBtn.disabled = true;
+        bypassPaymentBtn.classList.add('bg-green-500');
+        bypassPaymentBtn.classList.remove('bg-yellow-500');
+    }
+    
+    // Update main button text to show bypass mode
+    if (upgradeBtn) {
+        upgradeBtn.textContent = '🧪 Fix My Resume Now (Testing Mode)';
+        upgradeBtn.classList.add('bg-yellow-100', 'text-yellow-800');
+        upgradeBtn.classList.remove('bg-white', 'text-gray-900');
+    }
+    
     checkPaymentBypass(); // Update UI
-    showSuccess('Payment bypass enabled! Now click "Fix My Resume Now" to use it.');
+    showSuccess('Testing mode enabled! Now click "Fix My Resume Now" button.');
 }
 
 /**
