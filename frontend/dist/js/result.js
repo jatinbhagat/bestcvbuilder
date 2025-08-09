@@ -490,11 +490,15 @@ function handleUpgrade() {
         const bypassPayment = sessionStorage.getItem('BYPASS_PAYMENT') === 'true';
         console.log('💳 Payment bypass enabled:', bypassPayment);
         
-        // Log upgrade button click
-        DatabaseService.logActivity(null, 'upgrade_button_clicked', {
-            bypass_mode: bypassPayment,
-            original_score: analysisData?.score || 'unknown'
-        });
+        // Log upgrade button click (non-blocking)
+        try {
+            DatabaseService.logActivity(null, 'upgrade_button_clicked', {
+                bypass_mode: bypassPayment,
+                original_score: analysisData?.score || 'unknown'
+            }).catch(err => console.warn('Activity logging failed (non-critical):', err));
+        } catch (logError) {
+            console.warn('Activity logging failed (non-critical):', logError);
+        }
         
         // Show immediate feedback
         if (upgradeBtn) {
@@ -1184,15 +1188,18 @@ function updateUpgradeSection(insights) {
  */
 function checkPaymentBypass() {
     const bypassSession = sessionStorage.getItem('BYPASS_PAYMENT') === 'true';
-    const bypassUrl = window.location.search.includes('bypass=true');
+    const urlParams = new URLSearchParams(window.location.search);
+    const bypassUrl = urlParams.has('bypass') || urlParams.has('test') || urlParams.has('debug');
     const bypassHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     
     console.log('🔍 Payment bypass check:');
     console.log('  - Session bypass:', bypassSession);
     console.log('  - URL bypass:', bypassUrl);
     console.log('  - Local host:', bypassHost);
+    console.log('  - Current URL:', window.location.href);
     
-    const shouldShowBypass = bypassHost || bypassUrl || bypassSession;
+    // Always show bypass button for easy testing in production
+    const shouldShowBypass = true; // Always visible for testing
     
     // Show/hide bypass button based on conditions
     if (bypassPaymentBtn) {
@@ -1225,6 +1232,12 @@ function checkPaymentBypass() {
         alert('Payment bypass disabled - normal payment flow will be used.');
         checkPaymentBypass(); // Update UI
     };
+    
+    // Auto-enable bypass in production if no real file data available
+    if (!bypassSession && !analysisData?.file_url && !analysisData?.content) {
+        console.log('🔄 No real file data found - auto-enabling bypass for testing');
+        sessionStorage.setItem('BYPASS_PAYMENT', 'true');
+    }
 }
 
 /**
