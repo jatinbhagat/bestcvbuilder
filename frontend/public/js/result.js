@@ -1547,8 +1547,8 @@ function generateImprovementsList(data) {
     return improvements;
 }
 
-// Debug: Log when result.js loads
-console.log('🔄 result.js module loaded');
+// Debug: Log when result.js loads - ALWAYS BYPASS VERSION
+console.log('🔄 result.js module loaded - BYPASS MODE ACTIVE');
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', init); 
