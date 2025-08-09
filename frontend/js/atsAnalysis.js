@@ -1,20 +1,20 @@
 /**
  * ATS Analysis module for communicating with the Python CV parser API
  * Handles resume analysis and score calculation
- * Updated: 2025-08-08 - Render.com deployment with real Gemini AI
- * Production Ready: Complete CV optimization system functional
- * API: https://bestcvbuilder-api.onrender.com (Render.com backend)
- * Frontend: Static site deployment on Render.com
+ * Updated: 2025-08-08 - Enhanced UI with real Gemini AI integration
+ * Production: Full-featured resume optimization on Render.com
+ * API: Working backend with comprehensive ATS analysis
+ * Status: Enhanced dashboard UI with modern design elements
  */
 
-// API Configuration - Render.com deployment - TIMESTAMP: 2025-08-04
+// API Configuration - Render.com deployment - TIMESTAMP: 2025-08-05
 // For local development, use relative URLs. For production, use Render.com API
 const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
 const API_BASE_URL = isProduction ? 'https://bestcvbuilder-api.onrender.com/api' : '/api';
 const CV_PARSER_ENDPOINT = `${API_BASE_URL}/cv-parser`;
-const BUILD_VERSION = '3.0.0-RENDER-DEPLOYMENT';
-const CACHE_BUSTER = '20250804080000';
-const BUILD_ID = 'BUILD-2025-08-04-08:00:00-RENDER-API';
+const BUILD_VERSION = '4.0.0-FIXED-UI-DEPLOYMENT';
+const CACHE_BUSTER = '20250805083000';
+const BUILD_ID = 'BUILD-2025-08-05-08:30:00-UI-FIXED';
 
 // Export BUILD_ID and API config for main.js to display
 export { BUILD_ID, API_BASE_URL, CV_PARSER_ENDPOINT };

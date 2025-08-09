@@ -178,6 +178,81 @@ export class DatabaseService {
             throw error;
         }
     }
+
+    /**
+     * Save job analysis to database
+     */
+    static async saveJobAnalysis(userId, jobAnalysisData) {
+        try {
+            console.log('📊 Saving job analysis to database...');
+            
+            const { data, error } = await supabase
+                .from('job_analysis')
+                .insert({
+                    user_id: userId,
+                    role_title: jobAnalysisData.role_title,
+                    company_name: jobAnalysisData.company_name,
+                    job_description: jobAnalysisData.job_description,
+                    extracted_requirements: jobAnalysisData.extracted_requirements,
+                    user_expectations: jobAnalysisData.user_expectations,
+                    analysis_score: jobAnalysisData.analysis_score,
+                    matching_keywords: jobAnalysisData.matching_keywords,
+                    created_at: new Date().toISOString()
+                });
+            
+            if (error) {
+                console.error('❌ Job analysis save failed:', error);
+                throw error;
+            }
+            
+            console.log('✅ Job analysis saved successfully:', data);
+            return data;
+        } catch (error) {
+            console.error('Job analysis save error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Log user activity for tracking and analytics
+     */
+    static async logActivity(userId, activityType, activityData = null) {
+        try {
+            // Get user info if userId not provided
+            if (!userId) {
+                const { data: { user } } = await supabase.auth.getUser();
+                userId = user?.id || 'anonymous';
+            }
+            
+            const activityRecord = {
+                user_id: userId,
+                activity_type: activityType,
+                activity_data: activityData,
+                ip_address: null, // Will be handled by server-side if needed
+                user_agent: navigator.userAgent,
+                timestamp: new Date().toISOString()
+            };
+            
+            console.log('📊 Logging activity:', activityType, activityData);
+            
+            const { data, error } = await supabase
+                .from('activity_logs')
+                .insert(activityRecord);
+            
+            if (error) {
+                console.error('❌ Activity logging failed:', error);
+                // Don't throw error for activity logging - it shouldn't break user flow
+                return null;
+            }
+            
+            console.log('✅ Activity logged successfully:', activityType);
+            return data;
+        } catch (error) {
+            console.error('Activity logging error:', error);
+            // Don't throw error for activity logging - it shouldn't break user flow
+            return null;
+        }
+    }
 }
 
 /**

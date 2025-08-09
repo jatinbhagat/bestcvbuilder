@@ -13,6 +13,7 @@ const downloadBtn = document.getElementById('downloadBtn');
 const submitFeedbackBtn = document.getElementById('submitFeedbackBtn');
 const newAnalysisBtn = document.getElementById('newAnalysisBtn');
 const homeBtn = document.getElementById('homeBtn');
+const optimizeForJobBtn = document.getElementById('optimizeForJobBtn');
 const feedbackComment = document.getElementById('feedbackComment');
 
 // Rating buttons
@@ -27,6 +28,13 @@ let selectedRating = null;
  */
 function init() {
     console.log('Success page initialized');
+    
+    // Log success page visit
+    DatabaseService.logActivity(null, 'success_page_visited', {
+        source: 'upgrade_flow',
+        timestamp: new Date().toISOString()
+    });
+    
     loadRewriteData();
     setupEventListeners();
 }
@@ -36,30 +44,15 @@ function init() {
  */
 function loadRewriteData() {
     try {
-        console.log('🔍 SUCCESS-PAGE: Looking for CV rewrite data in sessionStorage...');
         const storedData = sessionStorage.getItem('cvRewriteResult');
-        
         if (!storedData) {
-            console.warn('❌ SUCCESS-PAGE: No CV rewrite data found in sessionStorage');
-            console.log('🔍 SUCCESS-PAGE: Available sessionStorage keys:', Object.keys(sessionStorage));
-            showError('No CV rewrite data available. Please try the process again.');
+            console.warn('No CV rewrite data found');
+            showError('No CV rewrite data available.');
             return;
         }
         
-        console.log('✅ SUCCESS-PAGE: Found CV rewrite data in sessionStorage');
-        console.log('📊 SUCCESS-PAGE: Raw data length:', storedData.length);
-        
         rewriteData = JSON.parse(storedData);
-        console.log('📄 SUCCESS-PAGE: Parsed CV rewrite data:', rewriteData);
-        console.log('🔑 SUCCESS-PAGE: Data keys:', Object.keys(rewriteData));
-        
-        if (rewriteData.improved_resume_url) {
-            console.log('📄 SUCCESS-PAGE: PDF URL found:', rewriteData.improved_resume_url);
-            console.log('📄 SUCCESS-PAGE: PDF URL type:', typeof rewriteData.improved_resume_url);
-            console.log('📄 SUCCESS-PAGE: PDF URL starts with:', rewriteData.improved_resume_url.substring(0, 50));
-        } else {
-            console.warn('⚠️ SUCCESS-PAGE: No improved_resume_url found in data!');
-        }
+        console.log('Loaded CV rewrite data:', rewriteData);
         
         displayRewriteResults();
         
@@ -109,6 +102,11 @@ function setupEventListeners() {
     
     if (homeBtn) {
         homeBtn.addEventListener('click', handleGoHome);
+    }
+    
+    // Job optimization button
+    if (optimizeForJobBtn) {
+        optimizeForJobBtn.addEventListener('click', handleOptimizeForJob);
     }
     
     // Rating buttons
@@ -225,6 +223,27 @@ function handleNewAnalysis() {
 function handleGoHome() {
     console.log('User going to home page');
     window.location.href = './index.html';
+}
+
+/**
+ * Handle optimize for job button
+ */
+function handleOptimizeForJob() {
+    console.log('User wants to optimize for specific job');
+    
+    // Log job optimization button click
+    DatabaseService.logActivity(null, 'job_optimization_started', {
+        original_score: rewriteData?.original_score || 'unknown',
+        new_score: rewriteData?.new_score || 'unknown'
+    });
+    
+    // Store current rewrite data for job optimization context
+    if (rewriteData) {
+        sessionStorage.setItem('currentRewriteData', JSON.stringify(rewriteData));
+    }
+    
+    // Navigate to job input page
+    window.location.href = './job-input.html';
 }
 
 /**

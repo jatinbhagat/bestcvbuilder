@@ -217,15 +217,10 @@ async function savePaymentRecord(paymentResult) {
  */
 async function triggerCVRewrite() {
     try {
-        console.log('Triggering resume improvement with Gemini AI...');
+        console.log('Triggering resume improvement...');
         
         // Call the Python API to fix/improve the resume
-        const API_BASE_URL = 'https://bestcvbuilder-api.onrender.com';
-        console.log(`🚀 PAYMENT: Calling resume-fix API at ${API_BASE_URL}/api/resume-fix`);
-        console.log(`📧 PAYMENT: User email: ${emailInput.value}`);
-        console.log(`📋 PAYMENT: Analysis data keys: ${Object.keys(analysisData)}`);
-        
-        const response = await fetch(`${API_BASE_URL}/api/resume-fix`, {
+        const response = await fetch('/api/resume-fix', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -237,36 +232,15 @@ async function triggerCVRewrite() {
             })
         });
         
-        console.log(`📈 PAYMENT: API Response status: ${response.status}`);
-        console.log(`📄 PAYMENT: Response headers:`, Object.fromEntries(response.headers.entries()));
-        
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`❌ PAYMENT: API Error (${response.status}):`, errorText);
-            throw new Error(`Resume improvement failed: ${response.status} - ${errorText}`);
+            throw new Error('Resume improvement failed');
         }
         
         const rewriteResult = await response.json();
-        console.log('✅ PAYMENT: Resume improvement completed successfully');
-        console.log(`📊 PAYMENT: Result keys: ${Object.keys(rewriteResult)}`);
-        console.log(`📄 PAYMENT: Has PDF URL: ${'improved_resume_url' in rewriteResult}`);
-        
-        if (rewriteResult.improved_resume_url) {
-            console.log(`📁 PAYMENT: PDF URL type: ${typeof rewriteResult.improved_resume_url}`);
-            console.log(`📁 PAYMENT: PDF URL length: ${rewriteResult.improved_resume_url.length}`);
-        }
+        console.log('Resume improvement completed:', rewriteResult);
         
         // Store rewrite result for success page
         sessionStorage.setItem('cvRewriteResult', JSON.stringify(rewriteResult));
-        console.log(`💾 PAYMENT: Stored result in sessionStorage`);
-        
-        // Also log what we're storing
-        console.log(`💾 PAYMENT: Stored data preview:`, {
-            status: rewriteResult.status,
-            original_score: rewriteResult.original_score,
-            new_score: rewriteResult.new_score,
-            has_pdf_url: !!rewriteResult.improved_resume_url
-        });
         
     } catch (error) {
         console.error('CV rewrite failed:', error);

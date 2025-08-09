@@ -3,160 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ATS Analysis Results - BestCVBuilder</title>
-    <meta name="description" content="Your resume ATS analysis results and upgrade options">
+    <title>Your ATS Analysis Results - BestCVBuilder</title>
+    <meta name="description" content="Your detailed ATS analysis results and recommendations">
     
     <!-- Tailwind CSS -->
-    
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="./assets/favicon.ico">
     
     <style>
-        /* Custom animations and styles */
-        @keyframes scoreReveal {
-            0% { transform: scale(0.8); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
         }
         
-        .score-reveal {
-            animation: scoreReveal 0.6s ease-out;
+        .score-circle {
+            width: 192px;
+            height: 192px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: #f8fafc;
+            border: 8px solid #e2e8f0;
         }
         
-        .gradient-text {
-            background: linear-gradient(135deg, #3b82f6, #10b981);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        .score-circle-fair {
+            border-color: #f59e0b;
         }
         
-        /* Sticky CTA for mobile */
-        .sticky-cta {
-            transform: translateY(100%);
-            transition: transform 0.3s ease-in-out;
+        .score-circle-good {
+            border-color: #10b981;
         }
         
-        .sticky-cta.visible {
-            transform: translateY(0);
+        .score-circle-poor {
+            border-color: #ef4444;
         }
         
-        /* Enhanced card shadows */
-        .card-modern {
-            background: white;
-            border-radius: 16px;
-            border: 1px solid rgba(229, 231, 235, 0.8);
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-        }
-        
-        .card-modern:hover {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            transition: box-shadow 0.2s ease;
-        }
-        
-        /* Better mobile spacing */
-        @media (max-width: 768px) {
-            .mobile-compact { padding: 16px; }
-            .mobile-text { font-size: 14px; }
+        .score-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
         }
     </style>
-  <script type="module" crossorigin src="/assets/result-DdCZ7SWa-v2.js"></script>
-  <link rel="modulepreload" crossorigin href="/assets/supabase-BMp_lEby-v2.js">
-  <link rel="modulepreload" crossorigin href="/assets/atsAnalysis-DfDExjh9-v2.js">
-  <link rel="stylesheet" crossorigin href="/assets/supabase-Du5OjIYV-v2.css">
+  <script type="module" crossorigin src="/assets/result-C2iGzuyG-v2.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/supabase-BWdB_AVO-v2.js">
+  <link rel="modulepreload" crossorigin href="/assets/atsAnalysis-CRFI84u--v2.js">
+  <link rel="stylesheet" crossorigin href="/assets/supabase-BQoH_Vvs-v2.css">
 </head>
-<body class="bg-gray-50 font-sans antialiased">
-    <!-- Minimal Header -->
-    <header class="bg-white/95 backdrop-blur-sm border-b border-gray-200/50 sticky top-0 z-40">
-        <div class="max-w-4xl mx-auto px-4 sm:px-6">
-            <div class="flex justify-between items-center h-14">
-                <div class="flex items-center">
-                    <a href="./index.html" class="text-lg font-bold text-gray-900">BestCVBuilder</a>
-                </div>
-                <button id="newAnalysisBtn" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">
-                    Analyze Another Resume
+<body>
+    <!-- Header -->
+    <header class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex justify-between items-center">
+                <h1 class="text-2xl font-bold text-blue-600">BestCVBuilder</h1>
+                <button id="newAnalysisBtn" class="text-blue-600 hover:text-blue-700 font-medium">
+                    📄 Analyze Another Resume
                 </button>
             </div>
         </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="max-w-4xl mx-auto px-4 sm:px-6 pb-20">
-        <!-- Hero Section -->
-        <section class="text-center py-6 mb-6">
-            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-                Your ATS Analysis Complete
-            </h1>
-            <p class="text-gray-600 mb-4" id="mainDescription">
-                Here's exactly what's blocking your interviews (and how to fix it)
+    <main class="max-w-4xl mx-auto px-4 py-8">
+        <!-- Title Section -->
+        <section class="text-center mb-8">
+            <h2 class="text-3xl md:text-4xl font-black text-gray-900 mb-4">
+                Your <span class="text-blue-600">ATS Analysis</span> is Complete! 🎯
+            </h2>
+            <p class="text-lg text-gray-600">
+                Here's exactly what's blocking your interviews and how to fix it in minutes
             </p>
-            
-            <!-- Critical Alert -->
-            <div id="criticalAlert" class="hidden bg-red-50 border border-red-200 rounded-xl p-4 mb-4 text-left max-w-md mx-auto">
-                <div class="flex items-start">
-                    <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
-                        <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01"></path>
-                        </svg>
-                    </div>
-                    <div>
-                        <h3 class="text-sm font-semibold text-red-800">Critical Issues Found</h3>
-                        <p class="text-sm text-red-700 mt-1" id="criticalAlertText">Multiple issues preventing ATS success</p>
-                    </div>
-                </div>
-            </div>
         </section>
 
-        <!-- Score & Impact Summary -->
+        <!-- Score Section -->
         <section class="mb-8">
-            <div class="card-modern p-6 md:p-8">
-                <div class="grid md:grid-cols-2 gap-8 items-center">
+            <div class="bg-white rounded-3xl p-8 shadow-lg">
+                <div class="grid lg:grid-cols-2 gap-8 items-center">
                     <!-- Score Circle -->
                     <div class="text-center">
-                        <div class="inline-flex items-center justify-center w-40 h-40 rounded-full border-4 score-reveal mb-4" id="scoreCircle">
-                            <div class="text-center">
-                                <span class="text-4xl font-bold" id="atsScore">0</span>
-                                <span class="text-xl text-gray-500">/100</span>
-                                <div class="text-sm font-medium mt-1 opacity-80" id="scoreLetter">F</div>
+                        <div id="scoreCircle" class="score-circle score-circle-fair mx-auto mb-6">
+                            <div class="score-content">
+                                <div class="text-4xl font-black text-yellow-600" id="atsScore">65</div>
+                                <div class="text-lg text-gray-500">/100</div>
+                                <div class="text-lg font-bold text-yellow-600 mt-1" id="scoreLetter">C</div>
                             </div>
                         </div>
-                        <h2 class="text-xl font-semibold text-gray-900 mb-2" id="scoreTitle">Your ATS Score</h2>
-                        <p class="text-gray-600 text-sm" id="scoreDescription">Loading analysis...</p>
+                        <h3 id="scoreTitle" class="text-2xl font-bold text-yellow-600 mb-2">Your ATS Score: Fair</h3>
+                        <div id="scoreDescription" class="text-yellow-700 font-semibold bg-yellow-50 px-4 py-2 rounded-lg border border-yellow-200">
+                            ⚠️ Your resume needs optimization to pass ATS screening
+                        </div>
                     </div>
-                    
+
                     <!-- Impact Metrics -->
-                    <div class="space-y-4">
-                        <div class="bg-gray-50 rounded-xl p-4">
-                            <h3 class="font-semibold text-gray-900 mb-3">Interview Impact</h3>
-                            <div class="space-y-3">
-                                <div class="flex justify-between items-center">
-                                    <span class="text-gray-600">Current rate:</span>
-                                    <span class="font-bold text-red-600 text-lg" id="currentRate">2%</span>
-                                </div>
-                                <div class="flex justify-between items-center">
-                                    <span class="text-gray-600">Potential rate:</span>
-                                    <span class="font-bold text-green-600 text-lg" id="potentialRate">15%</span>
-                                </div>
-                                <div class="pt-2 border-t border-gray-200">
-                                    <p class="text-sm text-gray-700 font-medium" id="impactText">
-                                        That's 7x more interviews possible
-                                    </p>
-                                </div>
+                    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6">
+                        <h4 class="text-xl font-bold text-gray-900 mb-4">Interview Impact Analysis</h4>
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Current interview rate:</span>
+                                <span class="text-2xl font-bold text-red-600" id="currentRate">3%</span>
                             </div>
-                        </div>
-                        
-                        <!-- Quick Stats -->
-                        <div class="grid grid-cols-2 gap-3">
-                            <div class="bg-blue-50 rounded-lg p-3 text-center">
-                                <div class="text-lg font-bold text-blue-700" id="quickWinsCount">0</div>
-                                <div class="text-xs text-blue-600">Quick Fixes</div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Potential interview rate:</span>
+                                <span class="text-2xl font-bold text-green-600" id="potentialRate">15%</span>
                             </div>
-                            <div class="bg-red-50 rounded-lg p-3 text-center">
-                                <div class="text-lg font-bold text-red-700" id="criticalIssuesCount">0</div>
-                                <div class="text-xs text-red-600">Critical Issues</div>
+                            <div class="bg-green-100 rounded-lg p-3 text-center">
+                                <div class="text-lg font-bold text-green-700" id="impactText">That's 5x more interviews possible!</div>
                             </div>
                         </div>
                     </div>
@@ -164,275 +117,326 @@
             </div>
         </section>
 
-        <!-- Upgrade CTA - Positioned for First Scroll -->
-        <section class="mb-8" id="mainCTA">
-            <div class="card-modern overflow-hidden">
-                <!-- Urgency Bar -->
-                <div class="bg-gradient-to-r from-amber-400 to-orange-400 px-4 py-3">
-                    <div class="flex items-center justify-center text-center">
-                        <svg class="w-4 h-4 text-white mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                        </svg>
-                        <span class="text-white font-semibold text-sm">Fix all issues automatically - Limited time offer</span>
-                    </div>
+        <!-- Main CTA -->
+        <section class="text-center mb-8">
+            <div class="bg-gradient-to-r from-orange-400 to-pink-400 rounded-2xl p-8 text-white">
+                <h3 class="text-2xl font-bold mb-4">🔥 LIMITED TIME: Fix All Issues Automatically 🔥</h3>
+                <div class="mb-6">
+                    <div class="text-4xl font-black mb-2">Get Your Interview-Ready Resume</div>
+                    <p class="text-lg opacity-90">Our AI will fix all <span id="totalIssuesCount">8</span> issues and boost your score to <span id="targetScore">90</span>+ in minutes</p>
                 </div>
                 
-                <div class="p-6 md:p-8">
-                    <div class="text-center mb-6">
-                        <h2 class="text-2xl font-bold text-gray-900 mb-2">
-                            Get Your Interview-Ready Resume
-                        </h2>
-                        <p class="text-gray-600 mb-1">
-                            Our AI will fix all <span id="totalIssuesCount" class="font-bold text-red-600">0</span> issues and boost your score to <span id="targetScore" class="font-bold text-green-600">85+</span>
-                        </p>
-                        <p class="text-sm text-gray-500">
-                            <span id="estimatedTime">5 minutes</span> to complete • Instant download • Join 12,000+ users
-                        </p>
+                <div class="grid md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white bg-opacity-20 rounded-xl p-4">
+                        <div class="text-3xl font-black text-green-700" id="scoreImprovement">+25</div>
+                        <div class="text-sm text-gray-900">ATS Score Boost</div>
                     </div>
-
-                    <!-- Value Grid -->
-                    <div class="grid grid-cols-3 gap-4 mb-6">
-                        <div class="text-center p-3 bg-gray-50 rounded-lg">
-                            <div class="text-2xl font-bold text-blue-600 mb-1" id="scoreImprovement">+40</div>
-                            <div class="text-xs text-gray-600">Score Boost</div>
-                        </div>
-                        <div class="text-center p-3 bg-gray-50 rounded-lg">
-                            <div class="text-2xl font-bold text-green-600 mb-1">7x</div>
-                            <div class="text-xs text-gray-600">More Interviews</div>
-                        </div>
-                        <div class="text-center p-3 bg-gray-50 rounded-lg">
-                            <div class="text-2xl font-bold text-purple-600 mb-1">40h</div>
-                            <div class="text-xs text-gray-600">Time Saved</div>
-                        </div>
+                    <div class="bg-white bg-opacity-20 rounded-xl p-4">
+                        <div class="text-3xl font-black text-blue-700">5x</div>
+                        <div class="text-sm text-gray-900">More Interviews</div>
                     </div>
-
-                    <!-- Pricing & CTA -->
-                    <div class="text-center">
-                        <div class="mb-4">
-                            <span class="text-3xl font-bold text-gray-900">$29</span>
-                            <span class="text-lg text-gray-500 ml-2">one-time payment</span>
-                            <div class="text-sm text-green-600 mt-1">Save $100s vs. hiring a resume writer</div>
-                        </div>
-                        
-                        <button 
-                            id="upgradeBtn"
-                            class="w-full md:w-auto bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 px-8 rounded-xl text-lg transition-all transform hover:scale-105 active:scale-95 shadow-lg min-h-[56px]"
-                        >
-                            Fix My Resume Now
-                        </button>
-                        
-                        <!-- Test Button for Development/Testing -->
-                        <button 
-                            id="testImprovementBtn"
-                            class="w-full md:w-auto bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-3 px-6 rounded-xl text-md transition-all transform hover:scale-105 active:scale-95 shadow-lg mt-4 border-2 border-green-500"
-                        >
-                            🧪 Test AI Improvement
-                        </button>
-                        <div class="text-xs text-center text-gray-500 mt-2">
-                            Test the AI improvement system without payment
-                        </div>
-                        
-                        <div class="flex items-center justify-center mt-4 space-x-4 text-xs text-gray-500">
-                            <div class="flex items-center">
-                                <svg class="w-4 h-4 mr-1 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                                30-day guarantee
-                            </div>
-                            <div class="flex items-center">
-                                <svg class="w-4 h-4 mr-1 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 0h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                                </svg>
-                                Secure payment
-                            </div>
-                            <div class="flex items-center">
-                                <svg class="w-4 h-4 mr-1 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                                </svg>
-                                Instant access
-                            </div>
-                        </div>
+                    <div class="bg-white bg-opacity-20 rounded-xl p-4">
+                        <div class="text-3xl font-black text-purple-700" id="estimatedTime">2min</div>
+                        <div class="text-sm text-gray-900">Time Saved</div>
                     </div>
                 </div>
+
+                <button id="upgradeBtn" class="bg-white text-gray-900 py-4 px-8 rounded-xl font-bold text-xl hover:bg-gray-100 transition-colors transform hover:scale-105">
+                    🚀 Fix My Resume Now - $9
+                </button>
+                
+                <!-- Bypass Payment Button (Testing Only) -->
+                <button id="bypassPaymentBtn" class="hidden bg-yellow-500 text-white py-4 px-8 rounded-xl font-bold text-xl hover:bg-yellow-600 transition-colors transform hover:scale-105 mt-4">
+                    🧪 Bypass Payment (Testing Mode)
+                </button>
             </div>
         </section>
 
         <!-- Issues Summary -->
         <section class="mb-8">
-            <div class="card-modern p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Top Issues Blocking Your Success</h3>
-                
-                <!-- Quick Wins -->
-                <div class="mb-6">
-                    <div class="flex items-center mb-3">
-                        <div class="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                            <svg class="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                            </svg>
-                        </div>
-                        <h4 class="font-medium text-gray-900">Quick Wins (Under 2 Minutes)</h4>
-                    </div>
-                    <div id="quickWinsList" class="space-y-2">
-                        <!-- Quick wins populated by JavaScript -->
-                    </div>
-                </div>
-
-                <!-- Critical Issues -->
-                <div class="mb-6">
-                    <div class="flex items-center mb-3">
-                        <div class="w-6 h-6 bg-red-100 rounded-lg flex items-center justify-center mr-3">
-                            <svg class="w-3 h-3 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01"></path>
-                            </svg>
-                        </div>
-                        <h4 class="font-medium text-gray-900">Critical Issues</h4>
-                    </div>
-                    <div id="criticalIssuesList" class="space-y-3">
-                        <!-- Critical issues populated by JavaScript -->
-                    </div>
-                </div>
-
-                <!-- Expand Details -->
-                <button 
-                    id="expandDetailsBtn" 
-                    class="w-full text-center py-3 text-blue-600 hover:text-blue-700 font-medium transition-colors border-t border-gray-200"
-                    onclick="toggleDetails()"
-                >
-                    <span id="expandText">Show Detailed Analysis</span>
-                    <svg id="expandIcon" class="w-4 h-4 inline-block ml-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                    </svg>
-                </button>
-            </div>
-        </section>
-
-        <!-- Detailed Analysis (Collapsible) -->
-        <section id="detailedSection" class="hidden mb-8">
-            <!-- Before/After Comparison -->
-            <div class="card-modern p-6 mb-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Transformation Preview</h3>
-                <div class="grid md:grid-cols-2 gap-6">
-                    <div class="bg-red-50 rounded-xl p-4">
-                        <h4 class="font-semibold text-red-800 mb-3 flex items-center">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                            Current Resume
-                        </h4>
-                        <ul class="space-y-2 text-sm" id="beforeList">
-                            <!-- Before state items -->
-                        </ul>
-                    </div>
-                    <div class="bg-green-50 rounded-xl p-4">
-                        <h4 class="font-semibold text-green-800 mb-3 flex items-center">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            After AI Optimization
-                        </h4>
-                        <ul class="space-y-2 text-sm" id="afterList">
-                            <!-- After state items -->
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Component Scores -->
-            <div class="card-modern p-6 mb-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Component Breakdown</h3>
-                <div id="componentScores" class="space-y-4">
-                    <!-- Component scores populated by JavaScript -->
-                </div>
-            </div>
-
-            <!-- Strengths -->
-            <div class="card-modern p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <div class="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-                        <svg class="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                    </div>
-                    What's Working Well
+            <div class="bg-white rounded-3xl p-8 shadow-lg">
+                <h3 class="text-2xl font-bold text-gray-900 mb-6 text-center">
+                    🎯 Issues Blocking Your Success
                 </h3>
-                <div id="strengthsList" class="grid gap-3 sm:grid-cols-2">
-                    <!-- Strengths populated by JavaScript -->
+                
+                <div class="grid md:grid-cols-2 gap-6 mb-6">
+                    <!-- Quick Wins -->
+                    <div>
+                        <h4 class="text-lg font-bold text-blue-600 mb-4">✅ Quick Fixes (<span id="quickWinsCount">2</span> Issues)</h4>
+                        <div id="quickWinsList" class="space-y-3">
+                            <div class="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-400" data-issue="linkedin">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-800 font-medium">ATS cannot effectively detect your LinkedIn profile</span>
+                                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-bold">+3pts</span>
+                                </div>
+                            </div>
+                            <div class="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-400">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-800 font-medium">ATS struggles to parse your bullet point format</span>
+                                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-bold">+5pts</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Critical Issues -->
+                    <div>
+                        <h4 class="text-lg font-bold text-red-600 mb-4">🚨 Critical Issues (<span id="criticalIssuesCount">2</span> Issues)</h4>
+                        <div id="criticalIssuesList" class="space-y-3">
+                            <div class="bg-red-50 rounded-lg p-4 border-l-4 border-red-400">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-gray-800 font-medium">ATS cannot find your professional summary</span>
+                                    <span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-bold">+12pts</span>
+                                </div>
+                                <p class="text-sm text-gray-600">ATS systems look for a summary section to understand your profile</p>
+                            </div>
+                            <div class="bg-red-50 rounded-lg p-4 border-l-4 border-red-400">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-gray-800 font-medium">ATS cannot match your skills to job requirements</span>
+                                    <span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-bold">+15pts</span>
+                                </div>
+                                <p class="text-sm text-gray-600">Missing key terms that ATS systems scan for</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center">
+                    <button id="showDetailedBtn" class="bg-gray-100 border-2 border-gray-300 text-gray-700 py-3 px-6 rounded-xl font-bold hover:bg-gray-50 transition-colors">
+                        📊 Show All Issues & Detailed Analysis
+                    </button>
                 </div>
             </div>
         </section>
 
-        <!-- Alternative Actions -->
+
+        <!-- View Detailed Report -->
         <section class="text-center mb-8">
-            <div class="space-y-3">
-                <button 
-                    id="downloadReportBtn"
-                    class="w-full bg-white border border-gray-300 text-gray-700 py-3 px-6 rounded-xl font-medium hover:bg-gray-50 transition-colors"
-                >
-                    Download Analysis Report
-                </button>
+            <button id="viewDetailedReportBtn" class="bg-gray-100 border-2 border-gray-300 text-gray-700 py-4 px-8 rounded-xl font-bold hover:bg-gray-50 transition-colors">
+                📊 View Detailed Report
+            </button>
+        </section>
+
+        <!-- Detailed Report Section (Hidden) -->
+        <section id="detailedReportSection" class="hidden mb-8">
+            <div class="bg-white rounded-3xl p-8 shadow-lg">
+                <h3 class="text-2xl font-bold text-gray-900 mb-6 text-center">
+                    📊 Complete Analysis Report
+                </h3>
+                <!-- Component Breakdown -->
+                <div class="mb-8">
+                    <h4 class="text-xl font-bold text-gray-900 mb-4">ATS Component Analysis</h4>
+                    <div id="componentScores" class="space-y-4">
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-medium text-gray-900">Contact Information</span>
+                                <span class="font-bold text-gray-900">12/15</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-blue-600 h-2 rounded-full" style="width: 80%"></div>
+                            </div>
+                            <div class="text-sm text-gray-600 mt-1">80% ATS Compatible</div>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-medium text-gray-900">Keywords & Skills</span>
+                                <span class="font-bold text-gray-900">8/20</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-red-600 h-2 rounded-full" style="width: 40%"></div>
+                            </div>
+                            <div class="text-sm text-gray-600 mt-1">40% ATS Compatible - Needs Improvement</div>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-medium text-gray-900">Resume Structure</span>
+                                <span class="font-bold text-gray-900">15/25</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-yellow-600 h-2 rounded-full" style="width: 60%"></div>
+                            </div>
+                            <div class="text-sm text-gray-600 mt-1">60% ATS Compatible</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- All Issues List -->
+                <div class="mb-8">
+                    <h4 class="text-xl font-bold text-gray-900 mb-4">Issues Preventing ATS Success</h4>
+                    <div id="allIssuesList" class="space-y-3">
+                        <div class="bg-red-50 rounded-lg p-4 border-l-4 border-red-400">
+                            <h5 class="font-medium text-gray-900 mb-1">ATS cannot find your professional summary</h5>
+                            <p class="text-sm text-gray-600 mb-2">ATS systems scan for a dedicated summary section at the top of your resume</p>
+                            <p class="text-sm text-blue-600 font-medium">🔧 Fix: Add a "Professional Summary" section with 2-3 key accomplishments</p>
+                        </div>
+                        <div class="bg-red-50 rounded-lg p-4 border-l-4 border-red-400">
+                            <h5 class="font-medium text-gray-900 mb-1">ATS cannot match your skills to job requirements</h5>
+                            <p class="text-sm text-gray-600 mb-2">Your resume lacks industry-specific keywords that ATS systems search for</p>
+                            <p class="text-sm text-blue-600 font-medium">🔧 Fix: Add relevant keywords throughout your experience and skills sections</p>
+                        </div>
+                        <div class="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-400" data-issue="linkedin-detailed">
+                            <h5 class="font-medium text-gray-900 mb-1">ATS cannot effectively detect your LinkedIn profile</h5>
+                            <p class="text-sm text-gray-600 mb-2">LinkedIn URL format may not be ATS-readable in current position</p>
+                            <p class="text-sm text-blue-600 font-medium">🔧 Fix: Move LinkedIn URL to contact header with proper formatting</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recommendations -->
+                <div class="mb-8">
+                    <h4 class="text-xl font-bold text-gray-900 mb-4">Detailed Recommendations</h4>
+                    <div id="detailedRecommendations" class="space-y-3">
+                        <div class="bg-blue-50 rounded-lg p-4">
+                            <div class="flex items-start">
+                                <div class="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3 mt-0.5">
+                                    1
+                                </div>
+                                <p class="text-gray-800">Add a professional summary section with 2-3 sentences highlighting your key qualifications and career goals</p>
+                            </div>
+                        </div>
+                        <div class="bg-blue-50 rounded-lg p-4">
+                            <div class="flex items-start">
+                                <div class="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3 mt-0.5">
+                                    2
+                                </div>
+                                <p class="text-gray-800">Optimize your resume with industry-specific keywords from job descriptions you're targeting</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl">
+                    <h4 class="text-xl font-bold text-gray-900 mb-3">Ready to Fix These Issues?</h4>
+                    <p class="text-gray-600 mb-4">Our AI will automatically fix all these issues and boost your ATS score in just 2 minutes</p>
+                    <button id="fixIssuesBtn2" class="bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 px-8 rounded-xl font-bold hover:from-blue-700 hover:to-blue-800 transition-colors">
+                        🚀 Fix These Issues in 2 Minutes - $9
+                    </button>
+                </div>
             </div>
         </section>
     </main>
 
-    <!-- Sticky Mobile CTA -->
-    <div id="stickyCTA" class="sticky-cta fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50 md:hidden">
-        <div class="flex items-center justify-between">
-            <div class="text-left">
-                <div class="font-bold text-gray-900">$29 one-time</div>
-                <div class="text-xs text-gray-500">Fix all issues now</div>
-            </div>
-            <button 
-                onclick="document.getElementById('upgradeBtn').click()"
-                class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-colors"
-            >
-                Get My Resume
-            </button>
-        </div>
-    </div>
+    <!-- Hidden elements for JS functionality -->
+    <div id="strengthsList" class="hidden"></div>
+    <div id="improvementsList" class="hidden"></div>
+    <div id="detailedAnalysis" class="hidden"></div>
+    <div id="criticalAlert" class="hidden"></div>
+    <div id="criticalAlertText" class="hidden"></div>
+    <div id="mainDescription" class="hidden"></div>
+    <div id="componentBreakdown" class="hidden"></div>
+    <div id="beforeList" class="hidden"></div>
+    <div id="afterList" class="hidden"></div>
 
-    <!-- Footer -->
-    <footer class="bg-gray-900 text-white py-8">
-        <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
-            <p class="text-gray-400">&copy; 2024 BestCVBuilder. All rights reserved.</p>
-        </div>
-    </footer>
-
-    <!-- Scripts -->
     <script>
-        // Toggle detailed analysis
-        function toggleDetails() {
-            const section = document.getElementById('detailedSection');
-            const text = document.getElementById('expandText');
-            const icon = document.getElementById('expandIcon');
+        console.log('Script starting...');
+        
+        // Wait for DOM to be fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing...');
             
-            if (section.classList.contains('hidden')) {
-                section.classList.remove('hidden');
-                text.textContent = 'Hide Detailed Analysis';
-                icon.style.transform = 'rotate(180deg)';
-            } else {
-                section.classList.add('hidden');
-                text.textContent = 'Show Detailed Analysis';
-                icon.style.transform = 'rotate(0deg)';
+            // Initialize all functionality
+            setupEventListeners();
+            updateScoreDisplay();
+        });
+
+        function setupEventListeners() {
+            console.log('Setting up event listeners...');
+            
+            // New Analysis Button
+            const newAnalysisBtn = document.getElementById('newAnalysisBtn');
+            if (newAnalysisBtn) {
+                newAnalysisBtn.addEventListener('click', function() {
+                    console.log('New analysis clicked');
+                    sessionStorage.clear();
+                    window.location.href = './index.html';
+                });
+            }
+
+            // Upgrade Button - handled by result.js
+            console.log('Upgrade button will be handled by result.js');
+
+            // Show Detailed Analysis Button
+            const showDetailedBtn = document.getElementById('showDetailedBtn');
+            const detailedAnalysis = document.getElementById('detailedAnalysis');
+            if (showDetailedBtn && detailedAnalysis) {
+                showDetailedBtn.addEventListener('click', function() {
+                    console.log('Show detailed clicked');
+                    if (detailedAnalysis.classList.contains('hidden')) {
+                        detailedAnalysis.classList.remove('hidden');
+                        showDetailedBtn.textContent = '📊 Hide Detailed Analysis';
+                    } else {
+                        detailedAnalysis.classList.add('hidden');
+                        showDetailedBtn.textContent = '📊 Show All Issues & Detailed Analysis';
+                    }
+                });
+            }
+
+            // View Detailed Report Button
+            const viewDetailedReportBtn = document.getElementById('viewDetailedReportBtn');
+            const detailedReportSection = document.getElementById('detailedReportSection');
+            if (viewDetailedReportBtn && detailedReportSection) {
+                viewDetailedReportBtn.addEventListener('click', function() {
+                    console.log('View detailed report clicked');
+                    if (detailedReportSection.classList.contains('hidden')) {
+                        detailedReportSection.classList.remove('hidden');
+                        viewDetailedReportBtn.textContent = '📊 Hide Detailed Report';
+                        detailedReportSection.scrollIntoView({ behavior: 'smooth' });
+                    } else {
+                        detailedReportSection.classList.add('hidden');
+                        viewDetailedReportBtn.textContent = '📊 View Detailed Report';
+                    }
+                });
+            }
+
+            // Fix Issues Buttons - handled by result.js
+            console.log('Fix issues buttons will be handled by result.js');
+
+            console.log('Event listeners setup complete');
+        }
+
+        function updateScoreDisplay() {
+            console.log('Updating score display...');
+            
+            // Try to load actual data from session storage
+            try {
+                const storedData = sessionStorage.getItem('atsAnalysis');
+                if (storedData) {
+                    const data = JSON.parse(storedData);
+                    const score = data.score || data.ats_score || 65;
+                    
+                    const scoreElement = document.getElementById('atsScore');
+                    if (scoreElement) {
+                        scoreElement.textContent = score;
+                        console.log('Score updated to:', score);
+                    }
+                    
+                    // Update issues based on actual analysis
+                    updateIssuesDisplay(data);
+                }
+            } catch (error) {
+                console.error('Error loading score:', error);
             }
         }
-        
-        // Sticky CTA visibility
-        function handleStickyCTA() {
-            const mainCTA = document.getElementById('mainCTA');
-            const stickyCTA = document.getElementById('stickyCTA');
-            const rect = mainCTA.getBoundingClientRect();
+
+        function updateIssuesDisplay(data) {
+            console.log('Analysis data:', data);
             
-            if (rect.bottom < 0) {
-                stickyCTA.classList.add('visible');
-            } else {
-                stickyCTA.classList.remove('visible');
+            // Check if LinkedIn URL exists in the personal info
+            if (data.personal_info && data.personal_info.linkedin_url) {
+                // LinkedIn exists, hide the LinkedIn issues
+                const linkedinIssues = document.querySelectorAll('[data-issue=\"linkedin\"], [data-issue=\"linkedin-detailed\"]');
+                linkedinIssues.forEach(issue => {
+                    issue.style.display = 'none';
+                });
+                console.log('LinkedIn URL found, hiding LinkedIn issues');
             }
+            
+            // You can add more dynamic issue updates here based on actual analysis data
         }
-        
-        // Setup scroll listener for mobile CTA
-        if (window.innerWidth < 768) {
-            window.addEventListener('scroll', handleStickyCTA);
-        }
+
+        console.log('Script loaded successfully');
     </script>
+    
+    <!-- Load external JavaScript modules -->
 </body>
 </html>
