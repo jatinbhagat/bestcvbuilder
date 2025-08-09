@@ -81,9 +81,6 @@ async function loadAnalysisData() {
         
         displayAnalysisResults();
         
-        // Check payment bypass after data is loaded
-        checkPaymentBypass();
-        
         // Save analysis to database if user is authenticated
         await saveAnalysisToDatabase();
         
@@ -482,24 +479,19 @@ function setupStickyCtaVisibility() {
 }
 
 /**
- * Handle upgrade button click - check for payment bypass first
+ * Handle upgrade button click - ALWAYS BYPASS (no payments)
  */
 function handleUpgrade() {
-    console.log('🚀 User clicked Fix My Resume Now');
+    console.log('🚀 User clicked Fix My Resume Now - ALWAYS BYPASS MODE');
     
     try {
-        // Check if payment bypass is enabled
-        const bypassPayment = sessionStorage.getItem('BYPASS_PAYMENT') === 'true';
-        const bypassValue = sessionStorage.getItem('BYPASS_PAYMENT');
-        console.log('💳 Payment bypass check:');
-        console.log('  - Raw value:', bypassValue);
-        console.log('  - Parsed boolean:', bypassPayment);
-        console.log('  - Session storage keys:', Object.keys(sessionStorage));
+        // ALWAYS bypass payment - no payments needed
+        console.log('🧪 BYPASS MODE: Always enabled - no payments required');
         
         // Log upgrade button click (non-blocking)
         try {
             DatabaseService.logActivity(null, 'upgrade_button_clicked', {
-                bypass_mode: bypassPayment,
+                bypass_mode: true,
                 original_score: analysisData?.score || 'unknown'
             }).catch(err => console.warn('Activity logging failed (non-critical):', err));
         } catch (logError) {
@@ -509,18 +501,12 @@ function handleUpgrade() {
         // Show immediate feedback
         if (upgradeBtn) {
             upgradeBtn.disabled = true;
-            upgradeBtn.textContent = bypassPayment ? '🔄 Processing (Bypass)...' : '🔄 Processing with AI...';
+            upgradeBtn.textContent = '🔄 Processing Resume Improvements...';
         }
         
-        if (bypassPayment) {
-            console.log('🧪 Payment bypass enabled - redirecting to success');
-            // Skip payment and API call, go directly to success
-            handleBypassSuccess();
-        } else {
-            console.log('💳 Regular payment flow - calling real API');
-            // Call real resume improvement API
-            handleRealResumeImprovement();
-        }
+        // ALWAYS go to bypass success - never call real API
+        console.log('✅ Going directly to success with improved resume data');
+        handleBypassSuccess();
         
     } catch (error) {
         console.error('❌ Error in handleUpgrade:', error);
@@ -529,7 +515,7 @@ function handleUpgrade() {
         // Reset button
         if (upgradeBtn) {
             upgradeBtn.disabled = false;
-            upgradeBtn.textContent = '🚀 Fix My Resume Now - $9';
+            upgradeBtn.textContent = '🚀 Fix My Resume Now - FREE';
         }
     }
 }
@@ -577,14 +563,15 @@ function handleViewDetailedReport() {
 }
 
 /**
- * Handle fix issues button click - check for payment bypass first
+ * Handle fix issues button click - ALWAYS BYPASS (no payments)
  */
 function handleFixIssues() {
     try {
-        console.log('User clicked fix issues - CALLING REAL AI API');
+        console.log('User clicked fix issues - ALWAYS BYPASS MODE');
         
-        // Call real AI resume improvement
-        handleRealResumeImprovement();
+        // ALWAYS go to bypass success - never call real API
+        console.log('✅ Going directly to success with improved resume data');
+        handleBypassSuccess();
         
     } catch (error) {
         console.error('Error handling fix issues request:', error);
