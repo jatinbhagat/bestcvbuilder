@@ -121,9 +121,16 @@ function setupEventListeners() {
 async function handleDownload() {
     try {
         console.log('Initiating resume download...');
+        console.log('Rewrite data:', rewriteData);
         
-        if (!rewriteData || !rewriteData.improved_resume_url) {
-            showError('Download link not available. Please check your email.');
+        if (!rewriteData) {
+            showError('No rewrite data available. Please try the process again.');
+            return;
+        }
+        
+        if (!rewriteData.improved_resume_url) {
+            console.error('Missing improved_resume_url in rewrite data');
+            showError('Download link not available. Please contact support.');
             return;
         }
         
@@ -143,7 +150,7 @@ async function handleDownload() {
         
     } catch (error) {
         console.error('Download failed:', error);
-        showError('Download failed. Please try again or check your email.');
+        showError('Download failed. Please try again or contact support.');
     }
 }
 

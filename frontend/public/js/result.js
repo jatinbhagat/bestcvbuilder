@@ -481,17 +481,13 @@ function setupStickyCtaVisibility() {
 /**
  * Handle upgrade button click - ALWAYS BYPASS (no payments)
  */
-function handleUpgrade() {
-    console.log('🚀 User clicked Fix My Resume Now - ALWAYS BYPASS MODE');
+async function handleUpgrade() {
+    console.log('🚀 User clicked Fix My Resume Now - Processing real CV improvement...');
     
     try {
-        // ALWAYS bypass payment - no payments needed
-        console.log('🧪 BYPASS MODE: Always enabled - no payments required');
-        
         // Log upgrade button click (non-blocking)
         try {
             DatabaseService.logActivity(null, 'upgrade_button_clicked', {
-                bypass_mode: true,
                 original_score: analysisData?.score || 'unknown'
             }).catch(err => console.warn('Activity logging failed (non-critical):', err));
         } catch (logError) {
@@ -504,9 +500,9 @@ function handleUpgrade() {
             upgradeBtn.textContent = '🔄 Processing Resume Improvements...';
         }
         
-        // ALWAYS go to bypass success - never call real API
-        console.log('✅ Going directly to success with improved resume data');
-        handleBypassSuccess();
+        // Call the real CV rewrite API
+        console.log('📡 Calling CV rewrite API...');
+        await handleResumeRewrite();
         
     } catch (error) {
         console.error('❌ Error in handleUpgrade:', error);
@@ -517,6 +513,73 @@ function handleUpgrade() {
             upgradeBtn.disabled = false;
             upgradeBtn.textContent = '🚀 Fix My Resume Now - FREE';
         }
+    }
+}
+
+/**
+ * Handle actual resume rewrite using the CV rewrite API
+ */
+async function handleResumeRewrite() {
+    try {
+        console.log('🔄 Starting resume rewrite process...');
+        
+        if (!analysisData) {
+            throw new Error('No analysis data available for rewrite');
+        }
+        
+        // Get user information
+        let userEmail = 'user@example.com'; // Default fallback
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user && user.email) {
+                userEmail = user.email;
+            }
+        } catch (authError) {
+            console.warn('Could not get user email, using default:', authError);
+        }
+        
+        // Prepare API request data
+        const requestData = {
+            original_analysis: analysisData,
+            user_email: userEmail,
+            payment_id: `free_${Date.now()}` // Since payments are removed
+        };
+        
+        console.log('📤 Sending rewrite request:', {
+            original_score: analysisData.score,
+            user_email: userEmail
+        });
+        
+        // Call CV rewrite API
+        const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+            ? '/api' 
+            : 'https://bestcvbuilder-api.onrender.com/api';
+        
+        const response = await fetch(`${API_BASE_URL}/cv-rewrite`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestData)
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`CV rewrite failed: ${errorData.error || response.statusText}`);
+        }
+        
+        const rewriteResult = await response.json();
+        console.log('✅ CV rewrite completed:', rewriteResult);
+        
+        // Store rewrite result in session storage
+        sessionStorage.setItem('cvRewriteResult', JSON.stringify(rewriteResult));
+        
+        // Navigate to success page
+        window.location.href = './success.html';
+        
+    } catch (error) {
+        console.error('❌ Resume rewrite failed:', error);
+        throw error; // Re-throw to be handled by handleUpgrade
     }
 }
 
