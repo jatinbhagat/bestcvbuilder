@@ -483,23 +483,34 @@ function setupStickyCtaVisibility() {
  * Handle upgrade button click - check for payment bypass first
  */
 function handleUpgrade() {
-    console.log('🚀 User clicked Fix My Resume Now - CALLING REAL AI API');
+    console.log('🚀 User clicked Fix My Resume Now');
     
     try {
+        // Check if payment bypass is enabled
+        const bypassPayment = sessionStorage.getItem('BYPASS_PAYMENT') === 'true';
+        console.log('💳 Payment bypass enabled:', bypassPayment);
+        
         // Log upgrade button click
         DatabaseService.logActivity(null, 'upgrade_button_clicked', {
-            bypass_mode: false,
+            bypass_mode: bypassPayment,
             original_score: analysisData?.score || 'unknown'
         });
         
         // Show immediate feedback
         if (upgradeBtn) {
             upgradeBtn.disabled = true;
-            upgradeBtn.textContent = '🔄 Processing with AI...';
+            upgradeBtn.textContent = bypassPayment ? '🔄 Processing (Bypass)...' : '🔄 Processing with AI...';
         }
         
-        // Call real resume improvement API
-        handleRealResumeImprovement();
+        if (bypassPayment) {
+            console.log('🧪 Payment bypass enabled - redirecting to success');
+            // Skip payment and API call, go directly to success
+            handleBypassSuccess();
+        } else {
+            console.log('💳 Regular payment flow - calling real API');
+            // Call real resume improvement API
+            handleRealResumeImprovement();
+        }
         
     } catch (error) {
         console.error('❌ Error in handleUpgrade:', error);
@@ -1169,25 +1180,49 @@ function updateUpgradeSection(insights) {
 }
 
 /**
- * Check if payment bypass is enabled for testing - SIMPLIFIED VERSION
+ * Check if payment bypass is enabled for testing
  */
 function checkPaymentBypass() {
     const bypassSession = sessionStorage.getItem('BYPASS_PAYMENT') === 'true';
+    const bypassUrl = window.location.search.includes('bypass=true');
+    const bypassHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     
-    console.log('🔍 Simple bypass check:');
+    console.log('🔍 Payment bypass check:');
     console.log('  - Session bypass:', bypassSession);
+    console.log('  - URL bypass:', bypassUrl);
+    console.log('  - Local host:', bypassHost);
     
-    // TEMPORARY: Hide bypass button since payment is always bypassed
+    const shouldShowBypass = bypassHost || bypassUrl || bypassSession;
+    
+    // Show/hide bypass button based on conditions
     if (bypassPaymentBtn) {
-        bypassPaymentBtn.classList.add('hidden');
-        console.log('🙈 Bypass button hidden - payment always bypassed');
+        if (shouldShowBypass) {
+            bypassPaymentBtn.classList.remove('hidden');
+            console.log('👁️ Bypass button visible');
+        } else {
+            bypassPaymentBtn.classList.add('hidden');
+            console.log('🙈 Bypass button hidden');
+        }
     }
     
-    // Add global function for manual testing
+    // Auto-enable bypass if URL parameter is present
+    if (bypassUrl && !bypassSession) {
+        sessionStorage.setItem('BYPASS_PAYMENT', 'true');
+        console.log('🔗 Auto-enabled bypass from URL parameter');
+    }
+    
+    // Add global functions for manual testing
     window.enablePaymentBypass = function() {
         sessionStorage.setItem('BYPASS_PAYMENT', 'true');
         console.log('🧪 Payment bypass enabled via console');
-        alert('Payment bypass enabled! Now click any Pay button.');
+        alert('Payment bypass enabled! Now click "Fix My Resume Now" button.');
+        checkPaymentBypass(); // Update UI
+    };
+    
+    window.disablePaymentBypass = function() {
+        sessionStorage.removeItem('BYPASS_PAYMENT');
+        console.log('💳 Payment bypass disabled');
+        alert('Payment bypass disabled - normal payment flow will be used.');
         checkPaymentBypass(); // Update UI
     };
 }
@@ -1333,45 +1368,152 @@ function showSuccessMessage(message) {
     }, 3000);
 }
 
-function createMockSuccessDataAndRedirect() {
-    console.log('🚀 Creating mock success data for bypass...');
+/**
+ * Handle bypass success - create proper success data and redirect
+ */
+function handleBypassSuccess() {
+    console.log('🚀 Creating bypass success data with real analysis data...');
     
     try {
-        // Create simple mock data
-        const mockPaymentData = {
+        if (!analysisData) {
+            throw new Error('No analysis data available for bypass');
+        }
+        
+        // Create payment data for bypass
+        const paymentData = {
             payment_id: `bypass_${Date.now()}`,
             status: 'succeeded',
-            email: 'bypass@example.com'
+            email: 'bypass@example.com',
+            bypass_mode: true
         };
         
-        const originalScore = analysisData?.score || 65;
-        const mockRewriteData = {
+        // Calculate realistic improvements based on actual analysis
+        const originalScore = analysisData.score || 65;
+        const potentialImprovement = calculateRealisticImprovement(analysisData);
+        const newScore = Math.min(originalScore + potentialImprovement, 95);
+        
+        // Create rewrite result with proper data structure
+        const rewriteData = {
             original_score: originalScore,
-            new_score: Math.min(originalScore + 30, 95),
-            score_improvement: Math.min(30, 95 - originalScore),
-            improved_resume_url: 'bypass-resume.pdf',
+            new_score: newScore,
+            score_improvement: potentialImprovement,
+            original_analysis: analysisData,
+            improved_resume_url: null, // No actual file in bypass mode
             bypass_mode: true,
-            completed_at: new Date().toISOString()
+            completed_at: new Date().toISOString(),
+            improvements_made: generateImprovementsList(analysisData),
+            before_after_comparison: {
+                before: {
+                    score: originalScore,
+                    issues: (analysisData.critical_issues?.length || 0) + (analysisData.quick_wins?.length || 0)
+                },
+                after: {
+                    score: newScore,
+                    issues: 0
+                }
+            }
         };
         
-        // Store in session
-        sessionStorage.setItem('paymentResult', JSON.stringify(mockPaymentData));
-        sessionStorage.setItem('cvRewriteResult', JSON.stringify(mockRewriteData));
+        // Store in session storage
+        sessionStorage.setItem('paymentResult', JSON.stringify(paymentData));
+        sessionStorage.setItem('cvRewriteResult', JSON.stringify(rewriteData));
         
-        console.log('✅ Mock data stored:');
-        console.log('  - Payment:', mockPaymentData);
-        console.log('  - Rewrite:', mockRewriteData);
+        console.log('✅ Bypass success data created:');
+        console.log('  - Original score:', originalScore);
+        console.log('  - New score:', newScore);
+        console.log('  - Improvement:', potentialImprovement);
+        console.log('  - Improvements made:', rewriteData.improvements_made.length);
         
-        showSuccess('Processing complete! Redirecting to success page...');
+        showSuccessMessage('Processing complete! Redirecting to success page...');
         
-        // Immediate redirect (no delay)
-        console.log('🔄 Redirecting to success.html...');
-        window.location.href = './success.html';
+        // Redirect after brief delay
+        setTimeout(() => {
+            console.log('🔄 Redirecting to success.html...');
+            window.location.href = './success.html';
+        }, 1500);
         
     } catch (error) {
         console.error('❌ Bypass error:', error);
-        showError('Failed to process: ' + error.message);
+        showError('Failed to process bypass: ' + error.message);
+        resetUpgradeButton();
     }
+}
+
+/**
+ * Calculate realistic improvement based on analysis data
+ */
+function calculateRealisticImprovement(data) {
+    let improvement = 0;
+    
+    // Base improvement from quick wins
+    const quickWins = data.quick_wins || [];
+    improvement += quickWins.length * 3; // 3 points per quick win
+    
+    // Base improvement from critical issues
+    const criticalIssues = data.critical_issues || [];
+    improvement += criticalIssues.length * 8; // 8 points per critical issue
+    
+    // Ensure minimum improvement of 15 points and maximum of 40
+    improvement = Math.max(15, Math.min(improvement, 40));
+    
+    return improvement;
+}
+
+/**
+ * Generate list of improvements made during bypass
+ */
+function generateImprovementsList(data) {
+    const improvements = [];
+    
+    // Add quick wins
+    if (data.quick_wins) {
+        data.quick_wins.forEach(win => {
+            improvements.push({
+                type: 'quick_fix',
+                title: win.title || 'Quick formatting improvement',
+                description: win.issue || 'Fixed formatting issue for better ATS compatibility',
+                points_gained: win.points_gain || 3
+            });
+        });
+    }
+    
+    // Add critical issue fixes
+    if (data.critical_issues) {
+        data.critical_issues.forEach(issue => {
+            improvements.push({
+                type: 'critical_fix',
+                title: issue.title || 'Critical issue resolved',
+                description: issue.issue || 'Fixed critical ATS compatibility issue',
+                points_gained: issue.points_gain || 8
+            });
+        });
+    }
+    
+    // Add some generic improvements if no specific ones
+    if (improvements.length === 0) {
+        improvements.push(
+            {
+                type: 'formatting',
+                title: 'ATS-friendly formatting applied',
+                description: 'Optimized resume structure for better ATS parsing',
+                points_gained: 10
+            },
+            {
+                type: 'keywords',
+                title: 'Keyword optimization',
+                description: 'Enhanced with industry-relevant keywords',
+                points_gained: 8
+            },
+            {
+                type: 'structure',
+                title: 'Professional structure improvements',
+                description: 'Improved section organization and hierarchy',
+                points_gained: 12
+            }
+        );
+    }
+    
+    return improvements;
 }
 
 // Debug: Log when result.js loads
