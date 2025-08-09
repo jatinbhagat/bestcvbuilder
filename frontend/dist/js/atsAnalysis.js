@@ -62,7 +62,7 @@ export async function analyzeResume(fileUrl, userId = null) {
         const analysisResult = await response.json();
         console.log('ATS analysis completed:', analysisResult);
         
-        return processAnalysisResult(analysisResult);
+        return processAnalysisResult(analysisResult, fileUrl);
         
     } catch (error) {
         console.error('ATS analysis failed:', error);
@@ -73,9 +73,10 @@ export async function analyzeResume(fileUrl, userId = null) {
 /**
  * Process and format the analysis result
  * @param {Object} rawResult - Raw API response
+ * @param {string} fileUrl - Original file URL for rewrite API
  * @returns {Object} Formatted analysis result
  */
-function processAnalysisResult(rawResult) {
+function processAnalysisResult(rawResult, fileUrl) {
     return {
         score: rawResult.ats_score || 0,
         scoreCategory: getScoreCategory(rawResult.ats_score),
@@ -86,6 +87,7 @@ function processAnalysisResult(rawResult) {
         missingKeywords: rawResult.missing_keywords || [],
         formattingIssues: rawResult.formatting_issues || [],
         suggestions: rawResult.suggestions || [],
+        originalFileUrl: fileUrl, // Include original file URL for rewrite API
         timestamp: new Date().toISOString()
     };
 }

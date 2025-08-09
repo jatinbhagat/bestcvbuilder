@@ -542,7 +542,8 @@ async function handleResumeRewrite() {
         const requestData = {
             original_analysis: analysisData,
             user_email: userEmail,
-            payment_id: `free_${Date.now()}` // Since payments are removed
+            payment_id: `free_${Date.now()}`, // Since payments are removed
+            original_file_url: analysisData.originalFileUrl // Add the original file URL
         };
         
         console.log('📤 Sending rewrite request:', {
