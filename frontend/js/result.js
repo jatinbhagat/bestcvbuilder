@@ -508,7 +508,7 @@ function handleUpgrade() {
         // Reset button
         if (upgradeBtn) {
             upgradeBtn.disabled = false;
-            upgradeBtn.textContent = '🚀 Fix My Resume Now - $9';
+            upgradeBtn.textContent = '🚀 Fix My Resume Now - FREE';
         }
     }
 }
@@ -1315,7 +1315,7 @@ async function handleRealResumeImprovement() {
 function resetUpgradeButton() {
     if (upgradeBtn) {
         upgradeBtn.disabled = false;
-        upgradeBtn.textContent = '🚀 Fix My Resume Now - $9';
+        upgradeBtn.textContent = '🚀 Fix My Resume Now - FREE';
     }
 }
 
