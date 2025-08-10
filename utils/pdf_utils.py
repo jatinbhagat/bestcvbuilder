@@ -136,7 +136,7 @@ class PDFTextReplacer:
         self.similarity_threshold = 0.6  # Minimum similarity for text matching
         
     def update_pdf_text(self, pdf_bytes: bytes, original_text: str, 
-                       improved_text: str, text_blocks: List[TextBlock]) -> bytes:
+                       improved_text: str, text_blocks: List[TextBlock], conservative: bool = False) -> bytes:
         """
         Replace text in PDF while preserving layout and formatting
         
@@ -145,6 +145,7 @@ class PDFTextReplacer:
             original_text: Original extracted text
             improved_text: Improved text to replace with
             text_blocks: List of text blocks from layout parsing
+            conservative: If True, only replace obvious errors, not content
             
         Returns:
             Updated PDF as bytes
@@ -346,12 +347,16 @@ def update_pdf_text(pdf_bytes: bytes, original_text: str, improved_text: str,
             # Major overhaul - create clean PDF from scratch
             logger.info(f"🔄 Major overhaul (ATS {ats_score}) - Creating clean PDF from improved text")
             return create_clean_pdf_from_text(improved_text)
+        elif ats_score <= 70:
+            # Hybrid approach - ALSO use clean PDF to avoid text replacement issues
+            logger.info(f"🔄 Hybrid approach (ATS {ats_score}) - Creating clean PDF to avoid text loss")
+            return create_clean_pdf_from_text(improved_text)
         else:
-            # Minor fix or hybrid - try to preserve layout
-            logger.info(f"🔄 Minor/Hybrid approach (ATS {ats_score}) - Preserving layout")
+            # Minor fix only - try very conservative layout preservation
+            logger.info(f"🔄 Minor fix (ATS {ats_score}) - Conservative layout preservation")
             replacer = PDFTextReplacer()
             return replacer.update_pdf_text(
-                pdf_bytes, original_text, improved_text, layout_info["text_blocks"]
+                pdf_bytes, original_text, improved_text, layout_info["text_blocks"], conservative=True
             )
     except Exception as e:
         logger.warning(f"⚠️ Layout preservation failed: {e}, falling back to clean PDF")
@@ -375,21 +380,27 @@ def create_clean_pdf_from_text(text_content: str) -> bytes:
         doc = fitz.open()
         page = doc.new_page(width=595, height=842)  # A4 size
         
-        # Define styling
-        margin = 50
-        line_height = 14
-        current_y = margin + 20
+        # Define professional styling
+        margin_left = 50
+        margin_right = 545
+        margin_top = 50
+        line_height = 13
+        section_spacing = 20
+        current_y = margin_top
         
         # Parse the text into sections
         sections = _parse_resume_sections(text_content)
+        logger.info(f"📝 Parsed {len(sections)} sections from resume text")
         
         for section in sections:
-            current_y = _render_section_to_pdf(page, section, margin, current_y, line_height)
-            
-            # Add new page if needed
+            # Check if we need a new page
             if current_y > 750:  # Near bottom of page
                 page = doc.new_page(width=595, height=842)
-                current_y = margin + 20
+                current_y = margin_top
+            
+            current_y = _render_section_to_pdf(
+                page, section, margin_left, margin_right, current_y, line_height, section_spacing
+            )
         
         # Save to bytes
         pdf_bytes = io.BytesIO()
@@ -429,19 +440,44 @@ def create_basic_pdf_from_text(text_content: str) -> bytes:
 
 
 def _parse_resume_sections(text_content: str) -> List[Dict[str, Any]]:
-    """Parse resume text into structured sections"""
+    """Parse resume text into structured sections with better detection"""
     sections = []
     lines = text_content.split('\n')
     current_section = None
+    header_lines = []
     
-    for line in lines:
+    # Common section keywords
+    section_keywords = [
+        'PROFESSIONAL SUMMARY', 'SUMMARY', 'PROFILE', 'OBJECTIVE',
+        'PROFESSIONAL EXPERIENCE', 'EXPERIENCE', 'WORK EXPERIENCE', 'EMPLOYMENT',
+        'EDUCATION', 'ACADEMIC BACKGROUND',
+        'SKILLS', 'CORE COMPETENCIES', 'TECHNICAL SKILLS', 'CORE SKILLS',
+        'CERTIFICATIONS', 'CERTIFICATES', 'CREDENTIALS',
+        'ACHIEVEMENTS', 'KEY ACHIEVEMENTS', 'ACCOMPLISHMENTS',
+        'PROJECTS', 'KEY PROJECTS'
+    ]
+    
+    for i, line in enumerate(lines):
         line = line.strip()
         if not line:
             continue
+        
+        # Check if this is a section header
+        is_section_header = False
+        
+        # Method 1: All caps and substantial length
+        if line.isupper() and len(line) > 4 and not line.replace(' ', '').isdigit():
+            is_section_header = True
             
-        # Detect section headers (all caps, or specific keywords)
-        if (line.isupper() and len(line) > 3) or any(keyword in line.upper() for keyword in 
-            ['EXPERIENCE', 'EDUCATION', 'SKILLS', 'SUMMARY', 'CONTACT', 'ACHIEVEMENTS', 'CERTIFICATIONS']):
+        # Method 2: Exact keyword match
+        elif any(keyword == line.upper() for keyword in section_keywords):
+            is_section_header = True
+            
+        # Method 3: Starts with known keywords
+        elif any(line.upper().startswith(keyword) for keyword in section_keywords):
+            is_section_header = True
+        
+        if is_section_header:
             # Start new section
             if current_section:
                 sections.append(current_section)
@@ -453,73 +489,153 @@ def _parse_resume_sections(text_content: str) -> List[Dict[str, Any]]:
         elif current_section:
             current_section['content'].append(line)
         else:
-            # Header info (name, contact)
-            sections.append({
-                'type': 'header',
-                'content': [line]
-            })
+            # Header info (name, contact) - collect first few lines
+            header_lines.append(line)
+    
+    # Add header section if we have header lines
+    if header_lines:
+        sections.insert(0, {
+            'type': 'header',
+            'content': header_lines
+        })
     
     # Add final section
     if current_section:
         sections.append(current_section)
     
+    logger.info(f"📝 Parsed sections: {[s.get('header', 'header') for s in sections]}")
     return sections
 
 
-def _render_section_to_pdf(page: fitz.Page, section: Dict[str, Any], margin: int, 
-                          current_y: int, line_height: int) -> int:
-    """Render a resume section to PDF page"""
+def _render_section_to_pdf(page: fitz.Page, section: Dict[str, Any], margin_left: int, 
+                          margin_right: int, current_y: int, line_height: int, section_spacing: int) -> int:
+    """Render a resume section to PDF page with professional formatting"""
     try:
         if section['type'] == 'header':
             # Render header (name, contact info)
-            for line in section['content']:
-                if line:
+            for i, line in enumerate(section['content']):
+                if not line:
+                    continue
+                    
+                if i == 0:  # First line is usually the name
+                    # Name in large, bold font
                     page.insert_text(
-                        point=(margin, current_y),
+                        point=(margin_left, current_y),
                         text=line,
-                        fontsize=12 if current_y < 100 else 10,  # Name larger
+                        fontsize=16,
                         color=(0, 0, 0),
-                        fontname="Helvetica-Bold" if current_y < 100 else "Helvetica"
+                        fontname="Helvetica-Bold"
                     )
-                    current_y += line_height + 2
-            current_y += 10  # Extra spacing after header
+                    current_y += 20
+                elif i == 1:  # Second line is usually the title
+                    # Title in medium font
+                    page.insert_text(
+                        point=(margin_left, current_y),
+                        text=line,
+                        fontsize=11,
+                        color=(0.2, 0.2, 0.2),
+                        fontname="Helvetica"
+                    )
+                    current_y += 15
+                else:  # Contact info
+                    page.insert_text(
+                        point=(margin_left, current_y),
+                        text=line,
+                        fontsize=10,
+                        color=(0, 0, 0),
+                        fontname="Helvetica"
+                    )
+                    current_y += line_height
+            
+            current_y += section_spacing
             
         elif section['type'] == 'section':
+            # Add line above section header
+            page.draw_line(
+                fitz.Point(margin_left, current_y - 5),
+                fitz.Point(margin_right, current_y - 5),
+                color=(0.3, 0.3, 0.3),
+                width=1
+            )
+            
             # Render section header
             page.insert_text(
-                point=(margin, current_y),
-                text=section['header'],
-                fontsize=11,
+                point=(margin_left, current_y + 8),
+                text=section['header'].upper(),
+                fontsize=12,
                 color=(0, 0, 0),
                 fontname="Helvetica-Bold"
             )
-            current_y += line_height + 5
+            current_y += 25
             
             # Render section content
             for line in section['content']:
-                if line:
+                if not line:
+                    current_y += 5  # Small space for empty lines
+                    continue
+                
+                # Wrap long lines
+                wrapped_lines = _wrap_text(line, margin_right - margin_left, fontsize=10)
+                
+                for wrapped_line in wrapped_lines:
                     # Check if it's a bullet point
-                    if line.startswith('•') or line.startswith('-') or line.startswith('*'):
+                    if wrapped_line.startswith('•') or wrapped_line.startswith('-') or wrapped_line.startswith('*'):
                         page.insert_text(
-                            point=(margin + 15, current_y),
-                            text=line,
+                            point=(margin_left + 15, current_y),
+                            text=wrapped_line,
                             fontsize=10,
                             color=(0, 0, 0),
                             fontname="Helvetica"
                         )
                     else:
+                        # Check if it looks like a job title/company (often bold)
+                        is_title = any(keyword in wrapped_line for keyword in ['Manager', 'Director', 'Officer', 'Engineer', 'Developer', '–', '|'])
+                        
                         page.insert_text(
-                            point=(margin, current_y),
-                            text=line,
+                            point=(margin_left, current_y),
+                            text=wrapped_line,
                             fontsize=10,
                             color=(0, 0, 0),
-                            fontname="Helvetica"
+                            fontname="Helvetica-Bold" if is_title else "Helvetica"
                         )
                     current_y += line_height
-            current_y += 15  # Extra spacing after section
+            
+            current_y += section_spacing
             
         return current_y
         
     except Exception as e:
         logger.warning(f"⚠️ Failed to render section: {e}")
         return current_y + 20
+
+
+def _wrap_text(text: str, max_width: int, fontsize: int = 10) -> List[str]:
+    """Simple text wrapping based on character count"""
+    if not text:
+        return []
+    
+    # Approximate characters per line based on font size and width
+    chars_per_line = max_width // (fontsize * 0.6)  # Rough estimate
+    
+    if len(text) <= chars_per_line:
+        return [text]
+    
+    words = text.split(' ')
+    lines = []
+    current_line = []
+    current_length = 0
+    
+    for word in words:
+        if current_length + len(word) + 1 <= chars_per_line:
+            current_line.append(word)
+            current_length += len(word) + 1
+        else:
+            if current_line:
+                lines.append(' '.join(current_line))
+            current_line = [word]
+            current_length = len(word)
+    
+    if current_line:
+        lines.append(' '.join(current_line))
+    
+    return lines
