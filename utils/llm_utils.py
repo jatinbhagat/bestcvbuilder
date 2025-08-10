@@ -84,13 +84,14 @@ else:
 # Gemini API key
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
-def improve_resume_with_llm(resume_text: str, feedback_list: List[str]) -> str:
+def improve_resume_with_llm(resume_text: str, feedback_list: List[str], ats_score: int = 65) -> str:
     """
-    Use Gemini Flash 2.0 to improve resume text based on ATS feedback.
+    Use Gemini Flash 2.0 to improve resume text based on ATS feedback with score-based strategy.
     
     Args:
         resume_text: Original resume text content
         feedback_list: List of specific feedback issues to address
+        ats_score: ATS score (0-100) to determine improvement strategy
         
     Returns:
         Improved resume text addressing the feedback
@@ -125,8 +126,8 @@ def improve_resume_with_llm(resume_text: str, feedback_list: List[str]) -> str:
         raise RuntimeError("Gemini optimizer initialization failed.")
     
     # Create a comprehensive prompt for resume improvement
-    print(f"📝 LLM-UTILS: Creating improvement prompt...")
-    improvement_prompt = _create_resume_improvement_prompt(resume_text, feedback_list)
+    print(f"📝 LLM-UTILS: Creating improvement prompt for ATS score: {ats_score}")
+    improvement_prompt = _create_resume_improvement_prompt(resume_text, feedback_list, ats_score)
     print(f"📝 LLM-UTILS: Prompt length: {len(improvement_prompt)} characters")
     
     # Make Gemini request
@@ -159,38 +160,74 @@ def improve_resume_with_llm(resume_text: str, feedback_list: List[str]) -> str:
     return improved_text
 
 
-def _create_resume_improvement_prompt(resume_text: str, feedback_list: List[str]) -> str:
-    """Create comprehensive prompt for Gemini resume improvement"""
+def _create_resume_improvement_prompt(resume_text: str, feedback_list: List[str], ats_score: int) -> str:
+    """Create comprehensive prompt for Gemini resume improvement based on ATS score strategy"""
     feedback_text = "\n".join([f"- {feedback}" for feedback in feedback_list])
     
-    prompt = f"""You are an expert resume optimization specialist. Your task is to improve the following resume to address specific ATS (Applicant Tracking System) issues while maintaining the original structure and formatting.
+    # Determine strategy based on ATS score
+    if ats_score >= 70:
+        strategy = "Minor Fix"
+        instructions = """
+**MINOR FIX APPROACH (ATS Score ≥ 70):**
+- Keep the same structure, tone, and formatting as the original CV
+- Fix only the specific issues from ATS feedback
+- Add missing keywords naturally without keyword stuffing
+- Ensure grammar, clarity, and tense consistency
+- Preserve all achievements and details exactly as written
+- Make minimal changes while addressing feedback points"""
+        
+    elif ats_score <= 60:
+        strategy = "Major Overhaul"
+        instructions = """
+**MAJOR OVERHAUL APPROACH (ATS Score ≤ 60):**
+- Rewrite into a clean, modern, ATS-friendly format
+- Organize sections logically: Professional Summary, Core Skills, Professional Experience, Education, Key Achievements
+- Include all key details from the original CV but improve presentation
+- Use concise bullet points with measurable outcomes
+- Add strong action verbs and quantifiable results
+- Ensure comprehensive ATS keyword coverage
+- Create professional summary highlighting key qualifications
+- Structure each role with clear achievements and impact"""
+        
+    else:  # 60-69
+        strategy = "Hybrid Approach"
+        instructions = """
+**HYBRID APPROACH (ATS Score 60-69):**
+- Preserve professional tone and style but reorganize sections for better ATS parsing
+- Improve headings, section ordering, and overall structure
+- Add missing keywords and fill content gaps
+- Keep strong sections largely unchanged
+- Enhance weak areas with better formatting and content
+- Balance preservation of original style with ATS optimization"""
+    
+    prompt = f"""You are an expert ATS resume optimizer. Improve the CV according to the following rules based on its ATS score of {ats_score}:
 
-## ORIGINAL RESUME:
-{resume_text}
+1. If score is high (≥70): Minor edits only, preserve structure and style.
+2. If score is low (≤60): Rewrite using an ATS-friendly template and ensure full optimization.
+3. If score is medium (60–69): Hybrid approach — improve structure while keeping style.
 
-## ATS ISSUES TO FIX:
+**CURRENT STRATEGY: {strategy}**
+
+{instructions}
+
+## ATS FEEDBACK TO ADDRESS:
 {feedback_text}
 
-## IMPROVEMENT INSTRUCTIONS:
-1. **Maintain Original Structure**: Keep the same sections, order, and basic formatting
-2. **Address Each Issue**: Systematically fix every listed ATS issue
-3. **Quantify Achievements**: Add numbers, percentages, and metrics where missing
-4. **Use Action Verbs**: Replace passive language with strong action verbs
-5. **Add Strategic Keywords**: Include relevant industry and role-specific keywords naturally
-6. **Improve Readability**: Ensure clear, professional, and ATS-friendly language
-7. **Preserve Personal Information**: Keep names, contact details, and company names exactly as provided
+## GENERAL GUIDELINES:
+- Keep professional tone and readability
+- Avoid keyword stuffing or irrelevant content  
+- Output must be plain text CV format with clear section separation
+- Do not include explanations or metadata
+- Ensure the CV is ready for direct PDF conversion
+- Preserve all personal information, company names, and dates exactly as provided
 
-## SPECIFIC IMPROVEMENTS NEEDED:
-- If "measurable achievements" is mentioned: Add specific numbers, percentages, dollar amounts
-- If "action verbs" or "passive tone" is mentioned: Use strong action verbs (achieved, implemented, optimized, etc.)
-- If "keywords" is mentioned: Add relevant industry-specific terms naturally
-- If "professional summary" is mentioned: Create or enhance summary with key achievements
-- If "soft skills" is mentioned: Replace generic soft skills with specific technical skills
+## ORIGINAL CV:
+{resume_text}
 
-## OUTPUT FORMAT:
-Return ONLY the improved resume text, maintaining the exact same structure and sections as the original. Do not add explanations, comments, or additional formatting markers.
+## OUTPUT INSTRUCTIONS:
+Return ONLY the improved CV text in plain text format. Use clear section headers and consistent formatting. Do not add any explanations, comments, or metadata.
 
-IMPROVED RESUME:"""
+IMPROVED CV:"""
 
     return prompt
 
@@ -243,34 +280,67 @@ def generate_feedback_from_analysis(analysis_data: Dict[str, Any]) -> List[str]:
     feedback_list = []
     
     try:
-        # Extract penalty information if available
+        # PRIORITY 1: Use critical_issues and quick_wins from enhanced algorithm
+        if 'critical_issues' in analysis_data and analysis_data['critical_issues']:
+            for issue in analysis_data['critical_issues']:
+                title = issue.get('title', '')
+                issue_desc = issue.get('issue', '')
+                if title and issue_desc:
+                    feedback_list.append(f"{title}: {issue_desc}")
+                elif title:
+                    feedback_list.append(title)
+        
+        if 'quick_wins' in analysis_data and analysis_data['quick_wins']:
+            for win in analysis_data['quick_wins']:
+                title = win.get('title', '')
+                issue_desc = win.get('issue', '')
+                if title and issue_desc:
+                    feedback_list.append(f"{title}: {issue_desc}")
+                elif title:
+                    feedback_list.append(title)
+        
+        # PRIORITY 2: Extract penalty information if available
         if 'penalties_applied' in analysis_data:
             for penalty in analysis_data['penalties_applied']:
-                feedback_list.append(penalty.get('reason', 'General improvement needed'))
+                reason = penalty.get('reason', '')
+                if reason and reason not in [f.split(':')[0] for f in feedback_list]:
+                    feedback_list.append(reason)
         
-        # Extract component analysis if available
-        if 'components' in analysis_data:
-            components = analysis_data['components']
+        # PRIORITY 3: Extract component analysis if available
+        if 'component_scores' in analysis_data:
+            components = analysis_data['component_scores']
             
-            if components.get('keywords_score', 100) < 70:
-                feedback_list.append("Lacks industry-specific keywords and technical terms")
+            if components.get('keywords', 100) < 15:  # Out of 20 max
+                feedback_list.append("Add industry-specific keywords and technical terms throughout resume")
             
-            if components.get('experience_score', 100) < 70:
-                feedback_list.append("Lacks measurable achievements and quantifiable results")
-            
-            if components.get('structure_score', 100) < 70:
-                feedback_list.append("Resume structure needs optimization for ATS parsing")
+            if components.get('structure', 100) < 18:  # Out of 25 max  
+                feedback_list.append("Improve resume structure and section organization for ATS parsing")
+                
+            if components.get('contact', 100) < 12:  # Out of 15 max
+                feedback_list.append("Enhance contact information section with proper formatting")
+                
+            if components.get('achievements', 100) < 7:  # Out of 10 max
+                feedback_list.append("Add more quantifiable achievements with specific metrics and numbers")
         
-        # Generic feedback if no specific issues found
+        # PRIORITY 4: Extract specific improvements from analysis
+        if 'improvements' in analysis_data and analysis_data['improvements']:
+            for improvement in analysis_data['improvements'][:3]:  # Top 3 improvements
+                if improvement not in feedback_list:
+                    feedback_list.append(improvement)
+        
+        # PRIORITY 5: Generic feedback based on score if nothing specific found
         if not feedback_list:
             score = analysis_data.get('score', analysis_data.get('ats_score', 50))
             if score < 70:
                 feedback_list.extend([
-                    "Avoid passive tone and use strong action verbs",
-                    "Add quantifiable achievements with specific numbers",
-                    "Include more industry-relevant keywords",
-                    "Optimize formatting for ATS compatibility"
+                    "Replace passive language with strong action verbs (achieved, implemented, optimized)",
+                    "Add quantifiable achievements with specific numbers, percentages, and dollar amounts",
+                    "Include more industry-relevant keywords and technical skills",
+                    "Optimize formatting and section structure for ATS compatibility"
                 ])
+        
+        # Limit to top 6 feedback items for focused improvement
+        feedback_list = feedback_list[:6]
         
         logger.info(f"📋 Generated {len(feedback_list)} feedback items from analysis")
         return feedback_list

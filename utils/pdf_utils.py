@@ -263,7 +263,7 @@ class PDFTextReplacer:
     
     def _replace_text_in_block(self, doc: fitz.Document, text_block: TextBlock, 
                               replacement_text: str):
-        """Replace text in a specific block while preserving formatting"""
+        """Replace text in a specific block while preserving formatting - CLEAN APPROACH"""
         try:
             page = doc[text_block.page_num]
             
@@ -273,8 +273,9 @@ class PDFTextReplacer:
             for inst in text_instances:
                 # Check if this instance matches our block position
                 if self._bbox_overlap(inst, text_block.bbox) > 0.8:
-                    # Add a white rectangle to cover the old text
-                    page.add_redact_annot(inst)
+                    # CLEAN APPROACH: Use white rectangle instead of redaction
+                    # Draw white rectangle to cover old text
+                    page.draw_rect(inst, color=(1, 1, 1), fill=(1, 1, 1))
                     
                     # Insert new text with preserved formatting
                     page.insert_text(
@@ -286,8 +287,7 @@ class PDFTextReplacer:
                     )
                     break
             
-            # Apply redactions (removes old text)
-            page.apply_redactions()
+            # NO redaction application - already handled with white rectangle
             
         except Exception as e:
             logger.warning(f"⚠️ Failed to replace text in block: {e}")
@@ -327,20 +327,199 @@ def parse_pdf_layout(pdf_bytes: bytes) -> Dict[str, Any]:
 
 
 def update_pdf_text(pdf_bytes: bytes, original_text: str, improved_text: str, 
-                   layout_info: Dict[str, Any]) -> bytes:
+                   layout_info: Dict[str, Any], ats_score: int = 65) -> bytes:
     """
-    Main function to update PDF text while preserving formatting
+    Main function to update PDF text while preserving formatting or creating clean PDF
     
     Args:
         pdf_bytes: Original PDF bytes
         original_text: Original text content
         improved_text: Improved text to replace with
         layout_info: Layout information from parse_pdf_layout
+        ats_score: ATS score to determine approach (≤60 = major overhaul)
         
     Returns:
         Updated PDF as bytes
     """
-    replacer = PDFTextReplacer()
-    return replacer.update_pdf_text(
-        pdf_bytes, original_text, improved_text, layout_info["text_blocks"]
-    )
+    try:
+        if ats_score <= 60:
+            # Major overhaul - create clean PDF from scratch
+            logger.info(f"🔄 Major overhaul (ATS {ats_score}) - Creating clean PDF from improved text")
+            return create_clean_pdf_from_text(improved_text)
+        else:
+            # Minor fix or hybrid - try to preserve layout
+            logger.info(f"🔄 Minor/Hybrid approach (ATS {ats_score}) - Preserving layout")
+            replacer = PDFTextReplacer()
+            return replacer.update_pdf_text(
+                pdf_bytes, original_text, improved_text, layout_info["text_blocks"]
+            )
+    except Exception as e:
+        logger.warning(f"⚠️ Layout preservation failed: {e}, falling back to clean PDF")
+        return create_clean_pdf_from_text(improved_text)
+
+
+def create_clean_pdf_from_text(text_content: str) -> bytes:
+    """
+    Create a clean, professional PDF from improved text content
+    
+    Args:
+        text_content: Improved resume text
+        
+    Returns:
+        Clean PDF as bytes
+    """
+    try:
+        logger.info("📄 Creating clean PDF from improved text...")
+        
+        # Create new PDF document
+        doc = fitz.open()
+        page = doc.new_page(width=595, height=842)  # A4 size
+        
+        # Define styling
+        margin = 50
+        line_height = 14
+        current_y = margin + 20
+        
+        # Parse the text into sections
+        sections = _parse_resume_sections(text_content)
+        
+        for section in sections:
+            current_y = _render_section_to_pdf(page, section, margin, current_y, line_height)
+            
+            # Add new page if needed
+            if current_y > 750:  # Near bottom of page
+                page = doc.new_page(width=595, height=842)
+                current_y = margin + 20
+        
+        # Save to bytes
+        pdf_bytes = io.BytesIO()
+        doc.save(pdf_bytes)
+        doc.close()
+        
+        result = pdf_bytes.getvalue()
+        logger.info(f"✅ Clean PDF created: {len(result)} bytes")
+        return result
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to create clean PDF: {e}")
+        # Fallback: create basic PDF with text
+        return create_basic_pdf_from_text(text_content)
+
+
+def create_basic_pdf_from_text(text_content: str) -> bytes:
+    """Basic PDF creation as final fallback"""
+    try:
+        doc = fitz.open()
+        page = doc.new_page()
+        
+        # Simple text insertion
+        text_rect = fitz.Rect(50, 50, 545, 792)  # Margins
+        page.insert_textbox(text_rect, text_content, 
+                          fontsize=10, fontname="Helvetica", color=(0, 0, 0))
+        
+        pdf_bytes = io.BytesIO()
+        doc.save(pdf_bytes)
+        doc.close()
+        
+        return pdf_bytes.getvalue()
+        
+    except Exception as e:
+        logger.error(f"❌ Even basic PDF creation failed: {e}")
+        raise Exception(f"PDF generation completely failed: {e}")
+
+
+def _parse_resume_sections(text_content: str) -> List[Dict[str, Any]]:
+    """Parse resume text into structured sections"""
+    sections = []
+    lines = text_content.split('\n')
+    current_section = None
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+            
+        # Detect section headers (all caps, or specific keywords)
+        if (line.isupper() and len(line) > 3) or any(keyword in line.upper() for keyword in 
+            ['EXPERIENCE', 'EDUCATION', 'SKILLS', 'SUMMARY', 'CONTACT', 'ACHIEVEMENTS', 'CERTIFICATIONS']):
+            # Start new section
+            if current_section:
+                sections.append(current_section)
+            current_section = {
+                'type': 'section',
+                'header': line,
+                'content': []
+            }
+        elif current_section:
+            current_section['content'].append(line)
+        else:
+            # Header info (name, contact)
+            sections.append({
+                'type': 'header',
+                'content': [line]
+            })
+    
+    # Add final section
+    if current_section:
+        sections.append(current_section)
+    
+    return sections
+
+
+def _render_section_to_pdf(page: fitz.Page, section: Dict[str, Any], margin: int, 
+                          current_y: int, line_height: int) -> int:
+    """Render a resume section to PDF page"""
+    try:
+        if section['type'] == 'header':
+            # Render header (name, contact info)
+            for line in section['content']:
+                if line:
+                    page.insert_text(
+                        point=(margin, current_y),
+                        text=line,
+                        fontsize=12 if current_y < 100 else 10,  # Name larger
+                        color=(0, 0, 0),
+                        fontname="Helvetica-Bold" if current_y < 100 else "Helvetica"
+                    )
+                    current_y += line_height + 2
+            current_y += 10  # Extra spacing after header
+            
+        elif section['type'] == 'section':
+            # Render section header
+            page.insert_text(
+                point=(margin, current_y),
+                text=section['header'],
+                fontsize=11,
+                color=(0, 0, 0),
+                fontname="Helvetica-Bold"
+            )
+            current_y += line_height + 5
+            
+            # Render section content
+            for line in section['content']:
+                if line:
+                    # Check if it's a bullet point
+                    if line.startswith('•') or line.startswith('-') or line.startswith('*'):
+                        page.insert_text(
+                            point=(margin + 15, current_y),
+                            text=line,
+                            fontsize=10,
+                            color=(0, 0, 0),
+                            fontname="Helvetica"
+                        )
+                    else:
+                        page.insert_text(
+                            point=(margin, current_y),
+                            text=line,
+                            fontsize=10,
+                            color=(0, 0, 0),
+                            fontname="Helvetica"
+                        )
+                    current_y += line_height
+            current_y += 15  # Extra spacing after section
+            
+        return current_y
+        
+    except Exception as e:
+        logger.warning(f"⚠️ Failed to render section: {e}")
+        return current_y + 20

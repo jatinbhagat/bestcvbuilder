@@ -175,14 +175,18 @@ def process_resume_fix(original_analysis: Dict[str, Any], user_email: str, payme
         gemini_key = os.getenv('GEMINI_API_KEY')
         print(f"🔑 PROCESS-RESUME-FIX: Gemini API key status: {'SET' if gemini_key else 'MISSING'}")
         
-        improved_text = improve_resume_with_llm(original_text, feedback_list)
+        # Get original ATS score for strategy determination
+        original_score = original_analysis.get('score', original_analysis.get('ats_score', 65))
+        print(f"📊 PROCESS-RESUME-FIX: Original ATS score: {original_score}")
+        
+        improved_text = improve_resume_with_llm(original_text, feedback_list, original_score)
         print(f"✅ PROCESS-RESUME-FIX: Text improved - length: {len(improved_text)}")
         
-        # Step 5: Create improved PDF
-        print(f"📄 PROCESS-RESUME-FIX: Step 5 - Creating improved PDF...")
+        # Step 5: Create improved PDF using ATS score-based approach
+        print(f"📄 PROCESS-RESUME-FIX: Step 5 - Creating improved PDF (ATS strategy for score {original_score})...")
         logger.info("📄 Step 5: Creating improved PDF...")
         improved_pdf_bytes = update_pdf_text(
-            original_pdf_bytes, original_text, improved_text, layout_info
+            original_pdf_bytes, original_text, improved_text, layout_info, original_score
         )
         print(f"✅ PROCESS-RESUME-FIX: Improved PDF created - {len(improved_pdf_bytes)} bytes")
         
