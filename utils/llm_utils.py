@@ -151,9 +151,9 @@ def improve_resume_with_llm(resume_text: str, feedback_list: List[str], ats_scor
     improved_text = _parse_gemini_improvement_response(response_text, resume_text)
     print(f"✅ LLM-UTILS: Parsed improved text length: {len(improved_text)}")
     
-    if len(improved_text) < len(resume_text) * 0.5:
+    if len(improved_text) < len(resume_text) * 0.7:
         print(f"❌ LLM-UTILS: Improved text too short: {len(improved_text)} vs {len(resume_text)}")
-        raise RuntimeError("Gemini response was too short or invalid. Resume improvement failed.")
+        raise RuntimeError(f"Gemini response was too short: {len(improved_text)} chars (need at least 70% of {len(resume_text)}). Resume improvement failed.")
     
     print(f"🎉 LLM-UTILS: Gemini improvement completed successfully!")
     logger.info(f"✅ Gemini improvement complete: {len(improved_text)} characters")
@@ -200,69 +200,104 @@ def _create_resume_improvement_prompt(resume_text: str, feedback_list: List[str]
 - Enhance weak areas with better formatting and content
 - Balance preservation of original style with ATS optimization"""
     
-    prompt = f"""You are an expert ATS resume optimizer. Improve the CV according to the following rules based on its ATS score of {ats_score}:
+    prompt = f"""You are an expert ATS resume optimizer. Your CRITICAL task is to improve the CV while PRESERVING ALL ORIGINAL CONTENT.
 
-1. If score is high (≥70): Minor edits only, preserve structure and style.
-2. If score is low (≤60): Rewrite using an ATS-friendly template and ensure full optimization.
-3. If score is medium (60–69): Hybrid approach — improve structure while keeping style.
+**ABSOLUTELY CRITICAL REQUIREMENTS:**
+1. PRESERVE ALL job titles, company names, dates, and achievements from original
+2. PRESERVE ALL skills, certifications, education details, and contact information
+3. PRESERVE ALL bullet points and accomplishments - DO NOT delete any content
+4. PRESERVE ALL quantifiable metrics, numbers, percentages, and results
+5. Only IMPROVE language, structure, and add missing ATS keywords - NEVER remove content
 
-**CURRENT STRATEGY: {strategy}**
+**CURRENT STRATEGY: {strategy} (ATS Score: {ats_score})**
 
 {instructions}
 
 ## ATS FEEDBACK TO ADDRESS:
 {feedback_text}
 
-## GENERAL GUIDELINES:
-- Keep professional tone and readability
-- Avoid keyword stuffing or irrelevant content  
-- Output must be plain text CV format with clear section separation
-- Do not include explanations or metadata
-- Ensure the CV is ready for direct PDF conversion
-- Preserve all personal information, company names, and dates exactly as provided
+## CONTENT PRESERVATION RULES:
+- Every job position from original must appear in improved version
+- Every skill mentioned in original must appear in improved version  
+- Every achievement and metric must be preserved
+- Every education degree and certification must be included
+- Every date range must be maintained exactly
+- If original has incomplete sections, FILL them - don't delete them
 
-## ORIGINAL CV:
+## FORMAT REQUIREMENTS:
+- Use clear section headers (PROFESSIONAL SUMMARY, PROFESSIONAL EXPERIENCE, EDUCATION, SKILLS, CERTIFICATIONS)
+- Maintain chronological order for experience
+- Use bullet points for achievements under each job
+- Keep plain text format suitable for PDF conversion
+- NO markdown, NO explanations, NO metadata
+
+## ORIGINAL CV TO IMPROVE:
 {resume_text}
 
 ## OUTPUT INSTRUCTIONS:
-Return ONLY the improved CV text in plain text format. Use clear section headers and consistent formatting. Do not add any explanations, comments, or metadata.
+Return ONLY the complete improved CV text. Include EVERY piece of information from the original CV. The improved version should be longer or same length as original - NEVER shorter.
 
 IMPROVED CV:"""
 
     return prompt
 
 def _parse_gemini_improvement_response(response_text: str, original_text: str) -> str:
-    """Parse and clean Gemini's improvement response"""
+    """Parse and clean Gemini's improvement response with strict content validation"""
     try:
+        print(f"🔍 PARSING: Original response length: {len(response_text)}")
+        
         # Clean the response
         improved_text = response_text.strip()
         
         # Remove any markdown formatting or explanations
-        improved_text = re.sub(r'^```.*$', '', improved_text, flags=re.MULTILINE)
-        improved_text = re.sub(r'^#.*$', '', improved_text, flags=re.MULTILINE)
+        improved_text = re.sub(r'^```[a-zA-Z]*\n?', '', improved_text, flags=re.MULTILINE)
+        improved_text = re.sub(r'^```$', '', improved_text, flags=re.MULTILINE) 
+        improved_text = re.sub(r'^#{1,6}\s+.*$', '', improved_text, flags=re.MULTILINE)
         
-        # Remove any leading/trailing explanatory text
-        lines = improved_text.split('\n')
-        start_idx = 0
-        end_idx = len(lines)
+        # Remove common explanation patterns
+        improved_text = re.sub(r'^(Here is|Here\'s|Below is).*improved.*:?\s*$', '', improved_text, flags=re.MULTILINE | re.IGNORECASE)
+        improved_text = re.sub(r'^IMPROVED CV:?\s*$', '', improved_text, flags=re.MULTILINE | re.IGNORECASE)
         
-        # Find where the actual resume content starts
-        for i, line in enumerate(lines):
-            if any(keyword in line.lower() for keyword in ['name', 'contact', 'email', 'phone', 'experience', 'education', 'skills']):
-                start_idx = i
-                break
+        # Clean up multiple blank lines
+        improved_text = re.sub(r'\n\s*\n\s*\n', '\n\n', improved_text)
+        improved_text = improved_text.strip()
         
-        # Extract the improved resume content
-        improved_lines = lines[start_idx:end_idx]
-        final_text = '\n'.join(improved_lines).strip()
+        print(f"🔍 PARSING: Cleaned response length: {len(improved_text)}")
         
-        # Ensure we have substantial content
-        if len(final_text) < len(original_text) * 0.5:
-            raise RuntimeError(f"Gemini response too short: {len(final_text)} chars vs {len(original_text)} expected")
+        # CRITICAL CONTENT VALIDATION
+        original_lines = [line.strip() for line in original_text.split('\n') if line.strip()]
+        improved_lines = [line.strip() for line in improved_text.split('\n') if line.strip()]
         
-        return final_text
+        print(f"🔍 PARSING: Original lines: {len(original_lines)}, Improved lines: {len(improved_lines)}")
+        
+        # Check for critical content preservation
+        if len(improved_text) < len(original_text) * 0.7:
+            print(f"❌ PARSING: Response too short - {len(improved_text)} vs {len(original_text)}")
+            raise RuntimeError(f"Gemini response too short: {len(improved_text)} chars vs {len(original_text)} expected (minimum 70%)")
+        
+        # Validate that key resume elements are preserved
+        original_lower = original_text.lower()
+        improved_lower = improved_text.lower()
+        
+        # Check for preservation of critical elements
+        critical_checks = [
+            ('email address', '@' in improved_lower and '@' in original_lower),
+            ('phone number', any(char.isdigit() for char in improved_text) if any(char.isdigit() for char in original_text) else True),
+            ('professional experience', 'experience' in improved_lower or 'work' in improved_lower),
+            ('education', 'education' in improved_lower or 'degree' in improved_lower or 'university' in improved_lower),
+            ('skills', 'skills' in improved_lower or 'competenc' in improved_lower)
+        ]
+        
+        failed_checks = [check_name for check_name, passed in critical_checks if not passed]
+        if failed_checks:
+            print(f"❌ PARSING: Failed critical checks: {failed_checks}")
+            raise RuntimeError(f"Critical resume sections missing after improvement: {', '.join(failed_checks)}")
+        
+        print(f"✅ PARSING: All validation checks passed")
+        return improved_text
         
     except Exception as e:
+        print(f"❌ PARSING: Error parsing response: {e}")
         logger.error(f"❌ Failed to parse Gemini response: {e}")
         raise RuntimeError(f"Failed to parse Gemini response: {str(e)}")
 
