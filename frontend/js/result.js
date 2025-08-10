@@ -551,6 +551,12 @@ async function handleResumeRewrite() {
             user_email: userEmail
         });
         
+        // DEBUG: Log the analysis data being sent
+        console.log('🔍 DEBUG: Analysis data keys:', Object.keys(analysisData));
+        console.log('🔍 DEBUG: Has file_url:', 'file_url' in analysisData, analysisData.file_url);
+        console.log('🔍 DEBUG: Has content:', 'content' in analysisData, analysisData.content ? analysisData.content.length : 'null');
+        console.log('🔍 DEBUG: Has originalFileUrl:', 'originalFileUrl' in analysisData, analysisData.originalFileUrl);
+        
         // Call CV rewrite API
         const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
             ? '/api' 
