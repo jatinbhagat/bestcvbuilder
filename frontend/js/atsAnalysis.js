@@ -88,6 +88,11 @@ function processAnalysisResult(rawResult, fileUrl) {
         formattingIssues: rawResult.formatting_issues || [],
         suggestions: rawResult.suggestions || [],
         originalFileUrl: fileUrl, // Include original file URL for rewrite API
+        
+        // CRITICAL: Preserve original API response fields needed for resume improvement
+        file_url: rawResult.file_url || fileUrl, // Original file URL from API response
+        content: rawResult.content || '', // Extracted text content from PDF
+        
         timestamp: new Date().toISOString()
     };
 }
