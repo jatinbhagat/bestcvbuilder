@@ -365,7 +365,7 @@ def update_pdf_text(pdf_bytes: bytes, original_text: str, improved_text: str,
 
 def create_clean_pdf_from_text(text_content: str) -> bytes:
     """
-    Create a clean, professional PDF from improved text content
+    Create a clean, professional PDF from improved text content - CONSERVATIVE APPROACH
     
     Args:
         text_content: Improved resume text
@@ -374,7 +374,7 @@ def create_clean_pdf_from_text(text_content: str) -> bytes:
         Clean PDF as bytes
     """
     try:
-        logger.info("📄 Creating clean PDF from improved text...")
+        logger.info("📄 Creating clean PDF with CONSERVATIVE text preservation...")
         
         # Create new PDF document
         doc = fitz.open()
@@ -384,23 +384,73 @@ def create_clean_pdf_from_text(text_content: str) -> bytes:
         margin_left = 50
         margin_right = 545
         margin_top = 50
-        line_height = 13
-        section_spacing = 20
+        line_height = 14
         current_y = margin_top
         
-        # Parse the text into sections
-        sections = _parse_resume_sections(text_content)
-        logger.info(f"📝 Parsed {len(sections)} sections from resume text")
+        # CONSERVATIVE APPROACH: Process line by line without complex parsing
+        lines = text_content.split('\n')
+        logger.info(f"📝 Processing {len(lines)} lines directly from improved text")
         
-        for section in sections:
+        for line_num, line in enumerate(lines):
+            line = line.strip()
+            if not line:  # Empty line - add small spacing
+                current_y += 8
+                continue
+            
             # Check if we need a new page
-            if current_y > 750:  # Near bottom of page
+            if current_y > 780:  # Near bottom of page
                 page = doc.new_page(width=595, height=842)
                 current_y = margin_top
             
-            current_y = _render_section_to_pdf(
-                page, section, margin_left, margin_right, current_y, line_height, section_spacing
-            )
+            # Determine font style based on line characteristics
+            fontsize = 10
+            fontname = "Helvetica"
+            color = (0, 0, 0)
+            
+            # First few lines (header info)
+            if line_num == 0:  # Name
+                fontsize = 18
+                fontname = "Helvetica-Bold"
+            elif line_num <= 3:  # Contact/title info
+                fontsize = 11
+                if line_num == 1:
+                    fontname = "Helvetica-Bold"
+                    color = (0.2, 0.2, 0.2)
+            # Section headers (ALL CAPS and significant length)
+            elif line.isupper() and len(line) > 5 and not line.replace(' ', '').isdigit():
+                fontsize = 12
+                fontname = "Helvetica-Bold"
+                current_y += 8  # Extra spacing before section
+            # Job titles/companies (contains certain keywords)
+            elif any(keyword in line for keyword in ['Manager', 'Director', 'Officer', 'Engineer', 'Developer', 'Lead', '–', '|', 'Chief', 'Associate', 'Senior', 'Principal']):
+                fontsize = 11
+                fontname = "Helvetica-Bold"
+            
+            # Handle long lines by wrapping text
+            wrapped_lines = _wrap_text_conservative(line, margin_right - margin_left, fontsize)
+            
+            for wrapped_line in wrapped_lines:
+                # Insert text
+                try:
+                    page.insert_text(
+                        point=(margin_left, current_y),
+                        text=wrapped_line,
+                        fontsize=fontsize,
+                        color=color,
+                        fontname=fontname
+                    )
+                except Exception as e:
+                    logger.warning(f"⚠️ Failed to insert text: {wrapped_line[:50]}... Error: {e}")
+                    # Fallback with basic font
+                    page.insert_text(
+                        point=(margin_left, current_y),
+                        text=wrapped_line,
+                        fontsize=10,
+                        color=(0, 0, 0),
+                        fontname="Helvetica"
+                    )
+                
+                current_y += line_height
         
         # Save to bytes
         pdf_bytes = io.BytesIO()
@@ -408,7 +458,7 @@ def create_clean_pdf_from_text(text_content: str) -> bytes:
         doc.close()
         
         result = pdf_bytes.getvalue()
-        logger.info(f"✅ Clean PDF created: {len(result)} bytes")
+        logger.info(f"✅ Conservative PDF created: {len(result)} bytes")
         return result
         
     except Exception as e:
@@ -608,6 +658,54 @@ def _render_section_to_pdf(page: fitz.Page, section: Dict[str, Any], margin_left
         logger.warning(f"⚠️ Failed to render section: {e}")
         return current_y + 20
 
+
+def _wrap_text_conservative(text: str, max_width: int, fontsize: int = 10) -> List[str]:
+    """Conservative text wrapping that preserves all content"""
+    if not text:
+        return []
+    
+    # More conservative character estimate
+    chars_per_line = int(max_width // (fontsize * 0.5))  # More conservative estimate
+    
+    if len(text) <= chars_per_line:
+        return [text]
+    
+    words = text.split(' ')
+    lines = []
+    current_line = []
+    current_length = 0
+    
+    for word in words:
+        # Check if adding this word would exceed the line length
+        if current_length + len(word) + 1 <= chars_per_line:
+            current_line.append(word)
+            current_length += len(word) + 1
+        else:
+            # Finish current line if it has content
+            if current_line:
+                lines.append(' '.join(current_line))
+            
+            # Handle very long single words
+            if len(word) > chars_per_line:
+                # Split long words
+                while len(word) > chars_per_line:
+                    lines.append(word[:chars_per_line])
+                    word = word[chars_per_line:]
+                if word:  # Add remaining part
+                    current_line = [word]
+                    current_length = len(word)
+                else:
+                    current_line = []
+                    current_length = 0
+            else:
+                current_line = [word]
+                current_length = len(word)
+    
+    # Add any remaining content
+    if current_line:
+        lines.append(' '.join(current_line))
+    
+    return lines if lines else [text]  # Ensure we never return empty
 
 def _wrap_text(text: str, max_width: int, fontsize: int = 10) -> List[str]:
     """Simple text wrapping based on character count"""
