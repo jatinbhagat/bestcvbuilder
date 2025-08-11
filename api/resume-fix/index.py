@@ -204,7 +204,12 @@ def process_resume_fix(original_analysis: Dict[str, Any], user_email: str, payme
         score_improvement = max(0, new_score - original_score)
         print(f"✅ PROCESS-RESUME-FIX: Score calculated - {original_score} → {new_score} (+{score_improvement})")
         
-        # Step 8: Prepare result
+        # Step 8: Create debug text outputs
+        print(f"🔍 PROCESS-RESUME-FIX: Step 8 - Creating debug text outputs...")
+        debug_data = create_debug_outputs(original_text, improved_text, user_email, payment_id)
+        print(f"✅ PROCESS-RESUME-FIX: Debug outputs created")
+        
+        # Step 9: Prepare result
         result = {
             'status': 'success',
             'original_score': original_score,
@@ -214,7 +219,8 @@ def process_resume_fix(original_analysis: Dict[str, Any], user_email: str, payme
             'feedback_addressed': feedback_list,
             'processing_time': 'completed',
             'payment_id': payment_id,
-            'user_email': user_email
+            'user_email': user_email,
+            'debug': debug_data  # Include debug information
         }
         
         print(f"🎉 PROCESS-RESUME-FIX: Complete! Result has {len(result)} keys")
@@ -382,6 +388,80 @@ def error_response(message: str, status_code: int) -> Dict[str, Any]:
             'timestamp': int(__import__('time').time())
         })
     }
+
+def create_debug_outputs(original_text: str, improved_text: str, user_email: str, payment_id: str) -> Dict[str, Any]:
+    """
+    Create debug text outputs for analyzing content loss
+    """
+    try:
+        import base64
+        
+        # Create debug analysis
+        original_lines = original_text.split('\n')
+        improved_lines = improved_text.split('\n')
+        
+        # Text comparison analysis
+        comparison = {
+            'original_length': len(original_text),
+            'improved_length': len(improved_text),
+            'length_ratio': len(improved_text) / len(original_text) if original_text else 0,
+            'original_lines': len(original_lines),
+            'improved_lines': len(improved_lines),
+            'lines_ratio': len(improved_lines) / len(original_lines) if original_lines else 0,
+            'content_preserved': len(improved_text) >= len(original_text) * 0.8  # 80% preservation threshold
+        }
+        
+        # Create downloadable text files as base64 data URLs
+        original_filename = f"original_extracted_{payment_id}.txt"
+        improved_filename = f"gemini_improved_{payment_id}.txt"
+        comparison_filename = f"text_comparison_{payment_id}.json"
+        
+        # Create original text download
+        original_base64 = base64.b64encode(original_text.encode('utf-8')).decode('utf-8')
+        original_data_url = f"data:text/plain;base64,{original_base64}"
+        
+        # Create improved text download  
+        improved_base64 = base64.b64encode(improved_text.encode('utf-8')).decode('utf-8')
+        improved_data_url = f"data:text/plain;base64,{improved_base64}"
+        
+        # Create comparison JSON download
+        comparison_json = json.dumps(comparison, indent=2)
+        comparison_base64 = base64.b64encode(comparison_json.encode('utf-8')).decode('utf-8')
+        comparison_data_url = f"data:application/json;base64,{comparison_base64}"
+        
+        debug_data = {
+            'text_analysis': comparison,
+            'downloads': {
+                'original_text': {
+                    'filename': original_filename,
+                    'data_url': original_data_url,
+                    'size_bytes': len(original_text)
+                },
+                'improved_text': {
+                    'filename': improved_filename,
+                    'data_url': improved_data_url,
+                    'size_bytes': len(improved_text)
+                },
+                'comparison': {
+                    'filename': comparison_filename,
+                    'data_url': comparison_data_url,
+                    'size_bytes': len(comparison_json)
+                }
+            }
+        }
+        
+        logger.info(f"🔍 Debug outputs created - Original: {len(original_text)} chars, Improved: {len(improved_text)} chars")
+        return debug_data
+        
+    except Exception as e:
+        logger.error(f"Failed to create debug outputs: {e}")
+        return {
+            'error': f'Debug output creation failed: {str(e)}',
+            'text_analysis': {
+                'original_length': len(original_text),
+                'improved_length': len(improved_text)
+            }
+        }
 
 def cleanup_memory():
     """Clean up memory resources"""

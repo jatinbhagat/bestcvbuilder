@@ -79,6 +79,9 @@ function displayRewriteResults() {
         improvement.textContent = `+${improvementValue}`;
         improvement.className = improvementValue > 0 ? 'text-lg font-semibold text-success-600' : 'text-lg font-semibold text-gray-600';
     }
+    
+    // Display debug information if available
+    displayDebugInfo();
 }
 
 /**
@@ -281,6 +284,131 @@ function showError(message) {
     setTimeout(() => {
         errorDiv.remove();
     }, 5000);
+}
+
+/**
+ * Display debug information if available
+ */
+function displayDebugInfo() {
+    if (!rewriteData?.debug) return;
+    
+    console.log('Debug data available:', rewriteData.debug);
+    
+    try {
+        // Create debug section container
+        const existingDebugSection = document.getElementById('debugSection');
+        if (existingDebugSection) {
+            existingDebugSection.remove();
+        }
+        
+        const debugSection = document.createElement('div');
+        debugSection.id = 'debugSection';
+        debugSection.className = 'mt-8 p-6 bg-gray-50 rounded-lg border border-gray-200';
+        
+        const debugData = rewriteData.debug;
+        
+        // Debug header
+        debugSection.innerHTML = `
+            <h3 class="text-lg font-bold text-gray-900 mb-4">🔍 Debug Information</h3>
+            
+            <div class="grid md:grid-cols-2 gap-4 mb-4">
+                <div class="text-sm">
+                    <div class="font-medium text-gray-700">Original Text:</div>
+                    <div class="text-gray-600">${debugData.text_analysis?.original_length || 0} characters, ${debugData.text_analysis?.original_lines || 0} lines</div>
+                </div>
+                <div class="text-sm">
+                    <div class="font-medium text-gray-700">Improved Text:</div>
+                    <div class="text-gray-600">${debugData.text_analysis?.improved_length || 0} characters, ${debugData.text_analysis?.improved_lines || 0} lines</div>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <div class="text-sm">
+                    <div class="font-medium text-gray-700">Content Preservation:</div>
+                    <div class="text-gray-600">
+                        Length ratio: ${Math.round((debugData.text_analysis?.length_ratio || 0) * 100)}%
+                        ${debugData.text_analysis?.content_preserved ? 
+                          '<span class="text-green-600 font-medium ml-2">✅ Good preservation</span>' : 
+                          '<span class="text-red-600 font-medium ml-2">⚠️ Potential content loss</span>'}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="space-y-2">
+                <h4 class="font-medium text-gray-700">Download Debug Files:</h4>
+                <div class="grid md:grid-cols-3 gap-2">
+                    <button id="downloadOriginalText" class="px-3 py-2 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200 transition-colors">
+                        📄 Original Text
+                    </button>
+                    <button id="downloadImprovedText" class="px-3 py-2 bg-green-100 text-green-700 rounded text-sm hover:bg-green-200 transition-colors">
+                        ✨ Improved Text
+                    </button>
+                    <button id="downloadComparison" class="px-3 py-2 bg-purple-100 text-purple-700 rounded text-sm hover:bg-purple-200 transition-colors">
+                        📊 Comparison
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Add debug section to page
+        const mainContent = document.querySelector('.max-w-4xl') || document.querySelector('main') || document.body;
+        mainContent.appendChild(debugSection);
+        
+        // Add event listeners for debug downloads
+        setupDebugDownloads(debugData);
+        
+    } catch (error) {
+        console.error('Error displaying debug info:', error);
+    }
+}
+
+/**
+ * Setup debug download functionality
+ */
+function setupDebugDownloads(debugData) {
+    const downloads = debugData.downloads || {};
+    
+    // Original text download
+    const originalBtn = document.getElementById('downloadOriginalText');
+    if (originalBtn && downloads.original_text) {
+        originalBtn.addEventListener('click', () => {
+            downloadDataUrl(downloads.original_text.data_url, downloads.original_text.filename);
+        });
+    }
+    
+    // Improved text download
+    const improvedBtn = document.getElementById('downloadImprovedText');
+    if (improvedBtn && downloads.improved_text) {
+        improvedBtn.addEventListener('click', () => {
+            downloadDataUrl(downloads.improved_text.data_url, downloads.improved_text.filename);
+        });
+    }
+    
+    // Comparison download
+    const comparisonBtn = document.getElementById('downloadComparison');
+    if (comparisonBtn && downloads.comparison) {
+        comparisonBtn.addEventListener('click', () => {
+            downloadDataUrl(downloads.comparison.data_url, downloads.comparison.filename);
+        });
+    }
+}
+
+/**
+ * Download a data URL as a file
+ */
+function downloadDataUrl(dataUrl, filename) {
+    try {
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showSuccess(`Downloaded ${filename}`);
+    } catch (error) {
+        console.error('Download failed:', error);
+        showError('Download failed. Please try again.');
+    }
 }
 
 /**
