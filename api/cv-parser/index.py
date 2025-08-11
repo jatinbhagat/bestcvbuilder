@@ -346,7 +346,8 @@ def cors_headers():
     return {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Headers": "Content-Type, Accept, Authorization",
+        "Access-Control-Max-Age": "86400"
     }
 
 def validate_file_url(file_url: str) -> bool:
@@ -2730,9 +2731,11 @@ class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         """Handle CORS preflight requests"""
         self.send_response(200)
+        # Set Content-Type first
+        self.send_header('Content-Type', 'application/json')
+        # Set all CORS headers
         for key, value in cors_headers().items():
-            if key != 'Content-Type':  # Don't set content-type for OPTIONS
-                self.send_header(key.replace('_', '-'), value)
+            self.send_header(key.replace('_', '-'), value)
         self.end_headers()
         return
     
@@ -2923,6 +2926,7 @@ class handler(BaseHTTPRequestHandler):
     def send_success_response(self, data):
         """Send successful JSON response"""
         self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
         for key, value in cors_headers().items():
             self.send_header(key.replace('_', '-'), value)
         self.end_headers()
@@ -2931,6 +2935,7 @@ class handler(BaseHTTPRequestHandler):
     def send_error_response(self, error_data, status_code):
         """Send error JSON response"""
         self.send_response(status_code)
+        self.send_header('Content-Type', 'application/json')
         for key, value in cors_headers().items():
             self.send_header(key.replace('_', '-'), value)
         self.end_headers()
