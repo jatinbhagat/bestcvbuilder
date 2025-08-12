@@ -88,7 +88,7 @@ def health_check():
     except Exception as e:
         supabase_status = f"error: {str(e)}"
     
-    return jsonify({
+    response = jsonify({
         "status": "healthy",
         "service": "bestcvbuilder-api",
         "handlers": {
@@ -102,6 +102,35 @@ def health_check():
             "supabase_key": bool(os.environ.get('PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY'))
         }
     })
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    return response
+
+@app.route('/api/test-connectivity', methods=['GET', 'POST', 'OPTIONS'])
+def test_connectivity():
+    """Simple connectivity test endpoint for debugging CORS issues"""
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Accept, Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        response.headers.add('Access-Control-Max-Age', '86400')
+        return response
+    
+    test_info = {
+        'status': 'success',
+        'method': request.method,
+        'timestamp': int(__import__('time').time()),
+        'headers': dict(request.headers),
+        'origin': request.headers.get('Origin', 'No origin header'),
+        'user_agent': request.headers.get('User-Agent', 'Unknown'),
+        'message': 'API connectivity test successful'
+    }
+    
+    response = jsonify(test_info)
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Accept, Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    return response
 
 @app.route('/api/cv-parser', methods=['POST', 'OPTIONS'])
 def cv_parser():

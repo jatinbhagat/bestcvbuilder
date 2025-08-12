@@ -24,6 +24,53 @@ export { BUILD_ID, API_BASE_URL, CV_PARSER_ENDPOINT };
 console.log('🔗 API Configuration v1.1.0:', { API_BASE_URL, CV_PARSER_ENDPOINT });
 console.log('🚨 CRITICAL: Verify this shows correct URL - should NOT be bestcvbuilder-gamma!');
 
+/**
+ * Test API connectivity before processing
+ */
+async function testAPIConnectivity() {
+    try {
+        console.log('🔍 Testing API connectivity...');
+        
+        // Test 1: Simple fetch to health endpoint
+        const healthResponse = await fetch('https://bestcvbuilder-api.onrender.com/health', {
+            method: 'GET',
+            mode: 'cors',
+            cache: 'no-cache'
+        });
+        
+        console.log('✅ Health check response:', healthResponse.status);
+        
+        // Test 2: CORS preflight test  
+        const corsResponse = await fetch(CV_PARSER_ENDPOINT, {
+            method: 'OPTIONS',
+            mode: 'cors',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        console.log('✅ CORS preflight response:', corsResponse.status);
+        
+        // Test 3: Try test connectivity endpoint
+        try {
+            const testResponse = await fetch('https://bestcvbuilder-api.onrender.com/api/test-connectivity', {
+                method: 'GET',
+                mode: 'cors',
+                cache: 'no-cache'
+            });
+            console.log('✅ Test connectivity response:', testResponse.status);
+        } catch (e) {
+            console.log('⚠️ Test connectivity endpoint not available yet:', e.message);
+        }
+        
+        return true;
+        
+    } catch (error) {
+        console.error('❌ API connectivity test failed:', error);
+        return false;
+    }
+}
+
 
 /**
  * Analyze resume using the Python ATS engine
@@ -34,6 +81,12 @@ console.log('🚨 CRITICAL: Verify this shows correct URL - should NOT be bestcv
 export async function analyzeResume(fileUrl, userId = null) {
     try {
         console.log('Starting ATS analysis for file:', fileUrl);
+        
+        // Test connectivity first
+        const isConnected = await testAPIConnectivity();
+        if (!isConnected) {
+            throw new Error('API connectivity test failed. Cannot proceed with analysis.');
+        }
         
         const requestBody = {
             file_url: fileUrl,
@@ -50,13 +103,55 @@ export async function analyzeResume(fileUrl, userId = null) {
         console.log('🚀 Making request to:', CV_PARSER_ENDPOINT);
         console.log('📤 Request body:', requestBody);
         
-        const response = await fetch(CV_PARSER_ENDPOINT, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
+        // Try with explicit CORS settings - multiple attempts with different configurations
+        let response;
+        const attempts = [
+            // Attempt 1: Standard CORS request
+            {
+                method: 'POST',
+                mode: 'cors',
+                cache: 'no-cache',
+                credentials: 'omit',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify(requestBody)
             },
-            body: JSON.stringify(requestBody)
-        });
+            // Attempt 2: Simplified headers
+            {
+                method: 'POST',
+                mode: 'cors',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody)
+            },
+            // Attempt 3: No explicit mode
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody)
+            }
+        ];
+        
+        let lastError;
+        for (let i = 0; i < attempts.length; i++) {
+            try {
+                console.log(`🔄 Attempt ${i + 1}/3 with configuration:`, attempts[i]);
+                response = await fetch(CV_PARSER_ENDPOINT, attempts[i]);
+                console.log(`✅ Attempt ${i + 1} succeeded:`, response.status);
+                break;
+            } catch (error) {
+                console.log(`❌ Attempt ${i + 1} failed:`, error.message);
+                lastError = error;
+                if (i === attempts.length - 1) {
+                    throw lastError;
+                }
+            }
+        }
         
         console.log('📨 Response received:', response.status, response.statusText);
         
@@ -79,16 +174,30 @@ export async function analyzeResume(fileUrl, userId = null) {
     } catch (error) {
         console.error('ATS analysis failed:', error);
         
-        // Provide more specific error messages
+        // Provide more specific error messages and try fallback
         if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+            console.log('🔄 Primary API failed, attempting diagnostics...');
+            
+            // Try to provide more specific diagnostics
+            try {
+                const diagResponse = await fetch('https://httpbin.org/ip');
+                console.log('✅ Internet connectivity confirmed, issue is with API endpoint');
+            } catch (e) {
+                console.log('❌ No internet connectivity detected');
+            }
+            
             const detailedError = new Error(
-                `Network connection failed when trying to reach: ${CV_PARSER_ENDPOINT}\n` +
-                `This could be due to:\n` +
-                `- Network connectivity issues\n` +
-                `- CORS restrictions\n` +
-                `- API server being down\n` +
-                `- Firewall or proxy blocking the request\n\n` +
-                `Original error: ${error.message}`
+                `❌ Cannot connect to the resume analysis service.\n\n` +
+                `🔍 Technical Details:\n` +
+                `• Endpoint: ${CV_PARSER_ENDPOINT}\n` +
+                `• Error: ${error.message}\n\n` +
+                `🛠️ Possible Solutions:\n` +
+                `• Check your internet connection\n` +
+                `• Try refreshing the page\n` +
+                `• Disable VPN or proxy if using one\n` +
+                `• Try using a different browser\n` +
+                `• Contact support if the issue persists\n\n` +
+                `🌐 If you're on a corporate network, this service may be blocked by your firewall.`
             );
             detailedError.name = 'NetworkError';
             throw detailedError;

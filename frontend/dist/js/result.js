@@ -556,7 +556,7 @@ async function handleResumeRewrite() {
             ? '/api' 
             : 'https://bestcvbuilder-api.onrender.com/api';
         
-        const response = await fetch(`${API_BASE_URL}/resume-fix`, {
+        const response = await fetch(`${API_BASE_URL}/cv-rewrite`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

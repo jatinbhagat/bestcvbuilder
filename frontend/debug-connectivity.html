@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Connectivity Debug Tool</title>
+    <style>
+        body { 
+            font-family: monospace; 
+            padding: 20px; 
+            background: #1a1a1a; 
+            color: #00ff00; 
+        }
+        .log { 
+            margin: 5px 0; 
+            padding: 5px; 
+            border-left: 3px solid #00ff00; 
+            background: #333; 
+        }
+        .error { border-left-color: #ff0000; color: #ff0000; }
+        .success { border-left-color: #00ff00; color: #00ff00; }
+        .warning { border-left-color: #ffaa00; color: #ffaa00; }
+        button { 
+            padding: 10px 20px; 
+            margin: 10px 5px; 
+            background: #333; 
+            color: #00ff00; 
+            border: 1px solid #00ff00; 
+            cursor: pointer; 
+        }
+        button:hover { background: #555; }
+        #results { 
+            max-height: 400px; 
+            overflow-y: auto; 
+            border: 1px solid #555; 
+            padding: 10px; 
+            margin: 20px 0; 
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 BestCVBuilder API Connectivity Debug Tool</h1>
+    <p>This tool helps diagnose connection issues with the API backend.</p>
+    
+    <div>
+        <button onclick="testBasicConnectivity()">Test Basic Connectivity</button>
+        <button onclick="testCorsSupport()">Test CORS Support</button>
+        <button onclick="testAPIEndpoints()">Test API Endpoints</button>
+        <button onclick="testFullFlow()">Test Full CV Analysis Flow</button>
+        <button onclick="clearLogs()">Clear Logs</button>
+    </div>
+    
+    <div id="results"></div>
+    
+    <script>
+        const API_BASE = 'https://bestcvbuilder-api.onrender.com';
+        const resultsDiv = document.getElementById('results');
+        
+        function log(message, type = 'log') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            resultsDiv.appendChild(div);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+            console.log(message);
+        }
+        
+        function clearLogs() {
+            resultsDiv.innerHTML = '';
+        }
+        
+        async function testBasicConnectivity() {
+            log('🔍 Testing basic internet connectivity...', 'log');
+            
+            try {
+                // Test 1: External service
+                const response = await fetch('https://httpbin.org/ip');
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ Internet connectivity OK - Your IP: ${data.origin}`, 'success');
+                } else {
+                    log(`⚠️ External service test failed: ${response.status}`, 'warning');
+                }
+            } catch (error) {
+                log(`❌ No internet connectivity: ${error.message}`, 'error');
+                return;
+            }
+            
+            try {
+                // Test 2: Our API health
+                const healthResponse = await fetch(`${API_BASE}/health`);
+                if (healthResponse.ok) {
+                    const healthData = await healthResponse.json();
+                    log(`✅ API Health Check OK - Service: ${healthData.service}`, 'success');
+                    log(`📊 Features: CV Parser: ${healthData.handlers?.cv_parser}, Job Analyzer: ${healthData.handlers?.job_analyzer}`, 'log');
+                } else {
+                    log(`❌ API Health Check Failed: ${healthResponse.status}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Cannot reach API: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testCorsSupport() {
+            log('🔍 Testing CORS support...', 'log');
+            
+            const endpoints = [
+                '/api/cv-parser',
+                '/api/resume-fix',
+                '/api/job-analyzer'
+            ];
+            
+            for (const endpoint of endpoints) {
+                try {
+                    const response = await fetch(`${API_BASE}${endpoint}`, {
+                        method: 'OPTIONS',
+                        headers: {
+                            'Origin': window.location.origin,
+                            'Access-Control-Request-Method': 'POST',
+                            'Access-Control-Request-Headers': 'Content-Type'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        log(`✅ CORS OK for ${endpoint}: ${response.status}`, 'success');
+                        // Check CORS headers
+                        const corsOrigin = response.headers.get('Access-Control-Allow-Origin');
+                        const corsMethods = response.headers.get('Access-Control-Allow-Methods');
+                        log(`  Origin: ${corsOrigin}, Methods: ${corsMethods}`, 'log');
+                    } else {
+                        log(`❌ CORS FAILED for ${endpoint}: ${response.status}`, 'error');
+                    }
+                } catch (error) {
+                    log(`❌ CORS test failed for ${endpoint}: ${error.message}`, 'error');
+                }
+            }
+        }
+        
+        async function testAPIEndpoints() {
+            log('🔍 Testing API endpoints with sample data...', 'log');
+            
+            // Test CV Parser
+            try {
+                const cvResponse = await fetch(`${API_BASE}/api/cv-parser`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file_url: 'https://example.com/test.pdf' })
+                });
+                
+                if (cvResponse.ok) {
+                    log(`✅ CV Parser endpoint responding`, 'success');
+                } else {
+                    const errorData = await cvResponse.json();
+                    log(`⚠️ CV Parser returned error (expected): ${errorData.error}`, 'warning');
+                }
+            } catch (error) {
+                log(`❌ CV Parser connection failed: ${error.message}`, 'error');
+            }
+            
+            // Test Resume Fix
+            try {
+                const resumeResponse = await fetch(`${API_BASE}/api/resume-fix`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ test: 'data' })
+                });
+                
+                if (resumeResponse.ok) {
+                    log(`✅ Resume Fix endpoint responding`, 'success');
+                } else {
+                    const errorData = await resumeResponse.json();
+                    log(`⚠️ Resume Fix returned error (expected): ${errorData.error}`, 'warning');
+                }
+            } catch (error) {
+                log(`❌ Resume Fix connection failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testFullFlow() {
+            log('🔍 Testing full CV analysis flow with multiple fetch strategies...', 'log');
+            
+            const testData = {
+                file_url: 'https://example.com/sample-resume.pdf',
+                analysis_type: 'ats_score',
+                include_recommendations: true
+            };
+            
+            const strategies = [
+                {
+                    name: 'Standard CORS',
+                    config: {
+                        method: 'POST',
+                        mode: 'cors',
+                        cache: 'no-cache',
+                        credentials: 'omit',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        }
+                    }
+                },
+                {
+                    name: 'Simplified',
+                    config: {
+                        method: 'POST',
+                        mode: 'cors',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                },
+                {
+                    name: 'Basic',
+                    config: {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                }
+            ];
+            
+            for (let i = 0; i < strategies.length; i++) {
+                const strategy = strategies[i];
+                try {
+                    log(`🔄 Attempting strategy ${i + 1}: ${strategy.name}`, 'log');
+                    
+                    const response = await fetch(`${API_BASE}/api/cv-parser`, {
+                        ...strategy.config,
+                        body: JSON.stringify(testData)
+                    });
+                    
+                    log(`✅ Strategy ${i + 1} (${strategy.name}) succeeded: ${response.status}`, 'success');
+                    
+                    if (response.ok) {
+                        log(`✅ API returned successful response`, 'success');
+                    } else {
+                        const errorData = await response.json();
+                        log(`⚠️ API returned expected error: ${errorData.error}`, 'warning');
+                    }
+                    
+                    // If one strategy works, we don't need to test others
+                    log(`🎉 Connection successful with ${strategy.name} strategy!`, 'success');
+                    break;
+                    
+                } catch (error) {
+                    log(`❌ Strategy ${i + 1} (${strategy.name}) failed: ${error.message}`, 'error');
+                    
+                    if (i === strategies.length - 1) {
+                        log(`💥 All connection strategies failed! This indicates a serious connectivity issue.`, 'error');
+                        log(`🔧 Possible causes:`, 'warning');
+                        log(`   • Corporate firewall blocking the request`, 'warning');
+                        log(`   • VPN or proxy interference`, 'warning');
+                        log(`   • Browser security settings`, 'warning');
+                        log(`   • Network connectivity issues`, 'warning');
+                        log(`   • API server is down`, 'warning');
+                    }
+                }
+            }
+        }
+        
+        // Auto-run basic connectivity test on page load
+        window.addEventListener('load', () => {
+            log('🚀 Debug tool loaded. Click buttons above to test connectivity.', 'log');
+            testBasicConnectivity();
+        });
+    </script>
+</body>
+</html>
