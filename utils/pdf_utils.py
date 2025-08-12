@@ -393,98 +393,41 @@ def create_clean_pdf_from_text(text_content: str) -> bytes:
         line_height = 14
         current_y = margin_top
         
-        # CONSERVATIVE APPROACH: Process line by line without complex parsing
-        lines = text_content.split('\n')
-        logger.info(f"📝 Processing {len(lines)} lines directly from improved text")
+        # CONTENT-AWARE APPROACH: Parse content into structured blocks first
+        content_blocks = _parse_resume_content_blocks(text_content)
+        logger.info(f"📝 Processing {len(content_blocks)} content blocks from improved text")
         
         # CRITICAL: Track what text we actually add to PDF
         added_text_parts = []
         
-        for line_num, line in enumerate(lines):
-            # CRITICAL: Preserve original line exactly, including whitespace
-            original_line = line
-            line = line.strip()
+        for block_num, content_block in enumerate(content_blocks):
+            # CRITICAL: Record this block for validation
+            added_text_parts.extend(content_block['lines'])
             
-            if not line:  # Empty line - add small spacing but preserve the line structure
-                current_y += 8
-                continue
-            
-            # CRITICAL: Record this line for validation
-            added_text_parts.append(original_line)
-            
-            # Check if we need a new page
-            if current_y > 780:  # Near bottom of page
-                page = doc.new_page(width=595, height=842)
-                current_y = margin_top
-            
-            # Determine font style based on line characteristics
-            fontsize = 10
-            fontname = "Helvetica"
-            color = (0, 0, 0)
-            
-            # First few lines (header info)
-            if line_num == 0:  # Name
-                fontsize = 18
-                fontname = "Helvetica-Bold"
-            elif line_num <= 3:  # Contact/title info
-                fontsize = 11
-                if line_num == 1:
-                    fontname = "Helvetica-Bold"
-                    color = (0.2, 0.2, 0.2)
-            # Section headers (ALL CAPS and significant length)
-            elif line.isupper() and len(line) > 5 and not line.replace(' ', '').isdigit():
-                fontsize = 12
-                fontname = "Helvetica-Bold"
-                current_y += 8  # Extra spacing before section
-            # Job titles/companies (contains certain keywords)
-            elif any(keyword in line for keyword in ['Manager', 'Director', 'Officer', 'Engineer', 'Developer', 'Lead', '–', '|', 'Chief', 'Associate', 'Senior', 'Principal']):
-                fontsize = 11
-                fontname = "Helvetica-Bold"
-            
-            # Handle long lines by wrapping text - CRITICAL: Must preserve all content
-            wrapped_lines = _wrap_text_conservative(line, margin_right - margin_left, fontsize)
-            
-            for wrapped_line in wrapped_lines:
-                # CRITICAL: Ensure wrapped_line is not empty
-                if not wrapped_line.strip():
-                    continue
-                
-                # Insert text
-                try:
-                    page.insert_text(
-                        point=(margin_left, current_y),
-                        text=wrapped_line,
-                        fontsize=fontsize,
-                        color=color,
-                        fontname=fontname
-                    )
-                except Exception as e:
-                    logger.warning(f"⚠️ Failed to insert text: {wrapped_line[:50]}... Error: {e}")
-                    # CRITICAL: Fallback MUST still add the text
-                    try:
-                        page.insert_text(
-                            point=(margin_left, current_y),
-                            text=wrapped_line,
-                            fontsize=10,
-                            color=(0, 0, 0),
-                            fontname="Helvetica"
-                        )
-                    except Exception as e2:
-                        logger.error(f"❌ CRITICAL: Could not add text line: {wrapped_line[:50]}... Error: {e2}")
-                        # CRITICAL: Try basic textbox as last resort
-                        try:
-                            rect = fitz.Rect(margin_left, current_y - 5, margin_right, current_y + 15)
-                            page.insert_textbox(rect, wrapped_line, fontsize=10, fontname="Helvetica")
-                        except Exception as e3:
-                            logger.error(f"❌ CRITICAL: Complete text insertion failure: {e3}")
-                
-                current_y += line_height
+            # Process each content block as a unit with page management
+            page, current_y = _render_content_block_to_pdf_with_pages(
+                page, doc, content_block, margin_left, margin_right, 
+                current_y, line_height, block_num, margin_top
+            )
         
-        # CRITICAL: Validate that we didn't lose content
-        added_text_length = sum(len(part) for part in added_text_parts)
-        if added_text_length < original_text_length * 0.9:  # Allow 10% loss for whitespace
-            logger.error(f"❌ CRITICAL: Text loss detected! Original: {original_text_length}, Added: {added_text_length}")
-            raise Exception(f"PDF generation lost significant content: {original_text_length} -> {added_text_length}")
+        # CRITICAL: Comprehensive content validation
+        validation_result = _validate_content_preservation(text_content, added_text_parts, original_text_length)
+        
+        if not validation_result['passed']:
+            logger.error(f"❌ CRITICAL: Content validation failed!")
+            logger.error(f"❌ Original length: {original_text_length}, Added length: {validation_result['added_length']}")
+            logger.error(f"❌ Missing content: {validation_result['missing_content'][:200]}...")
+            
+            # Try to recover missing content
+            recovery_result = _attempt_content_recovery(
+                doc, text_content, added_text_parts, margin_left, margin_right, margin_top
+            )
+            
+            if not recovery_result['success']:
+                logger.error(f"❌ Content recovery failed - falling back to text-only PDF")
+                return create_basic_pdf_from_text(text_content)
+            else:
+                logger.info(f"✅ Content recovery successful - added {recovery_result['recovered_items']} missing items")
         
         # Save to bytes
         pdf_bytes = io.BytesIO()
@@ -586,6 +529,399 @@ def create_basic_pdf_from_text(text_content: str) -> bytes:
         except:
             raise Exception(f"PDF generation completely failed: {e}")
 
+
+def _parse_resume_content_blocks(text_content: str) -> List[Dict[str, Any]]:
+    """Parse resume text into intelligent content blocks that preserve related information"""
+    lines = text_content.split('\n')
+    blocks = []
+    current_block = None
+    
+    for line_num, line in enumerate(lines):
+        line_type = _classify_resume_line(line, line_num)
+        
+        # Start new block for certain line types
+        if line_type in ['name', 'section_header', 'job_title']:
+            # Save previous block
+            if current_block and current_block['lines']:
+                blocks.append(current_block)
+            
+            # Start new block
+            current_block = {
+                'type': line_type,
+                'lines': [line],
+                'start_line': line_num
+            }
+        elif current_block:
+            # Add to current block
+            current_block['lines'].append(line)
+        else:
+            # No current block, start a general block
+            current_block = {
+                'type': 'general',
+                'lines': [line],
+                'start_line': line_num
+            }
+    
+    # Add final block
+    if current_block and current_block['lines']:
+        blocks.append(current_block)
+    
+    logger.info(f"📊 Parsed {len(blocks)} content blocks: {[b['type'] for b in blocks]}")
+    return blocks
+
+def _classify_resume_line(line: str, line_num: int) -> str:
+    """Classify a resume line to determine its type for intelligent processing"""
+    stripped = line.strip()
+    
+    if not stripped:
+        return 'empty'
+    
+    # Name (usually first non-empty line)
+    if line_num <= 2 and len(stripped) > 5 and not any(char in stripped for char in ['@', 'http', '+']):
+        return 'name'
+    
+    # Contact information
+    if any(indicator in stripped for indicator in ['@', 'http', '+91', '+1', 'linkedin', 'gmail']):
+        return 'contact'
+    
+    # Section headers (ALL CAPS)
+    if stripped.isupper() and len(stripped) > 4 and not stripped.replace(' ', '').isdigit():
+        return 'section_header'
+    
+    # Job titles/companies (contains position indicators)
+    if any(keyword in stripped for keyword in ['Manager', 'Director', 'Officer', 'Engineer', 'Developer', 'Lead', 'Chief', 'Associate', 'Senior', 'Principal', 'CEO', 'CTO', 'CPO']):
+        return 'job_title'
+    
+    # Date lines
+    if any(indicator in stripped for indicator in ['/', '–', '-', 'Ongoing', '2020', '2021', '2022', '2023', '2024', '2025']):
+        return 'date_location'
+    
+    # Bullet points
+    if stripped.startswith(('•', '-', '*', '◦')):
+        return 'bullet_point'
+    
+    # Skills/items in a list
+    if any(skill_word in stripped for skill_word in ['Python', 'JavaScript', 'Management', 'Analytics', 'AI', 'ML', 'Product']):
+        return 'skill_item'
+    
+    return 'general'
+
+def _render_content_block_to_pdf_with_pages(page, doc, content_block, margin_left, margin_right, 
+                                          current_y, line_height, block_num, margin_top) -> tuple:
+    """Render a content block to PDF while preserving all content and context with intelligent page flow"""
+    block_type = content_block['type']
+    lines = content_block['lines']
+    
+    # Intelligent page management: ensure blocks stay together when possible
+    estimated_height = len(lines) * line_height + 30  # Extra spacing for formatting
+    page_bottom = 780
+    
+    # For important blocks (name, section headers), try to keep them together
+    if block_type in ['name', 'section_header', 'job_title'] and current_y + estimated_height > page_bottom:
+        page = doc.new_page(width=595, height=842)
+        current_y = margin_top
+        logger.info(f"📄 Created new page for {block_type} block to keep content together")
+    
+    content_inserted = 0  # Track successful insertions
+    
+    try:
+        for line_num, line in enumerate(lines):
+            if not line.strip():  # Empty line
+                current_y += 8
+                continue
+            
+            # Check page space before processing line
+            if current_y > page_bottom - 30:  # Leave margin at bottom
+                page = doc.new_page(width=595, height=842)
+                current_y = margin_top
+                logger.info(f"📄 New page created during {block_type} block processing")
+            
+            # Determine styling based on line type and block type
+            fontsize, fontname, color = _get_line_styling(block_type, line, line_num, block_num)
+            
+            # Add extra spacing for certain block types
+            if line_num == 0 and block_type in ['section_header', 'job_title']:
+                current_y += 8
+            
+            # Wrap text with accurate measurement
+            wrapped_lines = _wrap_text_with_measurement(
+                line.strip(), margin_right - margin_left, fontsize, fontname
+            )
+            
+            for wrapped_line in wrapped_lines:
+                if not wrapped_line.strip():
+                    continue
+                
+                # Check page space for each wrapped line
+                if current_y > page_bottom - 20:
+                    page = doc.new_page(width=595, height=842)
+                    current_y = margin_top
+                    logger.info(f"📄 New page created for wrapped line in {block_type}")
+                
+                # Insert text with multiple fallback strategies
+                success = _insert_text_with_fallbacks(
+                    page, margin_left, current_y, wrapped_line, 
+                    fontsize, fontname, color, margin_right
+                )
+                
+                if success:
+                    content_inserted += 1
+                else:
+                    logger.error(f"❌ CRITICAL: Failed to insert line: {wrapped_line[:50]}")
+                
+                current_y += line_height
+        
+        # Add spacing after block
+        if block_type in ['section_header', 'job_title']:
+            current_y += 6
+        
+        logger.info(f"✅ Successfully inserted {content_inserted} text elements for {block_type} block")
+            
+    except Exception as e:
+        logger.error(f"❌ Error rendering content block {block_type}: {e}")
+        # Robust fallback: render as plain text with guaranteed insertion
+        for line in lines:
+            if line.strip():
+                # Ensure page space
+                if current_y > page_bottom - 20:
+                    page = doc.new_page(width=595, height=842)
+                    current_y = margin_top
+                
+                # Use most basic insertion method
+                try:
+                    page.insert_text(
+                        point=(margin_left, current_y),
+                        text=line.strip(),
+                        fontsize=10,
+                        color=(0, 0, 0),
+                        fontname="Helvetica"
+                    )
+                    content_inserted += 1
+                except:
+                    # Final fallback - textbox
+                    try:
+                        rect = fitz.Rect(margin_left, current_y - 5, margin_right, current_y + 15)
+                        page.insert_textbox(rect, line.strip(), fontsize=9)
+                        content_inserted += 1
+                    except:
+                        logger.error(f"❌ ULTIMATE FALLBACK FAILED for: {line[:50]}")
+                
+                current_y += line_height
+    
+    logger.info(f"📊 Block {block_type} completed: {content_inserted} elements inserted")
+    return page, current_y
+
+def _get_line_styling(block_type: str, line: str, line_num: int, block_num: int) -> tuple:
+    """Determine font styling for a line based on its context"""
+    fontsize = 10
+    fontname = "Helvetica"
+    color = (0, 0, 0)
+    
+    # Name styling
+    if block_type == 'name' or (block_num == 0 and line_num == 0):
+        fontsize = 18
+        fontname = "Helvetica-Bold"
+    
+    # Contact info styling
+    elif block_type == 'contact':
+        fontsize = 10
+        color = (0.3, 0.3, 0.3)
+    
+    # Section headers
+    elif block_type == 'section_header':
+        fontsize = 12
+        fontname = "Helvetica-Bold"
+        
+    # Job titles
+    elif block_type == 'job_title':
+        fontsize = 11
+        fontname = "Helvetica-Bold"
+    
+    # Date/location lines
+    elif block_type == 'date_location':
+        fontsize = 10
+        color = (0.4, 0.4, 0.4)
+    
+    # Professional summary (usually appears early)
+    elif block_num <= 2 and line_num == 0 and len(line) > 50:
+        fontsize = 11
+        fontname = "Helvetica-Bold"
+        color = (0.2, 0.2, 0.2)
+    
+    return fontsize, fontname, color
+
+def _insert_text_with_fallbacks(page, x, y, text, fontsize, fontname, color, max_x) -> bool:
+    """Insert text with multiple fallback strategies to ensure no content loss"""
+    strategies = [
+        # Strategy 1: Original parameters
+        {'fontsize': fontsize, 'fontname': fontname, 'color': color},
+        # Strategy 2: Safe font
+        {'fontsize': fontsize, 'fontname': 'Helvetica', 'color': (0, 0, 0)},
+        # Strategy 3: Smaller safe font
+        {'fontsize': 9, 'fontname': 'Helvetica', 'color': (0, 0, 0)},
+        # Strategy 4: Textbox fallback
+        {'method': 'textbox'}
+    ]
+    
+    for strategy in strategies:
+        try:
+            if strategy.get('method') == 'textbox':
+                # Textbox fallback
+                rect = fitz.Rect(x, y - 5, max_x, y + 15)
+                page.insert_textbox(rect, text, fontsize=9, fontname="Helvetica")
+                return True
+            else:
+                # Regular text insertion
+                page.insert_text(
+                    point=(x, y),
+                    text=text,
+                    fontsize=strategy['fontsize'],
+                    color=strategy['color'],
+                    fontname=strategy['fontname']
+                )
+                return True
+        except Exception as e:
+            logger.debug(f"Text insertion strategy failed: {e}")
+            continue
+    
+    return False
+
+def _validate_content_preservation(original_text: str, added_text_parts: List[str], original_length: int) -> Dict[str, Any]:
+    """Comprehensively validate that all content was preserved during PDF generation"""
+    
+    # Calculate text statistics
+    added_text = '\n'.join(added_text_parts)
+    added_length = len(added_text)
+    preservation_ratio = added_length / original_length if original_length > 0 else 0
+    
+    # Split into words for detailed comparison
+    original_words = set(original_text.lower().split())
+    added_words = set(added_text.lower().split())
+    
+    # Find missing words
+    missing_words = original_words - added_words
+    missing_content = ' '.join(missing_words)
+    
+    # Critical content check - look for important resume elements
+    critical_elements = [
+        'experience', 'education', 'skills', 'achievements', 
+        'professional', 'manager', 'director', 'engineer',
+        'university', 'certification', 'project'
+    ]
+    
+    missing_critical = [elem for elem in critical_elements if elem in original_text.lower() and elem not in added_text.lower()]
+    
+    # Validation criteria
+    length_ok = preservation_ratio >= 0.85  # Allow 15% loss for formatting
+    words_ok = len(missing_words) <= len(original_words) * 0.1  # Max 10% word loss
+    critical_ok = len(missing_critical) == 0  # No critical content missing
+    
+    passed = length_ok and words_ok and critical_ok
+    
+    result = {
+        'passed': passed,
+        'preservation_ratio': preservation_ratio,
+        'added_length': added_length,
+        'missing_words_count': len(missing_words),
+        'missing_content': missing_content,
+        'missing_critical': missing_critical,
+        'details': {
+            'length_check': length_ok,
+            'words_check': words_ok,
+            'critical_check': critical_ok
+        }
+    }
+    
+    logger.info(f"📊 Content validation: {preservation_ratio:.2%} preserved, {len(missing_words)} words missing")
+    
+    return result
+
+def _attempt_content_recovery(doc, original_text: str, added_text_parts: List[str], 
+                             margin_left: int, margin_right: int, margin_top: int) -> Dict[str, Any]:
+    """Attempt to recover missing content by adding it to the PDF"""
+    
+    try:
+        added_text = '\n'.join(added_text_parts)
+        
+        # Find content that wasn't added
+        original_lines = [line.strip() for line in original_text.split('\n') if line.strip()]
+        added_lines = [line.strip() for line in added_text.split('\n') if line.strip()]
+        
+        missing_lines = []
+        for orig_line in original_lines:
+            found = False
+            for added_line in added_lines:
+                if orig_line in added_line or added_line in orig_line:
+                    found = True
+                    break
+            if not found:
+                missing_lines.append(orig_line)
+        
+        if not missing_lines:
+            return {'success': True, 'recovered_items': 0, 'message': 'No missing content detected'}
+        
+        logger.info(f"🔧 Attempting to recover {len(missing_lines)} missing lines")
+        
+        # Add a new page for missing content
+        recovery_page = doc.new_page(width=595, height=842)
+        current_y = margin_top
+        
+        # Add header
+        recovery_page.insert_text(
+            point=(margin_left, current_y),
+            text="RECOVERED CONTENT",
+            fontsize=12,
+            color=(0.5, 0, 0),
+            fontname="Helvetica-Bold"
+        )
+        current_y += 25
+        
+        # Add missing content
+        recovered_count = 0
+        for line in missing_lines:
+            if current_y > 780:  # Near bottom
+                recovery_page = doc.new_page(width=595, height=842)
+                current_y = margin_top
+            
+            # Wrap and insert missing content
+            wrapped_lines = _wrap_text_with_measurement(line, margin_right - margin_left, 10, "Helvetica")
+            
+            for wrapped_line in wrapped_lines:
+                try:
+                    recovery_page.insert_text(
+                        point=(margin_left, current_y),
+                        text=wrapped_line,
+                        fontsize=10,
+                        color=(0, 0, 0),
+                        fontname="Helvetica"
+                    )
+                    current_y += 14
+                    recovered_count += 1
+                except:
+                    # Textbox fallback
+                    try:
+                        rect = fitz.Rect(margin_left, current_y - 5, margin_right, current_y + 15)
+                        recovery_page.insert_textbox(rect, wrapped_line, fontsize=9)
+                        current_y += 14
+                        recovered_count += 1
+                    except:
+                        logger.warning(f"Could not recover line: {line[:50]}")
+        
+        logger.info(f"✅ Content recovery completed: {recovered_count} items recovered")
+        
+        return {
+            'success': True,
+            'recovered_items': recovered_count,
+            'message': f'Successfully recovered {recovered_count} missing content items'
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Content recovery failed: {e}")
+        return {
+            'success': False,
+            'recovered_items': 0,
+            'message': f'Recovery failed: {str(e)}'
+        }
 
 def _parse_resume_sections(text_content: str) -> List[Dict[str, Any]]:
     """Parse resume text into structured sections with better detection"""
@@ -757,53 +1093,145 @@ def _render_section_to_pdf(page: fitz.Page, section: Dict[str, Any], margin_left
         return current_y + 20
 
 
-def _wrap_text_conservative(text: str, max_width: int, fontsize: int = 10) -> List[str]:
-    """Conservative text wrapping that preserves all content"""
+def _wrap_text_with_measurement(text: str, max_width: int, fontsize: int = 10, fontname: str = "Helvetica") -> List[str]:
+    """Accurate text wrapping using PyMuPDF text measurement - GUARANTEES no content loss"""
+    if not text or not text.strip():
+        return [text] if text else []
+    
+    try:
+        # Create a temporary document for text measurement
+        temp_doc = fitz.open()
+        temp_page = temp_doc.new_page()
+        
+        # Test if the entire text fits on one line
+        text_width = temp_page.get_textlength(text, fontname=fontname, fontsize=fontsize)
+        temp_doc.close()
+        
+        if text_width <= max_width:
+            return [text]
+        
+        # Text needs wrapping - use word-by-word approach with accurate measurement
+        words = text.split(' ')
+        lines = []
+        current_line = []
+        
+        temp_doc = fitz.open()
+        temp_page = temp_doc.new_page()
+        
+        for word in words:
+            # Test adding this word to current line
+            test_line = ' '.join(current_line + [word])
+            test_width = temp_page.get_textlength(test_line, fontname=fontname, fontsize=fontsize)
+            
+            if test_width <= max_width:
+                current_line.append(word)
+            else:
+                # Current line is full, save it and start new line
+                if current_line:
+                    lines.append(' '.join(current_line))
+                
+                # Handle very long single words
+                word_width = temp_page.get_textlength(word, fontname=fontname, fontsize=fontsize)
+                if word_width > max_width:
+                    # Word too long for line - split it character by character
+                    char_lines = _split_long_word_safely(word, max_width, fontsize, fontname, temp_page)
+                    lines.extend(char_lines)
+                    current_line = []
+                else:
+                    current_line = [word]
+        
+        # Add any remaining words
+        if current_line:
+            lines.append(' '.join(current_line))
+        
+        temp_doc.close()
+        
+        # CRITICAL: Ensure we never return empty list for non-empty input
+        if not lines and text.strip():
+            lines = [text]  # Fallback to original text
+        
+        return lines
+        
+    except Exception as e:
+        logger.error(f"❌ Text measurement failed: {e}, falling back to safe wrapping")
+        # Fallback to safe character-based wrapping
+        return _wrap_text_safe_fallback(text, max_width, fontsize)
+
+def _split_long_word_safely(word: str, max_width: int, fontsize: int, fontname: str, page: fitz.Page) -> List[str]:
+    """Split a word that's too long for a line, ensuring no content loss"""
+    if not word:
+        return []
+    
+    lines = []
+    remaining = word
+    
+    while remaining:
+        # Find the longest substring that fits
+        best_length = 1  # Always include at least one character
+        
+        for i in range(1, len(remaining) + 1):
+            test_text = remaining[:i]
+            test_width = page.get_textlength(test_text, fontname=fontname, fontsize=fontsize)
+            if test_width <= max_width:
+                best_length = i
+            else:
+                break
+        
+        # Take the best fitting substring
+        lines.append(remaining[:best_length])
+        remaining = remaining[best_length:]
+    
+    return lines
+
+def _wrap_text_safe_fallback(text: str, max_width: int, fontsize: int) -> List[str]:
+    """Safe fallback text wrapping that guarantees content preservation"""
     if not text:
         return []
     
-    # More conservative character estimate
-    chars_per_line = int(max_width // (fontsize * 0.5))  # More conservative estimate
+    # Very conservative character estimate as fallback
+    chars_per_line = max(10, int(max_width // (fontsize * 0.4)))  # Very conservative
     
     if len(text) <= chars_per_line:
         return [text]
     
-    words = text.split(' ')
     lines = []
+    words = text.split(' ')
     current_line = []
     current_length = 0
     
     for word in words:
-        # Check if adding this word would exceed the line length
-        if current_length + len(word) + 1 <= chars_per_line:
+        word_length = len(word)
+        
+        # Check if we can add this word
+        if current_length + word_length + 1 <= chars_per_line and current_line:
             current_line.append(word)
-            current_length += len(word) + 1
+            current_length += word_length + 1
+        elif current_length + word_length <= chars_per_line and not current_line:
+            current_line.append(word)
+            current_length = word_length
         else:
-            # Finish current line if it has content
+            # Save current line if it has content
             if current_line:
                 lines.append(' '.join(current_line))
             
-            # Handle very long single words
-            if len(word) > chars_per_line:
-                # Split long words
+            # Handle long words
+            if word_length > chars_per_line:
+                # Split long word
                 while len(word) > chars_per_line:
                     lines.append(word[:chars_per_line])
                     word = word[chars_per_line:]
-                if word:  # Add remaining part
-                    current_line = [word]
-                    current_length = len(word)
-                else:
-                    current_line = []
-                    current_length = 0
+                current_line = [word] if word else []
+                current_length = len(word) if word else 0
             else:
                 current_line = [word]
-                current_length = len(word)
+                current_length = word_length
     
-    # Add any remaining content
+    # Add remaining content
     if current_line:
         lines.append(' '.join(current_line))
     
-    return lines if lines else [text]  # Ensure we never return empty
+    # CRITICAL: Never return empty for non-empty input
+    return lines if lines else [text]
 
 def _wrap_text(text: str, max_width: int, fontsize: int = 10) -> List[str]:
     """Simple text wrapping based on character count"""
