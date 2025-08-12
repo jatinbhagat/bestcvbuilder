@@ -28,47 +28,57 @@ console.log('🚨 CRITICAL: Verify this shows correct URL - should NOT be bestcv
  * Test API connectivity before processing
  */
 async function testAPIConnectivity() {
+    console.log('🔍 Testing API connectivity (non-blocking)...');
+    
+    let healthOk = false;
+    let corsOk = false;
+    
+    // Test 1: Simple health check with timeout
     try {
-        console.log('🔍 Testing API connectivity...');
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
         
-        // Test 1: Simple fetch to health endpoint
         const healthResponse = await fetch('https://bestcvbuilder-api.onrender.com/health', {
             method: 'GET',
             mode: 'cors',
-            cache: 'no-cache'
+            cache: 'no-cache',
+            signal: controller.signal
         });
         
-        console.log('✅ Health check response:', healthResponse.status);
+        clearTimeout(timeoutId);
+        healthOk = healthResponse.status === 200;
+        console.log(`${healthOk ? '✅' : '❌'} Health check: ${healthResponse.status}`);
         
-        // Test 2: CORS preflight test  
+    } catch (error) {
+        console.log(`❌ Health check failed: ${error.message}`);
+    }
+    
+    // Test 2: CORS preflight with timeout
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+        
         const corsResponse = await fetch(CV_PARSER_ENDPOINT, {
             method: 'OPTIONS',
             mode: 'cors',
             headers: {
                 'Content-Type': 'application/json',
-            }
+            },
+            signal: controller.signal
         });
         
-        console.log('✅ CORS preflight response:', corsResponse.status);
-        
-        // Test 3: Try test connectivity endpoint
-        try {
-            const testResponse = await fetch('https://bestcvbuilder-api.onrender.com/api/test-connectivity', {
-                method: 'GET',
-                mode: 'cors',
-                cache: 'no-cache'
-            });
-            console.log('✅ Test connectivity response:', testResponse.status);
-        } catch (e) {
-            console.log('⚠️ Test connectivity endpoint not available yet:', e.message);
-        }
-        
-        return true;
+        clearTimeout(timeoutId);
+        corsOk = corsResponse.status === 200;
+        console.log(`${corsOk ? '✅' : '❌'} CORS preflight: ${corsResponse.status}`);
         
     } catch (error) {
-        console.error('❌ API connectivity test failed:', error);
-        return false;
+        console.log(`❌ CORS test failed: ${error.message}`);
     }
+    
+    const overallOk = healthOk || corsOk; // Consider it OK if any test passes
+    console.log(`📊 Connectivity summary: Health=${healthOk}, CORS=${corsOk}, Overall=${overallOk}`);
+    
+    return overallOk;
 }
 
 
@@ -82,11 +92,10 @@ export async function analyzeResume(fileUrl, userId = null) {
     try {
         console.log('Starting ATS analysis for file:', fileUrl);
         
-        // Test connectivity first
-        const isConnected = await testAPIConnectivity();
-        if (!isConnected) {
-            throw new Error('API connectivity test failed. Cannot proceed with analysis.');
-        }
+        // Optional connectivity diagnostic (non-blocking)
+        testAPIConnectivity().catch(error => {
+            console.warn('⚠️ Background connectivity test failed:', error.message);
+        });
         
         const requestBody = {
             file_url: fileUrl,
