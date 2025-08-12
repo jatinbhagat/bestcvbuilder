@@ -185,6 +185,15 @@ def process_resume_fix(original_analysis: Dict[str, Any], user_email: str, payme
         # Step 5: Create improved PDF using ATS score-based approach
         print(f"📄 PROCESS-RESUME-FIX: Step 5 - Creating improved PDF (ATS strategy for score {original_score})...")
         logger.info("📄 Step 5: Creating improved PDF...")
+        
+        # CRITICAL: Validate improved text before PDF generation
+        if len(improved_text) < len(original_text) * 0.7:
+            print(f"❌ PROCESS-RESUME-FIX: CRITICAL ERROR - Improved text too short!")
+            print(f"❌ PROCESS-RESUME-FIX: Original: {len(original_text)} chars, Improved: {len(improved_text)} chars")
+            raise Exception(f"Improved text is too short: {len(improved_text)} vs {len(original_text)} (need at least 70%)")
+        
+        print(f"✅ PROCESS-RESUME-FIX: Text validation passed - {len(improved_text)} chars vs {len(original_text)} chars")
+        
         improved_pdf_bytes = update_pdf_text(
             original_pdf_bytes, original_text, improved_text, layout_info, original_score
         )

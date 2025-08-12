@@ -47,6 +47,9 @@ export async function analyzeResume(fileUrl, userId = null) {
             console.log('Including user_id for database saving:', userId);
         }
         
+        console.log('🚀 Making request to:', CV_PARSER_ENDPOINT);
+        console.log('📤 Request body:', requestBody);
+        
         const response = await fetch(CV_PARSER_ENDPOINT, {
             method: 'POST',
             headers: {
@@ -55,8 +58,17 @@ export async function analyzeResume(fileUrl, userId = null) {
             body: JSON.stringify(requestBody)
         });
         
+        console.log('📨 Response received:', response.status, response.statusText);
+        
         if (!response.ok) {
-            throw new Error(`API request failed: ${response.status}`);
+            let errorMessage = `API request failed: ${response.status}`;
+            try {
+                const errorData = await response.json();
+                errorMessage = `API request failed: ${errorData.error || response.statusText}`;
+            } catch (e) {
+                console.warn('Could not parse error response as JSON');
+            }
+            throw new Error(errorMessage);
         }
         
         const analysisResult = await response.json();
@@ -66,6 +78,22 @@ export async function analyzeResume(fileUrl, userId = null) {
         
     } catch (error) {
         console.error('ATS analysis failed:', error);
+        
+        // Provide more specific error messages
+        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+            const detailedError = new Error(
+                `Network connection failed when trying to reach: ${CV_PARSER_ENDPOINT}\n` +
+                `This could be due to:\n` +
+                `- Network connectivity issues\n` +
+                `- CORS restrictions\n` +
+                `- API server being down\n` +
+                `- Firewall or proxy blocking the request\n\n` +
+                `Original error: ${error.message}`
+            );
+            detailedError.name = 'NetworkError';
+            throw detailedError;
+        }
+        
         throw error;
     }
 }

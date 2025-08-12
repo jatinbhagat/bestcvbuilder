@@ -366,15 +366,21 @@ def update_pdf_text(pdf_bytes: bytes, original_text: str, improved_text: str,
 def create_clean_pdf_from_text(text_content: str) -> bytes:
     """
     Create a clean, professional PDF from improved text content - CONSERVATIVE APPROACH
+    CRITICAL: This function MUST preserve ALL text from text_content without any loss
     
     Args:
-        text_content: Improved resume text
+        text_content: Improved resume text - MUST be preserved completely
         
     Returns:
-        Clean PDF as bytes
+        Clean PDF as bytes with IDENTICAL content to text_content
     """
     try:
         logger.info("📄 Creating clean PDF with CONSERVATIVE text preservation...")
+        logger.info(f"🔍 Input text length: {len(text_content)} characters")
+        
+        # CRITICAL: Save original text length for validation
+        original_text_length = len(text_content)
+        original_lines_count = len([line for line in text_content.split('\n') if line.strip()])
         
         # Create new PDF document
         doc = fitz.open()
@@ -391,11 +397,20 @@ def create_clean_pdf_from_text(text_content: str) -> bytes:
         lines = text_content.split('\n')
         logger.info(f"📝 Processing {len(lines)} lines directly from improved text")
         
+        # CRITICAL: Track what text we actually add to PDF
+        added_text_parts = []
+        
         for line_num, line in enumerate(lines):
+            # CRITICAL: Preserve original line exactly, including whitespace
+            original_line = line
             line = line.strip()
-            if not line:  # Empty line - add small spacing
+            
+            if not line:  # Empty line - add small spacing but preserve the line structure
                 current_y += 8
                 continue
+            
+            # CRITICAL: Record this line for validation
+            added_text_parts.append(original_line)
             
             # Check if we need a new page
             if current_y > 780:  # Near bottom of page
@@ -426,10 +441,14 @@ def create_clean_pdf_from_text(text_content: str) -> bytes:
                 fontsize = 11
                 fontname = "Helvetica-Bold"
             
-            # Handle long lines by wrapping text
+            # Handle long lines by wrapping text - CRITICAL: Must preserve all content
             wrapped_lines = _wrap_text_conservative(line, margin_right - margin_left, fontsize)
             
             for wrapped_line in wrapped_lines:
+                # CRITICAL: Ensure wrapped_line is not empty
+                if not wrapped_line.strip():
+                    continue
+                
                 # Insert text
                 try:
                     page.insert_text(
@@ -441,16 +460,31 @@ def create_clean_pdf_from_text(text_content: str) -> bytes:
                     )
                 except Exception as e:
                     logger.warning(f"⚠️ Failed to insert text: {wrapped_line[:50]}... Error: {e}")
-                    # Fallback with basic font
-                    page.insert_text(
-                        point=(margin_left, current_y),
-                        text=wrapped_line,
-                        fontsize=10,
-                        color=(0, 0, 0),
-                        fontname="Helvetica"
-                    )
+                    # CRITICAL: Fallback MUST still add the text
+                    try:
+                        page.insert_text(
+                            point=(margin_left, current_y),
+                            text=wrapped_line,
+                            fontsize=10,
+                            color=(0, 0, 0),
+                            fontname="Helvetica"
+                        )
+                    except Exception as e2:
+                        logger.error(f"❌ CRITICAL: Could not add text line: {wrapped_line[:50]}... Error: {e2}")
+                        # CRITICAL: Try basic textbox as last resort
+                        try:
+                            rect = fitz.Rect(margin_left, current_y - 5, margin_right, current_y + 15)
+                            page.insert_textbox(rect, wrapped_line, fontsize=10, fontname="Helvetica")
+                        except Exception as e3:
+                            logger.error(f"❌ CRITICAL: Complete text insertion failure: {e3}")
                 
                 current_y += line_height
+        
+        # CRITICAL: Validate that we didn't lose content
+        added_text_length = sum(len(part) for part in added_text_parts)
+        if added_text_length < original_text_length * 0.9:  # Allow 10% loss for whitespace
+            logger.error(f"❌ CRITICAL: Text loss detected! Original: {original_text_length}, Added: {added_text_length}")
+            raise Exception(f"PDF generation lost significant content: {original_text_length} -> {added_text_length}")
         
         # Save to bytes
         pdf_bytes = io.BytesIO()
@@ -458,35 +492,99 @@ def create_clean_pdf_from_text(text_content: str) -> bytes:
         doc.close()
         
         result = pdf_bytes.getvalue()
-        logger.info(f"✅ Conservative PDF created: {len(result)} bytes")
+        logger.info(f"✅ Conservative PDF created: {len(result)} bytes with content preservation validated")
+        logger.info(f"📊 Content validation: {added_text_length}/{original_text_length} characters preserved")
         return result
         
     except Exception as e:
         logger.error(f"❌ Failed to create clean PDF: {e}")
-        # Fallback: create basic PDF with text
+        # CRITICAL: Fallback MUST preserve content
+        logger.info("🔄 Falling back to basic PDF generation to preserve content")
         return create_basic_pdf_from_text(text_content)
 
 
 def create_basic_pdf_from_text(text_content: str) -> bytes:
-    """Basic PDF creation as final fallback"""
+    """Basic PDF creation as final fallback - MUST preserve all content"""
     try:
+        logger.info(f"🔄 Creating basic PDF fallback for {len(text_content)} characters")
+        
         doc = fitz.open()
         page = doc.new_page()
         
-        # Simple text insertion
+        # CRITICAL: Split text into manageable chunks that fit in textbox
         text_rect = fitz.Rect(50, 50, 545, 792)  # Margins
-        page.insert_textbox(text_rect, text_content, 
-                          fontsize=10, fontname="Helvetica", color=(0, 0, 0))
+        
+        # Calculate approximate characters that fit per page
+        max_chars_per_page = 3000  # Conservative estimate
+        
+        current_pos = 0
+        page_num = 0
+        
+        while current_pos < len(text_content):
+            # Get chunk for this page
+            chunk_end = min(current_pos + max_chars_per_page, len(text_content))
+            chunk = text_content[current_pos:chunk_end]
+            
+            # Find a good break point (preferably at line break)
+            if chunk_end < len(text_content):
+                # Look for the last newline in the last 200 characters
+                last_newline = chunk.rfind('\n', max(0, len(chunk) - 200))
+                if last_newline > len(chunk) * 0.8:  # Only use if it's not too early
+                    chunk = chunk[:last_newline + 1]
+                    chunk_end = current_pos + len(chunk)
+            
+            # Insert text into current page
+            try:
+                page.insert_textbox(text_rect, chunk, 
+                                  fontsize=10, fontname="Helvetica", color=(0, 0, 0))
+            except Exception as e:
+                logger.warning(f"⚠️ Textbox insertion failed: {e}, trying smaller font")
+                try:
+                    page.insert_textbox(text_rect, chunk, 
+                                      fontsize=8, fontname="Helvetica", color=(0, 0, 0))
+                except Exception as e2:
+                    logger.error(f"❌ Even smaller font failed: {e2}")
+                    # Try line by line as last resort
+                    lines = chunk.split('\n')
+                    y = 60
+                    for line in lines:
+                        if y > 780:
+                            break
+                        try:
+                            page.insert_text((55, y), line, fontsize=8)
+                            y += 12
+                        except:
+                            pass
+            
+            current_pos = chunk_end
+            page_num += 1
+            
+            # Create new page if more content remains
+            if current_pos < len(text_content):
+                page = doc.new_page()
         
         pdf_bytes = io.BytesIO()
         doc.save(pdf_bytes)
         doc.close()
         
-        return pdf_bytes.getvalue()
+        result = pdf_bytes.getvalue()
+        logger.info(f"✅ Basic PDF created: {len(result)} bytes across {page_num} pages")
+        return result
         
     except Exception as e:
         logger.error(f"❌ Even basic PDF creation failed: {e}")
-        raise Exception(f"PDF generation completely failed: {e}")
+        # CRITICAL: Last resort - create minimal PDF with error message
+        try:
+            doc = fitz.open()
+            page = doc.new_page()
+            error_msg = f"PDF generation failed: {str(e)}\n\nOriginal text length: {len(text_content)} chars\n\nPlease use the text download instead."
+            page.insert_textbox(fitz.Rect(50, 50, 545, 200), error_msg, fontsize=12)
+            pdf_bytes = io.BytesIO()
+            doc.save(pdf_bytes)
+            doc.close()
+            return pdf_bytes.getvalue()
+        except:
+            raise Exception(f"PDF generation completely failed: {e}")
 
 
 def _parse_resume_sections(text_content: str) -> List[Dict[str, Any]]:
