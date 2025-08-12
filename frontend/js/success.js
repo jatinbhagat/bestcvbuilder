@@ -10,6 +10,7 @@ const originalScore = document.getElementById('originalScore');
 const newScore = document.getElementById('newScore');
 const improvement = document.getElementById('improvement');
 const downloadBtn = document.getElementById('downloadBtn');
+const downloadTextBtn = document.getElementById('downloadTextBtn');
 const submitFeedbackBtn = document.getElementById('submitFeedbackBtn');
 const newAnalysisBtn = document.getElementById('newAnalysisBtn');
 const homeBtn = document.getElementById('homeBtn');
@@ -88,9 +89,13 @@ function displayRewriteResults() {
  * Set up event listeners
  */
 function setupEventListeners() {
-    // Download button
+    // Download buttons
     if (downloadBtn) {
         downloadBtn.addEventListener('click', handleDownload);
+    }
+    
+    if (downloadTextBtn) {
+        downloadTextBtn.addEventListener('click', handleTextDownload);
     }
     
     // Feedback submission
@@ -119,11 +124,11 @@ function setupEventListeners() {
 }
 
 /**
- * Handle resume download
+ * Handle resume download (PDF)
  */
 async function handleDownload() {
     try {
-        console.log('Initiating resume download...');
+        console.log('Initiating PDF download...');
         console.log('Rewrite data:', rewriteData);
         
         if (!rewriteData) {
@@ -133,11 +138,11 @@ async function handleDownload() {
         
         if (!rewriteData.improved_resume_url) {
             console.error('Missing improved_resume_url in rewrite data');
-            showError('Download link not available. Please contact support.');
+            showError('PDF download link not available. Please contact support.');
             return;
         }
         
-        // Create a temporary link to download the file
+        // Create a temporary link to download the PDF file
         const link = document.createElement('a');
         link.href = rewriteData.improved_resume_url;
         link.download = `improved_resume_${Date.now()}.pdf`;
@@ -149,11 +154,49 @@ async function handleDownload() {
         document.body.removeChild(link);
         
         // Show success message
-        showSuccess('Download started! Check your downloads folder.');
+        showSuccess('PDF download started! Check your downloads folder.');
         
     } catch (error) {
-        console.error('Download failed:', error);
-        showError('Download failed. Please try again or contact support.');
+        console.error('PDF download failed:', error);
+        showError('PDF download failed. Please try again or contact support.');
+    }
+}
+
+/**
+ * Handle text file download
+ */
+async function handleTextDownload() {
+    try {
+        console.log('Initiating text download...');
+        
+        if (!rewriteData) {
+            showError('No rewrite data available. Please try the process again.');
+            return;
+        }
+        
+        if (!rewriteData.improved_text_url) {
+            console.error('Missing improved_text_url in rewrite data');
+            showError('Text download link not available. Please contact support.');
+            return;
+        }
+        
+        // Create a temporary link to download the text file
+        const link = document.createElement('a');
+        link.href = rewriteData.improved_text_url;
+        link.download = `improved_resume_${Date.now()}.txt`;
+        link.target = '_blank';
+        
+        // Trigger download
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Show success message
+        showSuccess('Text file download started! You can now format this however you like.');
+        
+    } catch (error) {
+        console.error('Text download failed:', error);
+        showError('Text download failed. Please try again or contact support.');
     }
 }
 

@@ -190,11 +190,13 @@ def process_resume_fix(original_analysis: Dict[str, Any], user_email: str, payme
         )
         print(f"✅ PROCESS-RESUME-FIX: Improved PDF created - {len(improved_pdf_bytes)} bytes")
         
-        # Step 6: Save improved PDF and get URL
-        print(f"💾 PROCESS-RESUME-FIX: Step 6 - Saving improved PDF...")
-        logger.info("💾 Step 6: Saving improved PDF...")
+        # Step 6: Save improved PDF and text files
+        print(f"💾 PROCESS-RESUME-FIX: Step 6 - Saving improved PDF and text files...")
+        logger.info("💾 Step 6: Saving improved PDF and text files...")
         improved_pdf_url = save_improved_pdf(improved_pdf_bytes, user_email, payment_id)
+        improved_text_url = save_improved_text(improved_text, user_email, payment_id)
         print(f"✅ PROCESS-RESUME-FIX: PDF saved with URL: {improved_pdf_url}")
+        print(f"✅ PROCESS-RESUME-FIX: Text saved with URL: {improved_text_url}")
         
         # Step 7: Calculate new ATS score
         print(f"📊 PROCESS-RESUME-FIX: Step 7 - Calculating new ATS score...")
@@ -216,6 +218,7 @@ def process_resume_fix(original_analysis: Dict[str, Any], user_email: str, payme
             'new_score': new_score,
             'score_improvement': score_improvement,
             'improved_resume_url': improved_pdf_url,
+            'improved_text_url': improved_text_url,  # Include improved text file
             'feedback_addressed': feedback_list,
             'processing_time': 'completed',
             'payment_id': payment_id,
@@ -376,6 +379,34 @@ def save_improved_pdf(pdf_bytes: bytes, user_email: str, payment_id: str) -> str
         print(f"❌ SAVE-PDF: Error: {str(e)}")
         logger.error(f"Failed to save improved PDF: {e}")
         raise Exception(f"Failed to save improved PDF: {str(e)}")
+
+def save_improved_text(text_content: str, user_email: str, payment_id: str) -> str:
+    """
+    Save improved text content and return accessible URL for download
+    """
+    try:
+        import base64
+        
+        # Create filename
+        filename = f"improved_resume_{payment_id}_{user_email.split('@')[0]}.txt"
+        
+        print(f"💾 SAVE-TEXT: Creating text file: {filename}")
+        print(f"💾 SAVE-TEXT: Text size: {len(text_content)} characters")
+        
+        # Create data URL for immediate download
+        text_base64 = base64.b64encode(text_content.encode('utf-8')).decode('utf-8')
+        data_url = f"data:text/plain;base64,{text_base64}"
+        
+        print(f"💾 SAVE-TEXT: Created data URL (length: {len(data_url)})")
+        print(f"✅ SAVE-TEXT: Text file ready for download")
+        
+        logger.info(f"📁 Text converted to data URL for download")
+        return data_url
+        
+    except Exception as e:
+        print(f"❌ SAVE-TEXT: Error: {str(e)}")
+        logger.error(f"Failed to save improved text: {e}")
+        raise Exception(f"Failed to save improved text: {str(e)}")
 
 def error_response(message: str, status_code: int) -> Dict[str, Any]:
     """Create standardized error response"""

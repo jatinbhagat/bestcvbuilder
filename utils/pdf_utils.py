@@ -344,16 +344,16 @@ def update_pdf_text(pdf_bytes: bytes, original_text: str, improved_text: str,
     """
     try:
         if ats_score <= 60:
-            # Major overhaul - create clean PDF from scratch
-            logger.info(f"🔄 Major overhaul (ATS {ats_score}) - Creating clean PDF from improved text")
+            # Complete overhaul - create professional clean PDF from restructured content
+            logger.info(f"🔄 Complete Professional Overhaul (ATS {ats_score}) - Creating modern ATS-optimized PDF")
             return create_clean_pdf_from_text(improved_text)
-        elif ats_score <= 70:
-            # Hybrid approach - ALSO use clean PDF to avoid text replacement issues
-            logger.info(f"🔄 Hybrid approach (ATS {ats_score}) - Creating clean PDF to avoid text loss")
+        elif ats_score < 70:  # 61-69
+            # Hybrid approach - clean PDF with balanced improvements
+            logger.info(f"🔄 Balanced Hybrid (ATS {ats_score}) - Creating improved PDF with selective enhancements")
             return create_clean_pdf_from_text(improved_text)
-        else:
-            # Minor fix only - try very conservative layout preservation
-            logger.info(f"🔄 Minor fix (ATS {ats_score}) - Conservative layout preservation")
+        else:  # 70+
+            # Ultra-conservative - preserve original layout with minimal changes
+            logger.info(f"🔄 Ultra-Conservative (ATS {ats_score}) - Preserving original layout with minimal edits")
             replacer = PDFTextReplacer()
             return replacer.update_pdf_text(
                 pdf_bytes, original_text, improved_text, layout_info["text_blocks"], conservative=True

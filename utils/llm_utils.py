@@ -161,84 +161,122 @@ def improve_resume_with_llm(resume_text: str, feedback_list: List[str], ats_scor
 
 
 def _create_resume_improvement_prompt(resume_text: str, feedback_list: List[str], ats_score: int) -> str:
-    """Create comprehensive prompt for Gemini resume improvement based on ATS score strategy"""
+    """Create score-specific prompts for Gemini resume improvement with distinct strategies"""
     feedback_text = "\n".join([f"- {feedback}" for feedback in feedback_list])
     
-    # Determine strategy based on ATS score
     if ats_score >= 70:
-        strategy = "Minor Fix"
-        instructions = """
-**MINOR FIX APPROACH (ATS Score ≥ 70):**
-- Keep the same structure, tone, and formatting as the original CV
-- Fix only the specific issues from ATS feedback
-- Add missing keywords naturally without keyword stuffing
-- Ensure grammar, clarity, and tense consistency
-- Preserve all achievements and details exactly as written
-- Make minimal changes while addressing feedback points"""
-        
-    elif ats_score <= 60:
-        strategy = "Major Overhaul"
-        instructions = """
-**MAJOR OVERHAUL APPROACH (ATS Score ≤ 60):**
-- Rewrite into a clean, modern, ATS-friendly format
-- Organize sections logically: Professional Summary, Core Skills, Professional Experience, Education, Key Achievements
-- Include all key details from the original CV but improve presentation
-- Use concise bullet points with measurable outcomes
-- Add strong action verbs and quantifiable results
-- Ensure comprehensive ATS keyword coverage
-- Create professional summary highlighting key qualifications
-- Structure each role with clear achievements and impact"""
-        
-    else:  # 60-69
-        strategy = "Hybrid Approach"
-        instructions = """
-**HYBRID APPROACH (ATS Score 60-69):**
-- Preserve professional tone and style but reorganize sections for better ATS parsing
-- Improve headings, section ordering, and overall structure
-- Add missing keywords and fill content gaps
-- Keep strong sections largely unchanged
-- Enhance weak areas with better formatting and content
-- Balance preservation of original style with ATS optimization"""
-    
-    prompt = f"""You are an expert ATS resume optimizer. Your CRITICAL task is to improve the CV while PRESERVING ALL ORIGINAL CONTENT.
+        # ULTRA-CONSERVATIVE: Minimal changes only
+        strategy = "Ultra-Conservative Minor Fix"
+        prompt = f"""You are a professional resume editor making MINIMAL corrections only. This resume already scores {ats_score}/100 (GOOD), so make only tiny improvements.
 
-**ABSOLUTELY CRITICAL REQUIREMENTS:**
-1. PRESERVE ALL job titles, company names, dates, and achievements from original
-2. PRESERVE ALL skills, certifications, education details, and contact information
-3. PRESERVE ALL bullet points and accomplishments - DO NOT delete any content
-4. PRESERVE ALL quantifiable metrics, numbers, percentages, and results
-5. Only IMPROVE language, structure, and add missing ATS keywords - NEVER remove content
+**ULTRA-CONSERVATIVE RULES:**
+1. Change ONLY specific grammar errors, typos, and weak phrases
+2. Add ONLY 2-3 missing keywords naturally into existing sentences  
+3. Keep EXACT same structure, formatting, bullet points, and sections
+4. Preserve ALL symbols (•, -, *, Q, ½, ¯, Ó, etc.) exactly as written
+5. Maintain EXACT same line breaks and spacing
+6. Do NOT reorganize, reformat, or restructure anything
+7. Do NOT consolidate bullet points or merge sections
+8. Do NOT change job titles, company names, or dates
+9. Make changes so subtle that 90% of original text remains unchanged
 
-**CURRENT STRATEGY: {strategy} (ATS Score: {ats_score})**
-
-{instructions}
-
-## ATS FEEDBACK TO ADDRESS:
+**SPECIFIC ISSUES TO FIX:**
 {feedback_text}
 
-## CONTENT PRESERVATION RULES:
-- Every job position from original must appear in improved version
-- Every skill mentioned in original must appear in improved version  
-- Every achievement and metric must be preserved
-- Every education degree and certification must be included
-- Every date range must be maintained exactly
-- If original has incomplete sections, FILL them - don't delete them
+**APPROACH:**
+- Find the specific weak phrases mentioned in feedback
+- Replace ONLY those phrases with stronger versions
+- Add 1-2 keywords per section if missing critical terms
+- Fix any obvious grammar/spelling errors
+- Everything else stays EXACTLY the same
 
-## FORMAT REQUIREMENTS:
-- Use clear section headers (PROFESSIONAL SUMMARY, PROFESSIONAL EXPERIENCE, EDUCATION, SKILLS, CERTIFICATIONS)
-- Maintain chronological order for experience
-- Use bullet points for achievements under each job
-- Keep plain text format suitable for PDF conversion
-- NO markdown, NO explanations, NO metadata
-
-## ORIGINAL CV TO IMPROVE:
+**ORIGINAL RESUME:**
 {resume_text}
 
-## OUTPUT INSTRUCTIONS:
-Return ONLY the complete improved CV text. Include EVERY piece of information from the original CV. The improved version should be longer or same length as original - NEVER shorter.
+**OUTPUT:** Return the resume with minimal edits. It should look almost identical to the original with just small improvements.
 
-IMPROVED CV:"""
+MINIMALLY IMPROVED RESUME:"""
 
+    elif ats_score <= 60:
+        # COMPLETE OVERHAUL: Professional template restructure
+        strategy = "Complete Professional Overhaul"  
+        prompt = f"""You are a professional resume writer creating a modern, ATS-optimized resume. This resume scores {ats_score}/100 (POOR), so completely rewrite it using professional standards.
+
+**COMPLETE OVERHAUL STRATEGY:**
+1. Restructure into modern, ATS-friendly format with optimal section order
+2. Create compelling professional summary with key achievements
+3. Organize all experience with strong action verbs and quantified results
+4. Use consistent professional formatting throughout
+5. Add comprehensive industry keywords and technical terms
+6. Ensure every bullet point shows measurable impact
+7. Create logical flow optimized for ATS parsing
+
+**REQUIRED SECTIONS (in this order):**
+1. **PROFESSIONAL SUMMARY** - 3-4 sentences highlighting key qualifications and achievements
+2. **CORE COMPETENCIES** - Skills organized by category with keywords
+3. **PROFESSIONAL EXPERIENCE** - Reverse chronological with strong bullet points
+4. **EDUCATION** - Degrees with institutions and dates
+5. **CERTIFICATIONS** - Professional certifications and training
+6. **KEY ACHIEVEMENTS** - Major accomplishments with metrics
+
+**PROFESSIONAL FORMATTING RULES:**
+- Use consistent bullet points (• or -)
+- Start each bullet with strong action verbs (Led, Developed, Implemented, Achieved, etc.)
+- Include specific metrics, percentages, dollar amounts where possible
+- Use present tense for current role, past tense for previous roles
+- Ensure 15+ industry-relevant keywords throughout
+- Make each bullet point show clear business impact
+
+**CONTENT TO PRESERVE AND ENHANCE:**
+{feedback_text}
+
+**ORIGINAL CONTENT:**
+{resume_text}
+
+**OUTPUT:** Return a completely restructured, professional resume that includes ALL original information but in an optimized, ATS-friendly format.
+
+PROFESSIONALLY RESTRUCTURED RESUME:"""
+
+    else:  # 60-69
+        # BALANCED HYBRID: Selective improvements
+        strategy = "Balanced Hybrid Improvement"
+        prompt = f"""You are a professional resume optimizer making balanced improvements. This resume scores {ats_score}/100 (FAIR), so improve weak areas while preserving strong sections.
+
+**HYBRID IMPROVEMENT STRATEGY:**
+1. Keep strong sections mostly unchanged (just minor polish)
+2. Significantly improve weak sections identified in feedback
+3. Add missing keywords throughout naturally
+4. Enhance formatting consistency without complete restructure
+5. Strengthen weak bullet points with better action verbs and metrics
+6. Preserve good structure but optimize section headers
+
+**SELECTIVE IMPROVEMENT RULES:**
+- Professional Summary: Enhance if weak, preserve if strong
+- Experience: Keep good descriptions, strengthen weak ones
+- Skills: Organize better and add missing technical terms
+- Achievements: Quantify better but keep existing accomplishments
+- Formatting: Make consistent but don't completely change structure
+
+**AREAS NEEDING IMPROVEMENT:**
+{feedback_text}
+
+**BALANCED APPROACH:**
+- Preserve sections that work well
+- Focus improvements on areas mentioned in feedback  
+- Add 8-12 relevant keywords naturally
+- Improve weak bullet points with stronger action verbs
+- Enhance formatting consistency
+- Strengthen professional summary if needed
+- Better organize skills and competencies
+
+**ORIGINAL RESUME:**
+{resume_text}
+
+**OUTPUT:** Return an improved resume that balances preservation of good content with meaningful enhancements of weak areas.
+
+BALANCED IMPROVED RESUME:"""
+
+    print(f"📝 LLM-UTILS: Using {strategy} strategy for ATS score {ats_score}")
     return prompt
 
 def _parse_gemini_improvement_response(response_text: str, original_text: str) -> str:
