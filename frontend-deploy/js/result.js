@@ -640,15 +640,37 @@ async function saveAnalysisToDatabase() {
  * Process analysis data to extract actionable insights
  */
 function processAnalysisInsights(data) {
-    // Check if the data already has enhanced structure from new algorithm
-    if (data.critical_issues && data.quick_wins) {
-        // Use the new enhanced algorithm data directly
+    // Check if the data has our new detailed issues structure
+    if (data.critical_issues && data.quick_wins && data.content_improvements) {
+        // Use the new detailed issues algorithm data directly
         return {
             quickWins: data.quick_wins || [],
             criticalIssues: data.critical_issues || [],
+            contentImprovements: data.content_improvements || [],
+            beforeItems: data.transformation_preview?.before || generateBeforeItems(data),
+            afterItems: data.transformation_preview?.after || generateAfterItems(data),
+            totalIssues: data.total_issues || ((data.critical_issues?.length || 0) + (data.quick_wins?.length || 0) + (data.content_improvements?.length || 0)),
+            potentialImprovement: data.potential_improvement || 10,
+            realisticTargetScore: data.realistic_target_score || Math.min(data.score + 10, 95),
+            estimatedTime: data.estimated_time || '30 minutes',
+            interviewMetrics: data.interview_metrics || null,
+            transformationPreview: data.transformation_preview || null
+        };
+    }
+    
+    // Check if the data has legacy enhanced structure  
+    if (data.critical_issues && data.quick_wins) {
+        // Use the legacy enhanced algorithm data directly
+        return {
+            quickWins: data.quick_wins || [],
+            criticalIssues: data.critical_issues || [],
+            contentImprovements: [],
             beforeItems: data.transformation_preview?.before || generateBeforeItems(data),
             afterItems: data.transformation_preview?.after || generateAfterItems(data),
             totalIssues: (data.critical_issues?.length || 0) + (data.quick_wins?.length || 0),
+            potentialImprovement: Math.min(data.score * 0.3, 25),
+            realisticTargetScore: Math.min(data.score + 25, 95),
+            estimatedTime: '45 minutes',
             interviewMetrics: data.interview_metrics || null,
             transformationPreview: data.transformation_preview || null
         };
@@ -869,20 +891,32 @@ function displayQuickWins(quickWins) {
         return;
     }
     
-    // Show only top 2 quick wins for cleaner summary
+    // Show top 2 quick wins with enhanced details
     const topWins = quickWins.slice(0, 2);
     
     topWins.forEach(win => {
         const div = document.createElement('div');
-        div.className = 'bg-blue-50 rounded-lg p-3 border-l-4 border-blue-400';
+        div.className = 'bg-blue-50 rounded-lg p-4 border-l-4 border-blue-400 mb-3';
         
-        // Handle both new and legacy data formats
+        // Handle both new detailed and legacy data formats
         const pointsGain = win.points_gain || win.pointsGain || 3;
+        const timeToFix = win.time_to_fix || '2 minutes';
+        const category = win.category || 'Quick Fix';
+        const description = win.description || '';
+        const solution = win.solution || '';
         
         div.innerHTML = `
-            <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-800 font-medium flex-1">${win.title}</span>
-                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium ml-2">+${pointsGain}pts</span>
+            <div class="flex items-start justify-between mb-2">
+                <div class="flex-1">
+                    <h4 class="text-sm font-semibold text-gray-900 mb-1">${win.title}</h4>
+                    <div class="flex items-center space-x-2 mb-2">
+                        <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">${category}</span>
+                        <span class="text-xs text-gray-600">⚡ ${timeToFix}</span>
+                    </div>
+                    ${description ? `<p class="text-xs text-gray-700 mb-2">${description}</p>` : ''}
+                    ${solution ? `<p class="text-xs text-green-800 bg-green-50 p-2 rounded border-l-2 border-green-200"><strong>Quick Fix:</strong> ${solution}</p>` : ''}
+                </div>
+                <span class="text-xs bg-blue-600 text-white px-2 py-1 rounded-full font-medium ml-3">+${pointsGain}pts</span>
             </div>
         `;
         quickWinsList.appendChild(div);
@@ -891,8 +925,12 @@ function displayQuickWins(quickWins) {
     // Add "show more" if there are additional wins
     if (quickWins.length > 2) {
         const showMore = document.createElement('div');
-        showMore.className = 'text-xs text-blue-600 font-medium text-center pt-2';
-        showMore.textContent = `+${quickWins.length - 2} more fixes available`;
+        showMore.className = 'text-center pt-2';
+        showMore.innerHTML = `
+            <button class="text-xs text-blue-600 hover:text-blue-800 font-medium bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-lg border border-blue-200 transition-colors">
+                View ${quickWins.length - 2} More Quick Fixes →
+            </button>
+        `;
         quickWinsList.appendChild(showMore);
     }
 }
@@ -911,20 +949,32 @@ function displayCriticalIssues(criticalIssues) {
         return;
     }
     
-    // Show only top 3 critical issues for cleaner summary
+    // Show top 3 critical issues with enhanced details
     const topIssues = criticalIssues.slice(0, 3);
     
     topIssues.forEach(issue => {
         const div = document.createElement('div');
-        div.className = 'bg-red-50 rounded-lg p-3 border-l-4 border-red-400';
+        div.className = 'bg-red-50 rounded-lg p-4 border-l-4 border-red-400 mb-3';
         
-        // Handle both new and legacy data formats
+        // Handle both new detailed and legacy data formats
         const pointsGain = issue.points_gain || issue.pointsGain || 8;
+        const timeToFix = issue.time_to_fix || '5 minutes';
+        const category = issue.category || 'General';
+        const description = issue.description || '';
+        const solution = issue.solution || '';
         
         div.innerHTML = `
-            <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-800 font-medium flex-1">${issue.title}</span>
-                <span class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-medium ml-2">+${pointsGain}pts</span>
+            <div class="flex items-start justify-between mb-2">
+                <div class="flex-1">
+                    <h4 class="text-sm font-semibold text-gray-900 mb-1">${issue.title}</h4>
+                    <div class="flex items-center space-x-2 mb-2">
+                        <span class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">${category}</span>
+                        <span class="text-xs text-gray-600">⏱ ${timeToFix}</span>
+                    </div>
+                    ${description ? `<p class="text-xs text-gray-700 mb-2">${description}</p>` : ''}
+                    ${solution ? `<p class="text-xs text-blue-800 bg-blue-50 p-2 rounded border-l-2 border-blue-200"><strong>Solution:</strong> ${solution}</p>` : ''}
+                </div>
+                <span class="text-xs bg-red-600 text-white px-2 py-1 rounded-full font-medium ml-3">+${pointsGain}pts</span>
             </div>
         `;
         criticalIssuesList.appendChild(div);
@@ -933,8 +983,12 @@ function displayCriticalIssues(criticalIssues) {
     // Add "show more" if there are additional issues
     if (criticalIssues.length > 3) {
         const showMore = document.createElement('div');
-        showMore.className = 'text-xs text-red-600 font-medium text-center pt-2';
-        showMore.textContent = `+${criticalIssues.length - 3} more issues to fix`;
+        showMore.className = 'text-center pt-2';
+        showMore.innerHTML = `
+            <button class="text-xs text-red-600 hover:text-red-800 font-medium bg-red-50 hover:bg-red-100 px-3 py-2 rounded-lg border border-red-200 transition-colors">
+                View ${criticalIssues.length - 3} More Critical Issues →
+            </button>
+        `;
         criticalIssuesList.appendChild(showMore);
     }
 }

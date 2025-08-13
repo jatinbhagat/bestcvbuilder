@@ -1873,6 +1873,225 @@ def generate_next_steps(score: int, components: Dict[str, Any]) -> List[str]:
     
     return next_steps[:5]  # Limit to 5 steps
 
+def generate_detailed_issues_analysis(analysis: Dict[str, Any], content: str) -> Dict[str, Any]:
+    """Generate specific, actionable issues with detailed analysis"""
+    
+    score = analysis['ats_score']
+    components = analysis['detailed_analysis']
+    
+    critical_issues = []
+    quick_fixes = []
+    content_improvements = []
+    
+    # CONTACT INFORMATION ANALYSIS
+    contact = components.get('contact', {})
+    contact_missing = contact.get('missing', [])
+    
+    if 'email' in contact_missing:
+        critical_issues.append({
+            'title': 'Missing email address',
+            'category': 'Contact Information',
+            'description': 'Email address is required for ATS systems and recruiters',
+            'solution': 'Add your professional email address to the header (e.g., yourname@email.com)',
+            'time_to_fix': '1 minute',
+            'impact': 'Critical',
+            'points_gain': 12
+        })
+    
+    if 'phone' in contact_missing:
+        critical_issues.append({
+            'title': 'Missing phone number',
+            'category': 'Contact Information',
+            'description': 'Phone number is essential contact information for recruiters',
+            'solution': 'Add your phone number in standard format (e.g., +1 (555) 123-4567)',
+            'time_to_fix': '1 minute',
+            'impact': 'Critical',
+            'points_gain': 10
+        })
+    
+    if 'linkedin' in contact_missing:
+        quick_fixes.append({
+            'title': 'Add LinkedIn profile URL',
+            'category': 'Contact Information',
+            'description': 'LinkedIn profile increases credibility and networking opportunities',
+            'solution': 'Add your LinkedIn profile URL (linkedin.com/in/yourname)',
+            'time_to_fix': '2 minutes',
+            'impact': 'Medium',
+            'points_gain': 5
+        })
+    
+    # FORMATTING ANALYSIS
+    formatting = components.get('formatting', {})
+    formatting_issues = formatting.get('issues', [])
+    
+    if 'inconsistent_spacing' in formatting_issues:
+        quick_fixes.append({
+            'title': 'Fix inconsistent spacing',
+            'category': 'Formatting',
+            'description': 'Inconsistent spacing confuses ATS parsers',
+            'solution': 'Use consistent line spacing (1.15 or 1.5) and consistent margins throughout',
+            'time_to_fix': '3 minutes',
+            'impact': 'Medium',
+            'points_gain': 4
+        })
+    
+    if 'inconsistent_bullets' in formatting_issues:
+        quick_fixes.append({
+            'title': 'Standardize bullet points',
+            'category': 'Formatting',
+            'description': 'Mixed bullet styles reduce readability',
+            'solution': 'Use the same bullet style throughout (• or - consistently)',
+            'time_to_fix': '2 minutes',
+            'impact': 'Medium',
+            'points_gain': 3
+        })
+    
+    if 'font_issues' in formatting_issues:
+        critical_issues.append({
+            'title': 'Fix font consistency',
+            'category': 'Formatting',
+            'description': 'Multiple fonts or unusual fonts confuse ATS systems',
+            'solution': 'Use one professional font throughout (Arial, Calibri, or Times New Roman)',
+            'time_to_fix': '5 minutes',
+            'impact': 'High',
+            'points_gain': 8
+        })
+    
+    # KEYWORDS ANALYSIS
+    keywords = components.get('keywords', {})
+    missing_keywords = keywords.get('missing_keywords', [])
+    
+    if len(missing_keywords) > 0:
+        sample_keywords = missing_keywords[:5]  # Show up to 5 examples
+        content_improvements.append({
+            'title': f'Add {len(missing_keywords)} missing industry keywords',
+            'category': 'Keywords & Skills',
+            'description': f'Your resume lacks important keywords that ATS systems look for',
+            'solution': f'Add these keywords naturally: {", ".join(sample_keywords)}',
+            'time_to_fix': '10 minutes',
+            'impact': 'High',
+            'points_gain': min(len(missing_keywords), 15)
+        })
+    
+    # ACHIEVEMENTS ANALYSIS
+    achievements = components.get('achievements', {})
+    if achievements.get('score', 0) < 5:
+        # Analyze content for unquantified achievements
+        achievement_count = len(re.findall(r'[•\-\*]\s*[^•\-\*\n]+', content))
+        
+        content_improvements.append({
+            'title': 'Quantify your achievements with numbers',
+            'category': 'Content Quality',
+            'description': f'Found {achievement_count} bullet points that lack specific metrics',
+            'solution': 'Add numbers, percentages, or dollar amounts to your accomplishments (e.g., "Increased sales by 25%")',
+            'time_to_fix': '15 minutes',
+            'impact': 'High',
+            'points_gain': 12
+        })
+    
+    # STRUCTURE ANALYSIS
+    structure = components.get('structure', {})
+    missing_sections = structure.get('missing_sections', [])
+    
+    for section in missing_sections:
+        if section.lower() in ['experience', 'work experience', 'employment']:
+            critical_issues.append({
+                'title': 'Missing Work Experience section',
+                'category': 'Resume Structure',
+                'description': 'Work experience is essential for most resumes',
+                'solution': 'Add a dedicated "Work Experience" or "Professional Experience" section',
+                'time_to_fix': '20 minutes',
+                'impact': 'Critical',
+                'points_gain': 20
+            })
+        elif section.lower() in ['education']:
+            critical_issues.append({
+                'title': 'Missing Education section',
+                'category': 'Resume Structure',
+                'description': 'Education section is required for most positions',
+                'solution': 'Add an "Education" section with your degrees and institutions',
+                'time_to_fix': '10 minutes',
+                'impact': 'Critical',
+                'points_gain': 15
+            })
+        elif section.lower() in ['skills']:
+            quick_fixes.append({
+                'title': 'Add Skills section',
+                'category': 'Resume Structure',
+                'description': 'Skills section helps ATS match your qualifications',
+                'solution': 'Create a "Skills" section with 8-12 relevant technical and soft skills',
+                'time_to_fix': '8 minutes',
+                'impact': 'Medium',
+                'points_gain': 8
+            })
+    
+    # CONTENT QUALITY CHECKS
+    content_lower = content.lower()
+    
+    # Check for weak action verbs
+    weak_verbs = ['responsible for', 'worked on', 'helped with', 'involved in', 'participated in']
+    weak_verb_count = sum(1 for verb in weak_verbs if verb in content_lower)
+    
+    if weak_verb_count > 0:
+        content_improvements.append({
+            'title': f'Replace {weak_verb_count} weak action verbs',
+            'category': 'Content Quality',
+            'description': 'Weak action verbs reduce impact of your accomplishments',
+            'solution': 'Replace "responsible for" with "managed", "led", "developed", "implemented"',
+            'time_to_fix': '12 minutes',
+            'impact': 'Medium',
+            'points_gain': min(weak_verb_count * 2, 10)
+        })
+    
+    # Check for professional summary
+    if 'summary' not in content_lower and 'objective' not in content_lower:
+        content_improvements.append({
+            'title': 'Add professional summary',
+            'category': 'Resume Structure',
+            'description': 'Professional summary helps recruiters quickly understand your value',
+            'solution': 'Add a 2-3 sentence summary highlighting your key qualifications',
+            'time_to_fix': '15 minutes',
+            'impact': 'Medium',
+            'points_gain': 7
+        })
+    
+    # Calculate realistic improvement potential
+    total_potential_gain = sum(item['points_gain'] for item in critical_issues + quick_fixes + content_improvements)
+    capped_gain = min(total_potential_gain, 30)  # Cap at 30 points for realism
+    
+    return {
+        'critical_issues': critical_issues,
+        'quick_fixes': quick_fixes,
+        'content_improvements': content_improvements,
+        'total_issues': len(critical_issues) + len(quick_fixes) + len(content_improvements),
+        'potential_improvement': capped_gain,
+        'realistic_target_score': min(score + capped_gain, 95),
+        'estimated_time': calculate_total_time(critical_issues + quick_fixes + content_improvements)
+    }
+
+def calculate_total_time(issues: list) -> str:
+    """Calculate total estimated time for all improvements"""
+    total_minutes = 0
+    
+    for issue in issues:
+        time_str = issue.get('time_to_fix', '0 minutes')
+        try:
+            # Extract number from strings like "5 minutes", "1 minute", etc.
+            minutes = int(re.search(r'\d+', time_str).group())
+            total_minutes += minutes
+        except (AttributeError, ValueError):
+            total_minutes += 5  # Default fallback
+    
+    if total_minutes < 60:
+        return f"{total_minutes} minutes"
+    else:
+        hours = total_minutes // 60
+        remaining_minutes = total_minutes % 60
+        if remaining_minutes == 0:
+            return f"{hours} hour{'s' if hours > 1 else ''}"
+        else:
+            return f"{hours} hour{'s' if hours > 1 else ''} {remaining_minutes} minutes"
+
 def extract_personal_information(content: str) -> Dict[str, Any]:
     """
     Extract personal information from CV content for user profile
@@ -2683,6 +2902,14 @@ def analyze_resume_content(file_url: str) -> Dict[str, Any]:
         transformation_preview = generate_transformation_preview(ats_analysis, critical_issues, quick_wins)
         enhanced_components = enhance_component_breakdown(ats_analysis)
         
+        # CRITICAL: Generate detailed issues analysis with specific, actionable problems
+        detailed_issues = generate_detailed_issues_analysis(ats_analysis, content)
+        
+        # Override the generic issues with our specific ones
+        critical_issues = detailed_issues['critical_issues']
+        quick_fixes = detailed_issues['quick_fixes']
+        content_improvements = detailed_issues['content_improvements']
+        
         # Combine results with enhanced data
         result = {
             **ats_analysis,
@@ -2699,11 +2926,15 @@ def analyze_resume_content(file_url: str) -> Dict[str, Any]:
             'letter_grade': get_letter_grade(ats_analysis['ats_score']),
             'interview_metrics': interview_metrics,
             'critical_issues': critical_issues,
-            'quick_wins': quick_wins,
+            'quick_wins': quick_fixes,  # Use quick_fixes from detailed analysis
+            'content_improvements': content_improvements,  # Add content improvements category
             'transformation_preview': transformation_preview,
             'enhanced_components': enhanced_components,
-            'total_issues': len(critical_issues) + len(quick_wins),
-            'actionable_improvements': len([i for i in critical_issues + quick_wins if i.get('time_to_fix', '').split()[0].isdigit() and int(i.get('time_to_fix', '0').split()[0]) <= 5])
+            'total_issues': detailed_issues['total_issues'],  # Use calculated total
+            'potential_improvement': detailed_issues['potential_improvement'],  # Realistic improvement
+            'realistic_target_score': detailed_issues['realistic_target_score'],  # Target score
+            'estimated_time': detailed_issues['estimated_time'],  # Time to complete
+            'actionable_improvements': len([i for i in critical_issues + quick_fixes if i.get('time_to_fix', '').split()[0].isdigit() and int(i.get('time_to_fix', '0').split()[0]) <= 5])
         }
         
         logger.info(f"Analysis completed - Score: {ats_analysis['ats_score']}")

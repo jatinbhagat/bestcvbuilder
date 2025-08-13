@@ -168,10 +168,27 @@ export function getImprovementSuggestions(analysis) {
  */
 export function calculatePotentialImprovement(analysis) {
     const currentScore = analysis.score;
-    const maxPossibleScore = 100;
-    const potentialImprovement = maxPossibleScore - currentScore;
     
-    return Math.min(potentialImprovement, 40); // Cap at 40% improvement
+    // Use realistic improvement from backend if available
+    if (analysis.potential_improvement) {
+        return analysis.potential_improvement;
+    }
+    
+    // Fallback to more realistic calculation based on current score
+    let maxRealisticImprovement;
+    if (currentScore >= 90) {
+        maxRealisticImprovement = 5; // Very little room for improvement
+    } else if (currentScore >= 80) {
+        maxRealisticImprovement = 10; // Some room for improvement
+    } else if (currentScore >= 70) {
+        maxRealisticImprovement = 15; // Moderate improvement possible
+    } else if (currentScore >= 60) {
+        maxRealisticImprovement = 20; // Good improvement possible
+    } else {
+        maxRealisticImprovement = 25; // Significant improvement possible
+    }
+    
+    return maxRealisticImprovement;
 }
 
 /**
