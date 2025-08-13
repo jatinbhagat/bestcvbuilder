@@ -327,6 +327,9 @@ class ATSLoadingScreen {
             screen.classList.remove('hidden');
             this.isActive = true;
             this.resetProgress();
+        } else {
+            console.warn('ATS Loading Screen element not found - falling back to basic loading');
+            // Fallback: continue without the fancy loading screen
         }
     }
 
@@ -343,7 +346,7 @@ class ATSLoadingScreen {
         this.updateProgress(0);
         this.updateTimeRemaining(30);
         
-        // Reset all checks
+        // Reset all checks with defensive null checks
         this.steps.forEach((step, index) => {
             const checkElement = document.getElementById(`check-${step}`);
             if (checkElement) {
@@ -353,13 +356,13 @@ class ATSLoadingScreen {
                 if (index === 0) {
                     // First step starts active
                     checkElement.style.opacity = '1';
-                    spinner.classList.remove('hidden');
-                    icon.classList.add('hidden');
+                    if (spinner) spinner.classList.remove('hidden');
+                    if (icon) icon.classList.add('hidden');
                 } else {
                     // Other steps start inactive
                     checkElement.style.opacity = '0.5';
-                    spinner.classList.add('hidden');
-                    icon.classList.add('hidden');
+                    if (spinner) spinner.classList.add('hidden');
+                    if (icon) icon.classList.add('hidden');
                 }
             }
         });
@@ -374,9 +377,9 @@ class ATSLoadingScreen {
             const spinner = checkElement.querySelector('.loading-spinner');
             const icon = checkElement.querySelector('.check-icon');
             
-            // Mark current step as completed
-            spinner.classList.add('hidden');
-            icon.classList.remove('hidden');
+            // Mark current step as completed with null checks
+            if (spinner) spinner.classList.add('hidden');
+            if (icon) icon.classList.remove('hidden');
             checkElement.style.opacity = '1';
             
             // Start next step if available
@@ -387,7 +390,7 @@ class ATSLoadingScreen {
                 if (nextCheckElement) {
                     const nextSpinner = nextCheckElement.querySelector('.loading-spinner');
                     nextCheckElement.style.opacity = '1';
-                    nextSpinner.classList.remove('hidden');
+                    if (nextSpinner) nextSpinner.classList.remove('hidden');
                 }
             }
         }
@@ -486,17 +489,25 @@ function setLoadingState(isLoading) {
     const loadingText = document.getElementById('loadingText');
     
     if (isLoading) {
-        // Show ATS loading screen
-        atsLoadingScreen.show();
-        atsLoadingScreen.startAnalysisSequence();
+        try {
+            // Show ATS loading screen
+            atsLoadingScreen.show();
+            atsLoadingScreen.startAnalysisSequence();
+        } catch (error) {
+            console.warn('ATS loading screen error, falling back to simple loading:', error);
+        }
         
         // Also update button state
         if (buttonText) buttonText.style.display = 'none';
         if (loadingText) loadingText.style.display = 'flex';
         if (uploadBtn) uploadBtn.disabled = true;
     } else {
-        // Hide ATS loading screen
-        atsLoadingScreen.hide();
+        try {
+            // Hide ATS loading screen
+            atsLoadingScreen.hide();
+        } catch (error) {
+            console.warn('Error hiding ATS loading screen:', error);
+        }
         
         // Reset button state
         if (buttonText) buttonText.style.display = 'inline';
