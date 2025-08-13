@@ -28,10 +28,19 @@ try:
     spec.loader.exec_module(cv_rewrite_module)
     cv_rewrite_handler = cv_rewrite_module.handler
     
+    # Import resume-fix
+    sys.path.append(os.path.join(os.path.dirname(__file__), 'api', 'resume-fix'))
+    sys.path.append(os.path.join(os.path.dirname(__file__), 'utils'))  # Add utils to path
+    spec = importlib.util.spec_from_file_location("resume_fix", os.path.join(os.path.dirname(__file__), 'api', 'resume-fix', 'index.py'))
+    resume_fix_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(resume_fix_module)
+    resume_fix_handler = resume_fix_module.handler
+    
 except ImportError as e:
     print(f"Warning: Could not import API handlers: {e}")
     cv_parser_handler = None
     cv_rewrite_handler = None
+    resume_fix_handler = None
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -41,7 +50,8 @@ def health_check():
         "service": "bestcvbuilder-api",
         "handlers": {
             "cv_parser": cv_parser_handler is not None,
-            "cv_rewrite": cv_rewrite_handler is not None
+            "cv_rewrite": cv_rewrite_handler is not None,
+            "resume_fix": resume_fix_handler is not None
         }
     })
 
@@ -139,6 +149,56 @@ def cv_rewrite():
             
     except Exception as e:
         print(f"Error in cv_rewrite: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/resume-fix', methods=['POST', 'OPTIONS'])
+def resume_fix():
+    """Resume Fix API endpoint"""
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        return response
+    
+    if resume_fix_handler is None:
+        return jsonify({"error": "Resume fix handler not available"}), 500
+    
+    # Create a mock request object for the handler
+    class MockRequest:
+        def __init__(self, method, json_data):
+            self.method = method
+            self._json = json_data
+        
+        def get_json(self):
+            return self._json
+    
+    mock_request = MockRequest(request.method, request.get_json())
+    
+    try:
+        result = resume_fix_handler(mock_request)
+        
+        # Handle various response formats
+        if isinstance(result, dict):
+            if 'statusCode' in result:
+                response = jsonify(result.get('body', {}))
+                response.status_code = result['statusCode']
+                
+                # Add headers if present
+                if 'headers' in result:
+                    for key, value in result['headers'].items():
+                        response.headers[key] = value
+                        
+                return response
+            else:
+                return jsonify(result)
+        else:
+            return result
+            
+    except Exception as e:
+        print(f"Error in resume_fix: {e}")
+        import traceback
+        print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
 @app.errorhandler(404)
