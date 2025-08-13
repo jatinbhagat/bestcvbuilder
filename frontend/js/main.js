@@ -303,6 +303,182 @@ function handleDrop(event) {
 }
 
 /**
+ * ATS Loading Screen Controller
+ */
+class ATSLoadingScreen {
+    constructor() {
+        this.currentStep = 0;
+        this.steps = [
+            'upload',
+            'structure', 
+            'contact',
+            'keywords',
+            'experience',
+            'education',
+            'ats',
+            'recommendations'
+        ];
+        this.isActive = false;
+    }
+
+    show() {
+        const screen = document.getElementById('atsLoadingScreen');
+        if (screen) {
+            screen.classList.remove('hidden');
+            this.isActive = true;
+            this.resetProgress();
+        }
+    }
+
+    hide() {
+        const screen = document.getElementById('atsLoadingScreen');
+        if (screen) {
+            screen.classList.add('hidden');
+            this.isActive = false;
+        }
+    }
+
+    resetProgress() {
+        this.currentStep = 0;
+        this.updateProgress(0);
+        this.updateTimeRemaining(30);
+        
+        // Reset all checks
+        this.steps.forEach((step, index) => {
+            const checkElement = document.getElementById(`check-${step}`);
+            if (checkElement) {
+                const spinner = checkElement.querySelector('.loading-spinner');
+                const icon = checkElement.querySelector('.check-icon');
+                
+                if (index === 0) {
+                    // First step starts active
+                    checkElement.style.opacity = '1';
+                    spinner.classList.remove('hidden');
+                    icon.classList.add('hidden');
+                } else {
+                    // Other steps start inactive
+                    checkElement.style.opacity = '0.5';
+                    spinner.classList.add('hidden');
+                    icon.classList.add('hidden');
+                }
+            }
+        });
+    }
+
+    completeStep(stepName) {
+        const stepIndex = this.steps.indexOf(stepName);
+        if (stepIndex === -1) return;
+
+        const checkElement = document.getElementById(`check-${stepName}`);
+        if (checkElement) {
+            const spinner = checkElement.querySelector('.loading-spinner');
+            const icon = checkElement.querySelector('.check-icon');
+            
+            // Mark current step as completed
+            spinner.classList.add('hidden');
+            icon.classList.remove('hidden');
+            checkElement.style.opacity = '1';
+            
+            // Start next step if available
+            const nextStepIndex = stepIndex + 1;
+            if (nextStepIndex < this.steps.length) {
+                const nextStep = this.steps[nextStepIndex];
+                const nextCheckElement = document.getElementById(`check-${nextStep}`);
+                if (nextCheckElement) {
+                    const nextSpinner = nextCheckElement.querySelector('.loading-spinner');
+                    nextCheckElement.style.opacity = '1';
+                    nextSpinner.classList.remove('hidden');
+                }
+            }
+        }
+
+        // Update progress
+        const progress = Math.round(((stepIndex + 1) / this.steps.length) * 100);
+        this.updateProgress(progress);
+        
+        // Update time remaining (decreasing from 30 to 2 seconds)
+        const timeRemaining = Math.max(2, 30 - (stepIndex + 1) * 4);
+        this.updateTimeRemaining(timeRemaining);
+    }
+
+    updateProgress(percentage) {
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        
+        if (progressBar) {
+            progressBar.style.width = `${percentage}%`;
+        }
+        if (progressText) {
+            progressText.textContent = `${percentage}%`;
+        }
+    }
+
+    updateTimeRemaining(seconds) {
+        const timeElement = document.getElementById('timeRemaining');
+        if (timeElement) {
+            timeElement.textContent = `${seconds} seconds`;
+        }
+    }
+
+    // Simulate realistic timing for each step
+    async startAnalysisSequence() {
+        if (!this.isActive) return;
+
+        // Step 1: File Upload (already shown immediately)
+        await this.delay(2000);
+        this.completeStep('upload');
+
+        if (!this.isActive) return;
+        // Step 2: Document Structure 
+        await this.delay(3000);
+        this.completeStep('structure');
+
+        if (!this.isActive) return;
+        // Step 3: Contact Information
+        await this.delay(2500);
+        this.completeStep('contact');
+
+        if (!this.isActive) return;
+        // Step 4: Keywords Analysis
+        await this.delay(4000);
+        this.completeStep('keywords');
+
+        if (!this.isActive) return;
+        // Step 5: Experience Evaluation
+        await this.delay(3500);
+        this.completeStep('experience');
+
+        if (!this.isActive) return;
+        // Step 6: Education Check
+        await this.delay(2000);
+        this.completeStep('education');
+
+        if (!this.isActive) return;
+        // Step 7: ATS Compatibility
+        await this.delay(3000);
+        this.completeStep('ats');
+
+        if (!this.isActive) return;
+        // Step 8: Recommendations
+        await this.delay(2500);
+        this.completeStep('recommendations');
+
+        // Final completion
+        if (this.isActive) {
+            this.updateProgress(100);
+            this.updateTimeRemaining(0);
+        }
+    }
+
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+}
+
+// Create global instance
+const atsLoadingScreen = new ATSLoadingScreen();
+
+/**
  * Set loading state
  */
 function setLoadingState(isLoading) {
@@ -310,10 +486,19 @@ function setLoadingState(isLoading) {
     const loadingText = document.getElementById('loadingText');
     
     if (isLoading) {
+        // Show ATS loading screen
+        atsLoadingScreen.show();
+        atsLoadingScreen.startAnalysisSequence();
+        
+        // Also update button state
         if (buttonText) buttonText.style.display = 'none';
         if (loadingText) loadingText.style.display = 'flex';
         if (uploadBtn) uploadBtn.disabled = true;
     } else {
+        // Hide ATS loading screen
+        atsLoadingScreen.hide();
+        
+        // Reset button state
         if (buttonText) buttonText.style.display = 'inline';
         if (loadingText) loadingText.style.display = 'none';
         if (uploadBtn) uploadBtn.disabled = false;

@@ -215,6 +215,166 @@
             </div>
         </section>
         
+        <!-- ATS Analysis Loading Screen -->
+        <section id="atsLoadingScreen" class="hidden fixed inset-0 bg-gray-900 bg-opacity-95 z-50 flex items-center justify-center">
+            <div class="max-w-2xl mx-auto px-6">
+                <!-- Header -->
+                <div class="text-center mb-12">
+                    <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full mb-6">
+                        <svg class="w-10 h-10 text-white animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-3xl font-bold text-white mb-3">Analyzing Your Resume</h2>
+                    <p class="text-xl text-gray-300">Our AI is performing comprehensive ATS compatibility checks</p>
+                </div>
+
+                <!-- Progress Checks -->
+                <div class="space-y-4 mb-8">
+                    <!-- File Upload Check -->
+                    <div id="check-upload" class="flex items-center p-4 bg-white bg-opacity-10 rounded-xl border border-gray-700">
+                        <div class="flex-shrink-0 w-8 h-8 mr-4">
+                            <div class="loading-spinner w-8 h-8 border-2 border-gray-400 border-t-blue-500 rounded-full animate-spin"></div>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="text-white font-semibold">File Upload & Processing</div>
+                            <div class="text-gray-300 text-sm">Securely uploading and extracting resume content...</div>
+                        </div>
+                    </div>
+
+                    <!-- Document Structure Check -->
+                    <div id="check-structure" class="flex items-center p-4 bg-white bg-opacity-10 rounded-xl border border-gray-700 opacity-50">
+                        <div class="flex-shrink-0 w-8 h-8 mr-4">
+                            <div class="loading-spinner w-8 h-8 border-2 border-gray-400 border-t-blue-500 rounded-full animate-spin hidden"></div>
+                            <div class="check-icon hidden">
+                                <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="text-white font-semibold">Document Structure Analysis</div>
+                            <div class="text-gray-300 text-sm">Checking sections, formatting, and ATS readability...</div>
+                        </div>
+                    </div>
+
+                    <!-- Contact Information Check -->
+                    <div id="check-contact" class="flex items-center p-4 bg-white bg-opacity-10 rounded-xl border border-gray-700 opacity-50">
+                        <div class="flex-shrink-0 w-8 h-8 mr-4">
+                            <div class="loading-spinner w-8 h-8 border-2 border-gray-400 border-t-blue-500 rounded-full animate-spin hidden"></div>
+                            <div class="check-icon hidden">
+                                <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="text-white font-semibold">Contact Information Validation</div>
+                            <div class="text-gray-300 text-sm">Verifying phone, email, LinkedIn, and location details...</div>
+                        </div>
+                    </div>
+
+                    <!-- Keywords Analysis Check -->
+                    <div id="check-keywords" class="flex items-center p-4 bg-white bg-opacity-10 rounded-xl border border-gray-700 opacity-50">
+                        <div class="flex-shrink-0 w-8 h-8 mr-4">
+                            <div class="loading-spinner w-8 h-8 border-2 border-gray-400 border-t-blue-500 rounded-full animate-spin hidden"></div>
+                            <div class="check-icon hidden">
+                                <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="text-white font-semibold">Keywords & Skills Analysis</div>
+                            <div class="text-gray-300 text-sm">Scanning for industry-relevant keywords and skills...</div>
+                        </div>
+                    </div>
+
+                    <!-- Experience Analysis Check -->
+                    <div id="check-experience" class="flex items-center p-4 bg-white bg-opacity-10 rounded-xl border border-gray-700 opacity-50">
+                        <div class="flex-shrink-0 w-8 h-8 mr-4">
+                            <div class="loading-spinner w-8 h-8 border-2 border-gray-400 border-t-blue-500 rounded-full animate-spin hidden"></div>
+                            <div class="check-icon hidden">
+                                <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="text-white font-semibold">Work Experience Evaluation</div>
+                            <div class="text-gray-300 text-sm">Analyzing job descriptions, achievements, and impact...</div>
+                        </div>
+                    </div>
+
+                    <!-- Education Check -->
+                    <div id="check-education" class="flex items-center p-4 bg-white bg-opacity-10 rounded-xl border border-gray-700 opacity-50">
+                        <div class="flex-shrink-0 w-8 h-8 mr-4">
+                            <div class="loading-spinner w-8 h-8 border-2 border-gray-400 border-t-blue-500 rounded-full animate-spin hidden"></div>
+                            <div class="check-icon hidden">
+                                <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="text-white font-semibold">Education & Certifications</div>
+                            <div class="text-gray-300 text-sm">Validating degrees, certifications, and academic details...</div>
+                        </div>
+                    </div>
+
+                    <!-- ATS Compatibility Check -->
+                    <div id="check-ats" class="flex items-center p-4 bg-white bg-opacity-10 rounded-xl border border-gray-700 opacity-50">
+                        <div class="flex-shrink-0 w-8 h-8 mr-4">
+                            <div class="loading-spinner w-8 h-8 border-2 border-gray-400 border-t-blue-500 rounded-full animate-spin hidden"></div>
+                            <div class="check-icon hidden">
+                                <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="text-white font-semibold">ATS Compatibility Score</div>
+                            <div class="text-gray-300 text-sm">Computing final compatibility score and recommendations...</div>
+                        </div>
+                    </div>
+
+                    <!-- Recommendations Generation -->
+                    <div id="check-recommendations" class="flex items-center p-4 bg-white bg-opacity-10 rounded-xl border border-gray-700 opacity-50">
+                        <div class="flex-shrink-0 w-8 h-8 mr-4">
+                            <div class="loading-spinner w-8 h-8 border-2 border-gray-400 border-t-blue-500 rounded-full animate-spin hidden"></div>
+                            <div class="check-icon hidden">
+                                <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="text-white font-semibold">Personalized Recommendations</div>
+                            <div class="text-gray-300 text-sm">Generating specific improvement suggestions...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="mb-6">
+                    <div class="flex justify-between text-sm text-gray-300 mb-2">
+                        <span>Analysis Progress</span>
+                        <span id="progressText">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-700 rounded-full h-3">
+                        <div id="progressBar" class="bg-gradient-to-r from-blue-500 to-purple-600 h-3 rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Time Estimate -->
+                <div class="text-center">
+                    <p class="text-gray-300 text-sm">
+                        ⏱️ Estimated time remaining: <span id="timeRemaining" class="font-semibold text-white">30 seconds</span>
+                    </p>
+                </div>
+            </div>
+        </section>
+        
         <!-- Success Stats -->
         <section id="stats" class="mb-16">
             <div class="grid md:grid-cols-4 gap-6">
