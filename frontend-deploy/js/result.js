@@ -484,7 +484,7 @@ async function handleTestImprovement() {
         }
         
         // Call the resume-fix API directly
-        const API_BASE_URL = 'https://bestcvbuilder-api-znsg.onrender.com';
+        const API_BASE_URL = 'https://bestcvbuilder-api.onrender.com';
         console.log(`🚀 TEST: Calling resume-fix API at ${API_BASE_URL}/api/resume-fix`);
         console.log(`📋 TEST: Analysis data keys: ${Object.keys(analysisData)}`);
         

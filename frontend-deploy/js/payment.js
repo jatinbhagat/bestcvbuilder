@@ -220,7 +220,7 @@ async function triggerCVRewrite() {
         console.log('Triggering resume improvement with Gemini AI...');
         
         // Call the Python API to fix/improve the resume
-        const API_BASE_URL = 'https://bestcvbuilder-api-znsg.onrender.com';
+        const API_BASE_URL = 'https://bestcvbuilder-api.onrender.com';
         console.log(`🚀 PAYMENT: Calling resume-fix API at ${API_BASE_URL}/api/resume-fix`);
         console.log(`📧 PAYMENT: User email: ${emailInput.value}`);
         console.log(`📋 PAYMENT: Analysis data keys: ${Object.keys(analysisData)}`);
