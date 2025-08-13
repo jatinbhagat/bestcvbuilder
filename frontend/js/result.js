@@ -800,15 +800,38 @@ async function saveAnalysisToDatabase() {
  * Process analysis data to extract actionable insights
  */
 function processAnalysisInsights(data) {
-    // Check if the data already has enhanced structure from new algorithm
-    if (data.critical_issues && data.quick_wins) {
-        // Use the new enhanced algorithm data directly
+    // Check if the data has our new detailed issues structure
+    if (data.critical_issues && data.quick_wins && data.content_improvements) {
+        // Use the new detailed issues algorithm data directly
         return {
             quickWins: data.quick_wins || [],
             criticalIssues: data.critical_issues || [],
+            contentImprovements: data.content_improvements || [],
+            beforeItems: data.transformation_preview?.before || generateBeforeItems(data),
+            afterItems: data.transformation_preview?.after || generateAfterItems(data),
+            totalIssues: data.total_issues || ((data.critical_issues?.length || 0) + (data.quick_wins?.length || 0) + (data.content_improvements?.length || 0)),
+            potentialImprovement: data.potential_improvement || calculateRealisticPotentialImprovement(data),
+            realisticTargetScore: data.realistic_target_score || Math.min(data.score + calculateRealisticPotentialImprovement(data), 95),
+            estimatedTime: data.estimated_time || '30 minutes',
+            interviewMetrics: data.interview_metrics || null,
+            transformationPreview: data.transformation_preview || null
+        };
+    }
+    
+    // Check if the data has legacy enhanced structure  
+    if (data.critical_issues && data.quick_wins) {
+        // Use the legacy enhanced algorithm data directly
+        const potentialImp = calculateRealisticPotentialImprovement(data);
+        return {
+            quickWins: data.quick_wins || [],
+            criticalIssues: data.critical_issues || [],
+            contentImprovements: [],
             beforeItems: data.transformation_preview?.before || generateBeforeItems(data),
             afterItems: data.transformation_preview?.after || generateAfterItems(data),
             totalIssues: (data.critical_issues?.length || 0) + (data.quick_wins?.length || 0),
+            potentialImprovement: potentialImp,
+            realisticTargetScore: Math.min(data.score + potentialImp, 95),
+            estimatedTime: '45 minutes',
             interviewMetrics: data.interview_metrics || null,
             transformationPreview: data.transformation_preview || null
         };
@@ -873,8 +896,9 @@ function processAnalysisInsights(data) {
     }
     
     // Generate before/after items
+    const potentialImp = calculateRealisticPotentialImprovement(data);
     beforeItems.push(`ATS Score: ${data.score}/100`);
-    afterItems.push(`ATS Score: ${Math.min(data.score + 40, 95)}/100`);
+    afterItems.push(`ATS Score: ${Math.min(data.score + potentialImp, 95)}/100`);
     
     if (quickWins.length > 0) {
         beforeItems.push(`Missing key optimizations`);
@@ -887,14 +911,15 @@ function processAnalysisInsights(data) {
     }
     
     beforeItems.push(`${getInterviewRate(data.score)}% interview rate`);
-    afterItems.push(`${getInterviewRate(Math.min(data.score + 40, 95))}% interview rate`);
+    afterItems.push(`${getInterviewRate(Math.min(data.score + potentialImp, 95))}% interview rate`);
     
     return {
         quickWins: quickWins.slice(0, 3), // Limit to top 3
         criticalIssues: criticalIssues.slice(0, 5), // Limit to top 5
         beforeItems,
         afterItems,
-        totalIssues: quickWins.length + criticalIssues.length
+        totalIssues: quickWins.length + criticalIssues.length,
+        potentialImprovement: potentialImp
     };
 }
 
@@ -1615,6 +1640,44 @@ function generateImprovementsList(data) {
     }
     
     return improvements;
+}
+
+/**
+ * Calculate realistic potential improvement based on analysis data
+ */
+function calculateRealisticPotentialImprovement(data) {
+    let improvement = 0;
+    
+    // Base improvement from quick wins
+    const quickWins = data.quick_wins || [];
+    improvement += quickWins.length * 3; // 3 points per quick win
+    
+    // Base improvement from critical issues
+    const criticalIssues = data.critical_issues || [];
+    improvement += criticalIssues.length * 5; // 5 points per critical issue
+    
+    // Legacy improvements fallback
+    if (data.improvements && data.improvements.length > 0 && improvement === 0) {
+        improvement = data.improvements.length * 4; // 4 points per improvement
+    }
+    
+    // Score-based realistic ceiling
+    const currentScore = data.score || 65;
+    const maxPossibleImprovement = Math.max(5, 95 - currentScore); // Can't exceed 95
+    
+    // Apply realistic constraints
+    if (currentScore >= 80) {
+        improvement = Math.min(improvement, 10); // High scores have less room for improvement
+    } else if (currentScore >= 60) {
+        improvement = Math.min(improvement, 20); // Medium scores can improve more
+    } else {
+        improvement = Math.min(improvement, 30); // Low scores have most potential
+    }
+    
+    // Ensure minimum improvement of 5 points
+    improvement = Math.max(5, Math.min(improvement, maxPossibleImprovement));
+    
+    return improvement;
 }
 
 // Debug: Log when result.js loads - ALWAYS BYPASS VERSION

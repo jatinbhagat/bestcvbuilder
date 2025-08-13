@@ -322,11 +322,38 @@ export function getImprovementSuggestions(analysis) {
  * @returns {number} Potential score improvement percentage
  */
 export function calculatePotentialImprovement(analysis) {
-    const currentScore = analysis.score;
-    const maxPossibleScore = 100;
-    const potentialImprovement = maxPossibleScore - currentScore;
+    let improvement = 0;
     
-    return Math.min(potentialImprovement, 40); // Cap at 40% improvement
+    // Base improvement from quick wins
+    const quickWins = analysis.quick_wins || [];
+    improvement += quickWins.length * 3; // 3 points per quick win
+    
+    // Base improvement from critical issues
+    const criticalIssues = analysis.critical_issues || [];
+    improvement += criticalIssues.length * 5; // 5 points per critical issue
+    
+    // Legacy improvements fallback
+    if (analysis.improvements && analysis.improvements.length > 0 && improvement === 0) {
+        improvement = analysis.improvements.length * 4; // 4 points per improvement
+    }
+    
+    // Score-based realistic ceiling
+    const currentScore = analysis.score || 65;
+    const maxPossibleImprovement = Math.max(5, 95 - currentScore); // Can't exceed 95
+    
+    // Apply realistic constraints based on current score
+    if (currentScore >= 80) {
+        improvement = Math.min(improvement, 10); // High scores have less room for improvement
+    } else if (currentScore >= 60) {
+        improvement = Math.min(improvement, 20); // Medium scores can improve more
+    } else {
+        improvement = Math.min(improvement, 30); // Low scores have most potential
+    }
+    
+    // Ensure minimum improvement of 5 points and don't exceed what's possible
+    improvement = Math.max(5, Math.min(improvement, maxPossibleImprovement));
+    
+    return improvement;
 }
 
 /**
