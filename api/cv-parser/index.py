@@ -130,25 +130,23 @@ def extract_pdf_text_clean(file_content: bytes) -> str:
         logger.error(f"❌ PDF extraction failed: {e}")
         raise TextExtractionError(f"PDF extraction failed: {str(e)}")
 
-# Legacy function - keeping for compatibility but not used
-def extract_with_pypdf2_simple_legacy(file_content: bytes) -> str:
-    """Simple PyPDF2 extraction for large files - memory efficient"""
+# Legacy function - now uses PyMuPDF instead of PyPDF2
+def extract_with_pymupdf_simple_legacy(file_content: bytes) -> str:
+    """Simple PyMuPDF extraction for large files - memory efficient"""
     try:
-        pdf_file = io.BytesIO(file_content)
-        reader = PyPDF2.PdfReader(pdf_file)
+        doc = fitz.open(stream=file_content, filetype="pdf")
         
         text_parts = []
-        max_pages = min(len(reader.pages), 5)  # Limit to 5 pages for memory
+        max_pages = min(len(doc), 5)  # Limit to 5 pages for memory
         
         for i in range(max_pages):
             try:
-                page = reader.pages[i]
-                page_text = page.extract_text()
+                page = doc.load_page(i)
+                page_text = page.get_text()
                 if page_text and len(page_text.strip()) > 20:
                     text_parts.append(page_text)
                     
-                # Clean up page object
-                del page
+                # Clean up is automatic with PyMuPDF
                 
                 # Force cleanup every 2 pages
                 if i % 2 == 0:
@@ -158,9 +156,8 @@ def extract_with_pypdf2_simple_legacy(file_content: bytes) -> str:
                 logger.warning(f"Error extracting page {i+1}: {e}")
                 continue
         
-        # Clean up reader and file objects
-        del reader
-        pdf_file.close()
+        # Clean up document
+        doc.close()
         cleanup_memory()
         
         result = '\n'.join(text_parts)
@@ -186,14 +183,10 @@ PDFPLUMBER_AVAILABLE = False
 PYMUPDF_AVAILABLE = False
 PDFMINER_AVAILABLE = False
 
-# Check PyPDF2 (basic fallback - always required)
-try:
-    import PyPDF2
-    PYPDF2_AVAILABLE = True
-    logger.info("✅ PyPDF2 available (basic PDF extraction)")
-except ImportError as e:
-    logger.error(f"❌ CRITICAL: PyPDF2 not available: {e}")
-    PYPDF2_AVAILABLE = False
+# PyMuPDF is our primary PDF library (always available in deployment)
+PYMUPDF_AVAILABLE = FITZ_AVAILABLE  # Use existing fitz availability check
+PYPDF2_AVAILABLE = False  # PyPDF2 not used - removed dependency
+logger.info(f"✅ PDF processing available via PyMuPDF: {PYMUPDF_AVAILABLE}")
 
 # Check python-docx (for DOCX files) - Optional for minimal deployment
 try:
@@ -397,7 +390,7 @@ def extract_pdf_text(file_content: bytes) -> str:
     return extract_pdf_text_clean(file_content)
     
     # Check if any extraction method is available
-    if not any([PYPDF2_AVAILABLE, PDFPLUMBER_AVAILABLE, PYMUPDF_AVAILABLE, PDFMINER_AVAILABLE]):
+    if not any([PDFPLUMBER_AVAILABLE, PYMUPDF_AVAILABLE, PDFMINER_AVAILABLE]):
         raise TextExtractionError("CRITICAL: No PDF extraction libraries available")
     
     # Prioritized extraction methods (best first for Render.com)
@@ -415,9 +408,7 @@ def extract_pdf_text(file_content: bytes) -> str:
     if PDFMINER_AVAILABLE:
         extraction_methods.append(("pdfminer", extract_with_pdfminer))
         
-    # Priority 4: PyPDF2 (reliable fallback, widely compatible)
-    if PYPDF2_AVAILABLE:
-        extraction_methods.append(("pypdf2", extract_with_pypdf2))
+    # PyPDF2 removed - using PyMuPDF instead
     
     if not extraction_methods:
         raise TextExtractionError("No PDF extraction methods available")
@@ -471,16 +462,16 @@ def extract_pdf_text(file_content: bytes) -> str:
     
     # Ensure we have some text to work with
     if not best_text or len(best_text.strip()) < 50:
-        # Last resort: try basic PyPDF2 without scoring
-        if PYPDF2_AVAILABLE:
+        # Last resort: try basic PyMuPDF if available  
+        if PYMUPDF_AVAILABLE:
             try:
-                logger.warning("🚨 Falling back to basic PyPDF2 extraction (last resort)")
-                basic_text = extract_with_pypdf2_basic(file_content)
+                logger.warning("🚨 Falling back to basic PyMuPDF extraction (last resort)")
+                basic_text = extract_with_fitz_basic(file_content)
                 if basic_text and len(basic_text.strip()) >= 20:  # Lower threshold for last resort
-                    logger.info(f"✅ Basic PyPDF2 extracted {len(basic_text)} characters")
+                    logger.info(f"✅ Basic PyMuPDF extracted {len(basic_text)} characters")
                     return basic_text
             except Exception as e:
-                logger.error(f"❌ Basic PyPDF2 extraction also failed: {str(e)}")
+                logger.error(f"❌ Basic PyMuPDF extraction also failed: {str(e)}")
         
         raise TextExtractionError("PDF extraction failed - file may be corrupted, image-only, or password protected")
     
