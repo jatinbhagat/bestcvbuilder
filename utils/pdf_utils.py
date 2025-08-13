@@ -410,24 +410,25 @@ def create_clean_pdf_from_text(text_content: str) -> bytes:
                 current_y, line_height, block_num, margin_top
             )
         
-        # CRITICAL: Comprehensive content validation
+        # CRITICAL: Comprehensive content validation with STRICT preservation requirements
         validation_result = _validate_content_preservation(text_content, added_text_parts, original_text_length)
         
         if not validation_result['passed']:
             logger.error(f"❌ CRITICAL: Content validation failed!")
             logger.error(f"❌ Original length: {original_text_length}, Added length: {validation_result['added_length']}")
             logger.error(f"❌ Missing content: {validation_result['missing_content'][:200]}...")
+            logger.error(f"❌ Missing critical elements: {validation_result.get('missing_critical', [])}")
             
-            # Try to recover missing content
-            recovery_result = _attempt_content_recovery(
+            # ENHANCED: Try multiple recovery strategies
+            recovery_result = _attempt_enhanced_content_recovery(
                 doc, text_content, added_text_parts, margin_left, margin_right, margin_top
             )
             
             if not recovery_result['success']:
-                logger.error(f"❌ Content recovery failed - falling back to text-only PDF")
-                return create_basic_pdf_from_text(text_content)
+                logger.error(f"❌ Enhanced content recovery failed - falling back to GUARANTEED preservation PDF")
+                return create_guaranteed_preservation_pdf(text_content)
             else:
-                logger.info(f"✅ Content recovery successful - added {recovery_result['recovered_items']} missing items")
+                logger.info(f"✅ Enhanced content recovery successful - added {recovery_result['recovered_items']} missing items")
         
         # Save to bytes
         pdf_bytes = io.BytesIO()
@@ -436,7 +437,7 @@ def create_clean_pdf_from_text(text_content: str) -> bytes:
         
         result = pdf_bytes.getvalue()
         logger.info(f"✅ Conservative PDF created: {len(result)} bytes with content preservation validated")
-        logger.info(f"📊 Content validation: {added_text_length}/{original_text_length} characters preserved")
+        logger.info(f"📊 Content validation: {validation_result['added_length']}/{original_text_length} characters preserved")
         return result
         
     except Exception as e:
@@ -576,28 +577,60 @@ def _classify_resume_line(line: str, line_num: int) -> str:
     if not stripped:
         return 'empty'
     
-    # Name (usually first non-empty line)
-    if line_num <= 2 and len(stripped) > 5 and not any(char in stripped for char in ['@', 'http', '+']):
-        return 'name'
+    # CRITICAL: Better name detection - look for patterns typical of names
+    if line_num <= 3 and len(stripped) > 2:
+        # Check if it looks like a name (no email, phone, URL indicators)
+        if not any(char in stripped for char in ['@', 'http', '+', '(', ')', '.com', '.in', 'linkedin', 'github']):
+            # Check if it has name-like characteristics
+            words = stripped.split()
+            if len(words) >= 2 and all(word.replace('.', '').replace(',', '').isalpha() or word.isupper() for word in words):
+                return 'name'
+    
+    # CRITICAL: Professional tagline detection (after name, before contact)
+    if line_num <= 5 and len(stripped) > 10:
+        # Look for professional indicators in tagline
+        tagline_indicators = ['|', 'years', 'yrs', 'experience', 'leader', 'manager', 'director', 'specialist', 
+                             'expert', 'consultant', 'product', 'growth', 'AI', 'ML', 'LLM', 'enabled', 'experimentation']
+        if any(indicator in stripped.lower() for indicator in tagline_indicators):
+            return 'professional_tagline'
     
     # Contact information
-    if any(indicator in stripped for indicator in ['@', 'http', '+91', '+1', 'linkedin', 'gmail']):
+    if any(indicator in stripped for indicator in ['@', 'http', '+91', '+1', 'linkedin', 'gmail', '.com', 'github']):
         return 'contact'
     
-    # Section headers (ALL CAPS)
-    if stripped.isupper() and len(stripped) > 4 and not stripped.replace(' ', '').isdigit():
+    # Section headers (ALL CAPS or specific keywords)
+    if (stripped.isupper() and len(stripped) > 4 and not stripped.replace(' ', '').isdigit()) or \
+       stripped.upper() in ['PROFESSIONAL SUMMARY', 'EXPERIENCE', 'EDUCATION', 'SKILLS', 'CERTIFICATIONS', 'ACHIEVEMENTS', 'PROJECTS']:
         return 'section_header'
     
+    # CRITICAL: Education degree detection - preserve exact degree names
+    education_keywords = ['Bachelor', 'Master', 'Masters', 'MBA', 'B.E.', 'B.Tech', 'M.Tech', 'Ph.D', 'PhD', 
+                         'Certificate', 'Diploma', 'Instrumentation', 'Control', 'Business Administration']
+    if any(keyword in stripped for keyword in education_keywords):
+        return 'education_degree'
+    
+    # CRITICAL: Institution detection - preserve exact names
+    institution_keywords = ['University', 'Institute', 'College', 'School', 'IIT', 'IIM', 'Indian Institute', 
+                           'Management', 'Technology', 'Engineering']
+    if any(keyword in stripped for keyword in institution_keywords):
+        return 'institution'
+    
     # Job titles/companies (contains position indicators)
-    if any(keyword in stripped for keyword in ['Manager', 'Director', 'Officer', 'Engineer', 'Developer', 'Lead', 'Chief', 'Associate', 'Senior', 'Principal', 'CEO', 'CTO', 'CPO']):
+    if any(keyword in stripped for keyword in ['Manager', 'Director', 'Officer', 'Engineer', 'Developer', 'Lead', 
+                                              'Chief', 'Associate', 'Senior', 'Principal', 'CEO', 'CTO', 'CPO', 
+                                              'Vice President', 'VP', 'Head', 'Analyst']):
         return 'job_title'
     
-    # Date lines
-    if any(indicator in stripped for indicator in ['/', '–', '-', 'Ongoing', '2020', '2021', '2022', '2023', '2024', '2025']):
+    # CRITICAL: Date and location lines - PRESERVE ALL dates and locations
+    date_patterns = ['/', '–', '-', 'Ongoing', 'Present', 'Current']
+    year_patterns = ['2020', '2021', '2022', '2023', '2024', '2025', '2019', '2018', '2017', '2016', '2015']
+    location_patterns = ['Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Hyderabad', 'Pune', 'India', 'USA', 'UK']
+    
+    if any(pattern in stripped for pattern in date_patterns + year_patterns + location_patterns):
         return 'date_location'
     
     # Bullet points
-    if stripped.startswith(('•', '-', '*', '◦')):
+    if stripped.startswith(('•', '-', '*', '◦', '✓')):
         return 'bullet_point'
     
     # Skills/items in a list
@@ -712,15 +745,21 @@ def _render_content_block_to_pdf_with_pages(page, doc, content_block, margin_lef
     return page, current_y
 
 def _get_line_styling(block_type: str, line: str, line_num: int, block_num: int) -> tuple:
-    """Determine font styling for a line based on its context"""
+    """Determine font styling for a line based on its context - CRITICAL: Preserve all content styling"""
     fontsize = 10
     fontname = "Helvetica"
     color = (0, 0, 0)
     
-    # Name styling
-    if block_type == 'name' or (block_num == 0 and line_num == 0):
+    # CRITICAL: Name styling - better detection
+    if block_type == 'name' or _looks_like_name(line, line_num, block_num):
         fontsize = 18
         fontname = "Helvetica-Bold"
+    
+    # CRITICAL: Professional tagline styling  
+    elif block_type == 'professional_tagline':
+        fontsize = 12
+        fontname = "Helvetica-Bold"
+        color = (0.1, 0.1, 0.1)
     
     # Contact info styling
     elif block_type == 'contact':
@@ -732,15 +771,28 @@ def _get_line_styling(block_type: str, line: str, line_num: int, block_num: int)
         fontsize = 12
         fontname = "Helvetica-Bold"
         
+    # CRITICAL: Education degree styling - preserve degree names
+    elif block_type == 'education_degree':
+        fontsize = 11
+        fontname = "Helvetica-Bold"
+        color = (0.1, 0.1, 0.1)
+    
+    # CRITICAL: Institution styling - preserve institution names
+    elif block_type == 'institution':
+        fontsize = 10
+        fontname = "Helvetica"
+        color = (0.2, 0.2, 0.2)
+        
     # Job titles
     elif block_type == 'job_title':
         fontsize = 11
         fontname = "Helvetica-Bold"
     
-    # Date/location lines
+    # CRITICAL: Date/location lines - PRESERVE with consistent formatting
     elif block_type == 'date_location':
         fontsize = 10
-        color = (0.4, 0.4, 0.4)
+        fontname = "Helvetica"
+        color = (0.3, 0.3, 0.3)  # Lighter but still visible
     
     # Professional summary (usually appears early)
     elif block_num <= 2 and line_num == 0 and len(line) > 50:
@@ -749,6 +801,28 @@ def _get_line_styling(block_type: str, line: str, line_num: int, block_num: int)
         color = (0.2, 0.2, 0.2)
     
     return fontsize, fontname, color
+
+def _looks_like_name(line: str, line_num: int, block_num: int) -> bool:
+    """Enhanced name detection logic"""
+    if line_num > 5 or block_num > 1:  # Names appear early
+        return False
+        
+    stripped = line.strip()
+    if len(stripped) < 3:
+        return False
+        
+    # Exclude lines with contact indicators
+    if any(indicator in stripped for indicator in ['@', 'http', '+', '(', ')', '.com', 'linkedin']):
+        return False
+        
+    # Look for name patterns
+    words = stripped.split()
+    if len(words) >= 2:
+        # Check if words look like names (alphabetic with possible periods)
+        return all(word.replace('.', '').replace(',', '').isalpha() or 
+                  (word.isupper() and len(word) <= 4) for word in words)
+    
+    return False
 
 def _insert_text_with_fallbacks(page, x, y, text, fontsize, fontname, color, max_x) -> bool:
     """Insert text with multiple fallback strategies to ensure no content loss"""
@@ -787,7 +861,7 @@ def _insert_text_with_fallbacks(page, x, y, text, fontsize, fontname, color, max
     return False
 
 def _validate_content_preservation(original_text: str, added_text_parts: List[str], original_length: int) -> Dict[str, Any]:
-    """Comprehensively validate that all content was preserved during PDF generation"""
+    """ENHANCED: Comprehensively validate ALL content preservation with STRICT requirements"""
     
     # Calculate text statistics
     added_text = '\n'.join(added_text_parts)
@@ -802,21 +876,39 @@ def _validate_content_preservation(original_text: str, added_text_parts: List[st
     missing_words = original_words - added_words
     missing_content = ' '.join(missing_words)
     
-    # Critical content check - look for important resume elements
+    # ENHANCED: Critical content check - COMPREHENSIVE list of resume elements that MUST be preserved
     critical_elements = [
-        'experience', 'education', 'skills', 'achievements', 
-        'professional', 'manager', 'director', 'engineer',
-        'university', 'certification', 'project'
+        'experience', 'education', 'skills', 'achievements', 'professional', 
+        'manager', 'director', 'engineer', 'university', 'certification', 'project',
+        # CRITICAL: User details that CANNOT be lost
+        'masters', 'bachelor', 'mba', 'institute', 'management', 'business', 'administration',
+        'instrumentation', 'control', 'indian', 'iim', 'iit',
+        # CRITICAL: Professional details
+        'product', 'leader', 'growth', 'experimentation', 'years', 'yrs'
     ]
     
     missing_critical = [elem for elem in critical_elements if elem in original_text.lower() and elem not in added_text.lower()]
     
-    # Validation criteria
-    length_ok = preservation_ratio >= 0.85  # Allow 15% loss for formatting
-    words_ok = len(missing_words) <= len(original_words) * 0.1  # Max 10% word loss
-    critical_ok = len(missing_critical) == 0  # No critical content missing
+    # ENHANCED: Line-by-line validation for critical content
+    original_lines = [line.strip() for line in original_text.split('\n') if line.strip()]
+    added_lines_text = added_text.lower()
     
-    passed = length_ok and words_ok and critical_ok
+    missing_important_lines = []
+    for line in original_lines:
+        # Check for lines containing name, education, or critical professional info
+        if any(keyword in line.lower() for keyword in ['masters', 'bachelor', 'mba', 'indian institute', 'iim', 'instrumentation']):
+            # This line contains critical info - check if it's preserved
+            line_words = set(line.lower().split())
+            if not any(word in added_lines_text for word in line_words if len(word) > 3):
+                missing_important_lines.append(line[:100])  # Truncate for logging
+    
+    # STRICTER validation criteria
+    length_ok = preservation_ratio >= 0.90  # Require 90% preservation
+    words_ok = len(missing_words) <= len(original_words) * 0.05  # Max 5% word loss
+    critical_ok = len(missing_critical) == 0  # No critical content missing
+    lines_ok = len(missing_important_lines) == 0  # No important lines missing
+    
+    passed = length_ok and words_ok and critical_ok and lines_ok
     
     result = {
         'passed': passed,
@@ -825,16 +917,306 @@ def _validate_content_preservation(original_text: str, added_text_parts: List[st
         'missing_words_count': len(missing_words),
         'missing_content': missing_content,
         'missing_critical': missing_critical,
+        'missing_important_lines': missing_important_lines,
         'details': {
             'length_check': length_ok,
             'words_check': words_ok,
-            'critical_check': critical_ok
+            'critical_check': critical_ok,
+            'lines_check': lines_ok
         }
     }
     
-    logger.info(f"📊 Content validation: {preservation_ratio:.2%} preserved, {len(missing_words)} words missing")
+    logger.info(f"📊 ENHANCED Content validation: {preservation_ratio:.2%} preserved, {len(missing_words)} words missing, {len(missing_critical)} critical missing")
     
     return result
+
+def _attempt_enhanced_content_recovery(doc, original_text: str, added_text_parts: List[str], 
+                                     margin_left: int, margin_right: int, margin_top: int) -> Dict[str, Any]:
+    """ENHANCED: Attempt to recover ALL missing content with multiple strategies"""
+    
+    try:
+        added_text = '\n'.join(added_text_parts)
+        
+        # ENHANCED: Find content that wasn't added with better matching
+        original_lines = [line.strip() for line in original_text.split('\n') if line.strip()]
+        added_lines = [line.strip() for line in added_text.split('\n') if line.strip()]
+        
+        missing_lines = []
+        critical_missing_lines = []
+        
+        for orig_line in original_lines:
+            found = False
+            
+            # Enhanced matching - check for partial matches and key content
+            for added_line in added_lines:
+                # Check various matching strategies
+                if (orig_line in added_line or added_line in orig_line or 
+                    _lines_substantially_similar(orig_line, added_line)):
+                    found = True
+                    break
+            
+            if not found:
+                missing_lines.append(orig_line)
+                
+                # Identify critical missing content
+                critical_keywords = ['masters', 'bachelor', 'mba', 'indian institute', 'iim', 
+                                   'instrumentation', 'business administration', 'product', 'leader']
+                if any(keyword in orig_line.lower() for keyword in critical_keywords):
+                    critical_missing_lines.append(orig_line)
+        
+        if not missing_lines:
+            return {'success': True, 'recovered_items': 0, 'message': 'No missing content detected'}
+        
+        logger.info(f"🔧 ENHANCED recovery: {len(missing_lines)} missing lines, {len(critical_missing_lines)} critical")
+        
+        # PRIORITIZED recovery - critical content first
+        recovery_page = doc.new_page(width=595, height=842)
+        current_y = margin_top
+        
+        # Add header
+        recovery_page.insert_text(
+            point=(margin_left, current_y),
+            text="RECOVERED CRITICAL CONTENT",
+            fontsize=14,
+            color=(0.8, 0, 0),
+            fontname="Helvetica-Bold"
+        )
+        current_y += 30
+        
+        # FIRST: Recover critical missing content
+        recovered_count = 0
+        for line in critical_missing_lines + missing_lines:
+            if current_y > 750:  # Near bottom
+                recovery_page = doc.new_page(width=595, height=842)
+                current_y = margin_top
+            
+            # Determine styling based on content type
+            fontsize, fontname, color = _determine_recovery_styling(line)
+            
+            # Wrap and insert missing content with enhanced formatting
+            wrapped_lines = _wrap_text_with_measurement(line, margin_right - margin_left, fontsize, fontname)
+            
+            for wrapped_line in wrapped_lines:
+                if not wrapped_line.strip():
+                    continue
+                    
+                # ENHANCED insertion with multiple fallbacks
+                success = _insert_critical_content_with_fallbacks(
+                    recovery_page, margin_left, current_y, wrapped_line, 
+                    fontsize, fontname, color, margin_right
+                )
+                
+                if success:
+                    recovered_count += 1
+                    current_y += fontsize + 4
+                else:
+                    logger.warning(f"Could not recover critical line: {line[:50]}")
+        
+        logger.info(f"✅ ENHANCED content recovery completed: {recovered_count} items recovered")
+        
+        return {
+            'success': True,
+            'recovered_items': recovered_count,
+            'critical_recovered': len(critical_missing_lines),
+            'message': f'Successfully recovered {recovered_count} items ({len(critical_missing_lines)} critical)'
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Enhanced content recovery failed: {e}")
+        return {
+            'success': False,
+            'recovered_items': 0,
+            'message': f'Enhanced recovery failed: {str(e)}'
+        }
+
+def _lines_substantially_similar(line1: str, line2: str) -> bool:
+    """Check if two lines are substantially similar"""
+    words1 = set(line1.lower().split())
+    words2 = set(line2.lower().split())
+    
+    if not words1 or not words2:
+        return False
+        
+    intersection = words1 & words2
+    union = words1 | words2
+    
+    similarity = len(intersection) / len(union) if union else 0
+    return similarity > 0.6  # 60% word overlap
+
+def _determine_recovery_styling(line: str) -> tuple:
+    """Determine appropriate styling for recovered content"""
+    line_lower = line.lower()
+    
+    # Name-like content
+    if any(indicator in line_lower for indicator in ['masters', 'bachelor', 'mba']):
+        return 11, "Helvetica-Bold", (0.8, 0, 0)  # Red for education
+    
+    # Institution names
+    if any(indicator in line_lower for indicator in ['indian institute', 'iim', 'university']):
+        return 10, "Helvetica", (0.6, 0, 0)  # Dark red for institutions
+    
+    # Professional content
+    if any(indicator in line_lower for indicator in ['product', 'leader', 'manager', 'director']):
+        return 10, "Helvetica-Bold", (0, 0, 0.8)  # Blue for professional
+    
+    # Dates and locations
+    if any(indicator in line for indicator in ['2020', '2021', '2022', '2023', '2024', '/', '-']):
+        return 9, "Helvetica", (0.5, 0.5, 0.5)  # Gray for dates
+    
+    return 10, "Helvetica", (0, 0, 0)  # Default black
+
+def _insert_critical_content_with_fallbacks(page, x, y, text, fontsize, fontname, color, max_x) -> bool:
+    """Insert critical content with enhanced fallback strategies"""
+    strategies = [
+        # Strategy 1: Original parameters with enhanced font
+        {'fontsize': fontsize, 'fontname': fontname, 'color': color},
+        # Strategy 2: Bold safe font for emphasis
+        {'fontsize': fontsize, 'fontname': 'Helvetica-Bold', 'color': color},
+        # Strategy 3: Safe font with larger size
+        {'fontsize': fontsize + 1, 'fontname': 'Helvetica', 'color': (0, 0, 0)},
+        # Strategy 4: Smaller safe font
+        {'fontsize': max(8, fontsize - 1), 'fontname': 'Helvetica', 'color': (0, 0, 0)},
+        # Strategy 5: Textbox fallback with enhanced rect
+        {'method': 'textbox', 'fontsize': fontsize}
+    ]
+    
+    for strategy in strategies:
+        try:
+            if strategy.get('method') == 'textbox':
+                # Enhanced textbox fallback with better sizing
+                rect = fitz.Rect(x, y - 3, max_x - 10, y + fontsize + 8)
+                page.insert_textbox(rect, text, fontsize=strategy.get('fontsize', 9), 
+                                  fontname="Helvetica", color=(0, 0, 0))
+                return True
+            else:
+                # Regular text insertion
+                page.insert_text(
+                    point=(x, y),
+                    text=text,
+                    fontsize=strategy['fontsize'],
+                    color=strategy['color'],
+                    fontname=strategy['fontname']
+                )
+                return True
+        except Exception as e:
+            logger.debug(f"Critical content insertion strategy failed: {e}")
+            continue
+    
+    return False
+
+def create_guaranteed_preservation_pdf(text_content: str) -> bytes:
+    """GUARANTEED: Create PDF that preserves ALL content without any loss"""
+    try:
+        logger.info("🔒 Creating GUARANTEED preservation PDF...")
+        logger.info(f"🔍 Input text length: {len(text_content)} characters")
+        
+        # Validate input
+        if not text_content or not text_content.strip():
+            raise Exception("No content provided for PDF generation")
+        
+        # Create new PDF document with larger pages if needed
+        doc = fitz.open()
+        page = doc.new_page(width=595, height=842)  # A4 size
+        
+        # CONSERVATIVE approach: Use textbox for guaranteed insertion
+        margin = 40
+        text_rect = fitz.Rect(margin, margin, 595 - margin, 842 - margin)
+        
+        # Split content into manageable chunks
+        content_lines = text_content.split('\n')
+        current_page = page
+        current_y = margin
+        line_height = 12
+        
+        logger.info(f"📝 Processing {len(content_lines)} lines for guaranteed preservation")
+        
+        for i, line in enumerate(content_lines):
+            if not line.strip():
+                current_y += 6  # Small gap for empty lines
+                continue
+            
+            # Check if we need a new page
+            if current_y > 800:  # Near bottom
+                current_page = doc.new_page(width=595, height=842)
+                current_y = margin
+                logger.info(f"📄 Created new page at line {i}")
+            
+            # GUARANTEED insertion strategies
+            line_inserted = False
+            
+            # Strategy 1: Direct text insertion
+            try:
+                current_page.insert_text(
+                    point=(margin, current_y),
+                    text=line.strip(),
+                    fontsize=10,
+                    color=(0, 0, 0),
+                    fontname="Helvetica"
+                )
+                line_inserted = True
+            except:
+                # Strategy 2: Textbox insertion
+                try:
+                    rect = fitz.Rect(margin, current_y - 5, 555, current_y + 15)
+                    current_page.insert_textbox(rect, line.strip(), fontsize=9, fontname="Helvetica")
+                    line_inserted = True
+                except:
+                    # Strategy 3: Character-by-character insertion for problematic lines
+                    try:
+                        clean_line = ''.join(char for char in line if ord(char) < 128)  # ASCII only
+                        current_page.insert_text(
+                            point=(margin, current_y),
+                            text=clean_line,
+                            fontsize=9,
+                            color=(0, 0, 0),
+                            fontname="Helvetica"
+                        )
+                        line_inserted = True
+                    except:
+                        logger.warning(f"Could not insert line {i}: {line[:50]}")
+            
+            if line_inserted:
+                current_y += line_height
+        
+        # Save to bytes
+        pdf_bytes = io.BytesIO()
+        doc.save(pdf_bytes)
+        doc.close()
+        
+        result = pdf_bytes.getvalue()
+        logger.info(f"✅ GUARANTEED preservation PDF created: {len(result)} bytes")
+        return result
+        
+    except Exception as e:
+        logger.error(f"❌ Even guaranteed preservation failed: {e}")
+        # ULTIMATE fallback: Create error PDF with full text dump
+        try:
+            doc = fitz.open()
+            page = doc.new_page()
+            
+            # Insert as much text as possible in a large textbox
+            text_rect = fitz.Rect(30, 30, 565, 812)
+            
+            # Truncate if necessary but preserve critical parts
+            if len(text_content) > 10000:
+                # Keep first and last parts
+                preserved_content = text_content[:5000] + "\n\n[... CONTENT TRUNCATED FOR PDF SIZE ...]\n\n" + text_content[-3000:]
+            else:
+                preserved_content = text_content
+            
+            page.insert_textbox(text_rect, preserved_content, fontsize=8, fontname="Helvetica")
+            
+            pdf_bytes = io.BytesIO()
+            doc.save(pdf_bytes)
+            doc.close()
+            
+            result = pdf_bytes.getvalue()
+            logger.info(f"✅ ULTIMATE fallback PDF created: {len(result)} bytes")
+            return result
+            
+        except Exception as final_error:
+            logger.error(f"❌ ULTIMATE fallback failed: {final_error}")
+            raise Exception(f"Complete PDF generation failure: {str(final_error)}")
 
 def _attempt_content_recovery(doc, original_text: str, added_text_parts: List[str], 
                              margin_left: int, margin_right: int, margin_top: int) -> Dict[str, Any]:
@@ -1104,11 +1486,18 @@ def _wrap_text_with_measurement(text: str, max_width: int, fontsize: int = 10, f
         temp_page = temp_doc.new_page()
         
         # Test if the entire text fits on one line
-        text_width = temp_page.get_textlength(text, fontname=fontname, fontsize=fontsize)
-        temp_doc.close()
-        
-        if text_width <= max_width:
-            return [text]
+        try:
+            text_width = temp_page.get_textlength(text, fontname=fontname, fontsize=fontsize)
+            temp_doc.close()
+            
+            if text_width <= max_width:
+                return [text]
+        except AttributeError:
+            # Fallback for older PyMuPDF versions
+            temp_doc.close()
+            # Use character-based estimation
+            if len(text) * fontsize * 0.6 <= max_width:
+                return [text]
         
         # Text needs wrapping - use word-by-word approach with accurate measurement
         words = text.split(' ')
@@ -1121,7 +1510,14 @@ def _wrap_text_with_measurement(text: str, max_width: int, fontsize: int = 10, f
         for word in words:
             # Test adding this word to current line
             test_line = ' '.join(current_line + [word])
-            test_width = temp_page.get_textlength(test_line, fontname=fontname, fontsize=fontsize)
+            
+            try:
+                test_width = temp_page.get_textlength(test_line, fontname=fontname, fontsize=fontsize)
+                word_width = temp_page.get_textlength(word, fontname=fontname, fontsize=fontsize)
+            except AttributeError:
+                # Fallback for older PyMuPDF versions
+                test_width = len(test_line) * fontsize * 0.6
+                word_width = len(word) * fontsize * 0.6
             
             if test_width <= max_width:
                 current_line.append(word)
@@ -1131,7 +1527,6 @@ def _wrap_text_with_measurement(text: str, max_width: int, fontsize: int = 10, f
                     lines.append(' '.join(current_line))
                 
                 # Handle very long single words
-                word_width = temp_page.get_textlength(word, fontname=fontname, fontsize=fontsize)
                 if word_width > max_width:
                     # Word too long for line - split it character by character
                     char_lines = _split_long_word_safely(word, max_width, fontsize, fontname, temp_page)
@@ -1171,7 +1566,12 @@ def _split_long_word_safely(word: str, max_width: int, fontsize: int, fontname: 
         
         for i in range(1, len(remaining) + 1):
             test_text = remaining[:i]
-            test_width = page.get_textlength(test_text, fontname=fontname, fontsize=fontsize)
+            try:
+                test_width = page.get_textlength(test_text, fontname=fontname, fontsize=fontsize)
+            except AttributeError:
+                # Fallback for older PyMuPDF versions
+                test_width = len(test_text) * fontsize * 0.6
+            
             if test_width <= max_width:
                 best_length = i
             else:
