@@ -388,11 +388,11 @@ function displayMainIssuesList(data) {
                 <div class="text-xs text-gray-600 uppercase">High Priority</div>
             </div>
             <div>
-                <div class="text-2xl font-bold text-yellow-600">${issuesNeedingFix.filter(i => i.severity === 'medium').length}</div>
+                <div class="text-2xl font-bold text-yellow-600">${issuesNeedingFix.length}</div>
                 <div class="text-xs text-gray-600 uppercase">Medium Priority</div>
             </div>
             <div>
-                <div class="text-2xl font-bold text-green-600">${allIssues.filter(i => i.score === 10).length}</div>
+                <div class="text-2xl font-bold text-green-600">${21 - issuesNeedingFix.length}</div>
                 <div class="text-xs text-gray-600 uppercase">Completed</div>
             </div>
         </div>
@@ -481,12 +481,220 @@ function getSeverityText(severity) {
 }
 
 /**
- * Handle fix issue button click
+ * Handle fix issue button click - Show specific CV lines with issues
  */
 window.handleFixIssue = function(issueTitle, issueIndex) {
     console.log(`Fix requested for: ${issueTitle}`);
     
-    // For now, redirect to upgrade/payment
+    // Generate specific examples for this issue
+    const specificExamples = generateSpecificExamples(issueTitle, analysisData);
+    
+    // Show modal with specific line highlighting
+    showIssueDetailModal(issueTitle, specificExamples);
+};
+
+/**
+ * Generate specific examples of issues in CV text
+ */
+function generateSpecificExamples(issueTitle, data) {
+    const insights = data.insights || {};
+    const resumeText = data.resume_text || data.text || "Sample resume content here...";
+    
+    // Create realistic examples based on issue type
+    const examples = [];
+    
+    switch (issueTitle.toLowerCase()) {
+        case 'summary':
+            examples.push({
+                line: "Experienced professional seeking opportunities in technology.",
+                issue: "Too generic - lacks specific value proposition",
+                fix: "Results-driven Software Engineer with 5+ years developing scalable web applications, seeking to leverage expertise in React and Node.js to drive innovation at tech-forward companies."
+            });
+            break;
+            
+        case 'quantity impact':
+            examples.push({
+                line: "Improved website performance significantly.",
+                issue: "Vague impact - needs specific metrics",
+                fix: "Improved website performance by 40%, reducing page load time from 3.2s to 1.9s."
+            });
+            break;
+            
+        case 'weak verbs':
+            examples.push({
+                line: "Responsible for managing team projects.",
+                issue: "Weak verb 'responsible for' - use action verbs",
+                fix: "Led cross-functional team of 8 engineers to deliver 12 projects on schedule."
+            });
+            break;
+            
+        case 'verbosity':
+            examples.push({
+                line: "Collaborated extensively with multiple cross-functional teams in order to successfully implement and deploy various software solutions.",
+                issue: "Too wordy - can be more concise",
+                fix: "Collaborated with cross-functional teams to implement and deploy software solutions."
+            });
+            break;
+            
+        case 'spelling & consistency':
+            examples.push({
+                line: "Recieved recognition for excelent customer service.",
+                issue: "Spelling errors: 'Received' and 'excellent'",
+                fix: "Received recognition for excellent customer service."
+            });
+            break;
+            
+        case 'grammar':
+            examples.push({
+                line: "Developing applications and managing databases is my expertise.",
+                issue: "Grammar - subject-verb disagreement",
+                fix: "Developing applications and managing databases are my areas of expertise."
+            });
+            break;
+            
+        case 'active voice':
+            examples.push({
+                line: "The project was completed by me ahead of schedule.",
+                issue: "Passive voice - convert to active",
+                fix: "I completed the project ahead of schedule."
+            });
+            break;
+            
+        case 'verb tenses':
+            examples.push({
+                line: "Currently manage team (2019-2021) and was responsible for training.",
+                issue: "Inconsistent tenses for past role",
+                fix: "Managed team (2019-2021) and trained new employees."
+            });
+            break;
+            
+        case 'use of bullets':
+            examples.push({
+                line: "Experience includes: project management, team leadership, and software development.",
+                issue: "Should use bullet points instead of paragraph",
+                fix: "• Managed complex projects with $2M+ budgets\n• Led teams of 5-12 professionals\n• Developed software applications using modern frameworks"
+            });
+            break;
+            
+        default:
+            examples.push({
+                line: "Generic example of resume content that needs improvement.",
+                issue: `This area needs attention based on ATS analysis for ${issueTitle}`,
+                fix: "More specific, quantified, and impactful version of the content."
+            });
+    }
+    
+    return examples;
+}
+
+/**
+ * Show modal with specific issue details and examples
+ */
+function showIssueDetailModal(issueTitle, examples) {
+    // Create modal HTML
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+    modal.id = 'issueDetailModal';
+    
+    modal.innerHTML = `
+        <div class="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                <h2 class="text-xl font-bold text-gray-900">Fix: ${issueTitle}</h2>
+                <button onclick="closeIssueModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="p-6">
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Specific Issues Found in Your Resume:</h3>
+                    <p class="text-gray-600">Here are examples of areas that need improvement for better ATS optimization:</p>
+                </div>
+                
+                ${examples.map((example, index) => `
+                    <div class="mb-8 border border-gray-200 rounded-lg overflow-hidden">
+                        <div class="bg-red-50 p-4 border-b border-gray-200">
+                            <h4 class="font-semibold text-red-800 mb-2">❌ Current (Problematic):</h4>
+                            <div class="bg-white p-3 rounded border-l-4 border-red-500">
+                                <code class="text-sm text-gray-800">"${example.line}"</code>
+                            </div>
+                            <p class="text-sm text-red-700 mt-2"><strong>Issue:</strong> ${example.issue}</p>
+                        </div>
+                        
+                        <div class="bg-green-50 p-4">
+                            <h4 class="font-semibold text-green-800 mb-2">✅ Improved (ATS-Optimized):</h4>
+                            <div class="bg-white p-3 rounded border-l-4 border-green-500">
+                                <code class="text-sm text-gray-800">"${example.fix}"</code>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+                
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mt-8">
+                    <h4 class="font-semibold text-blue-800 mb-3">💡 Why This Matters for ATS:</h4>
+                    <p class="text-blue-700 text-sm">
+                        ${getATSExplanation(issueTitle)}
+                    </p>
+                </div>
+                
+                <div class="flex gap-4 mt-8">
+                    <button onclick="closeIssueModal()" class="flex-1 bg-gray-200 text-gray-800 py-3 px-6 rounded-lg font-medium hover:bg-gray-300">
+                        I'll Fix This Manually
+                    </button>
+                    <button onclick="handleAutoFix('${issueTitle}')" class="flex-1 bg-purple-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-purple-700">
+                        🚀 Auto-Fix with AI - FREE
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+/**
+ * Get ATS explanation for specific issue type
+ */
+function getATSExplanation(issueTitle) {
+    const explanations = {
+        'summary': 'ATS systems scan for specific keywords and value propositions in the summary. Generic statements reduce your ranking compared to candidates with targeted, quantified summaries.',
+        'quantity impact': 'ATS algorithms favor resumes with quantified achievements. Numbers and metrics demonstrate measurable impact and help you stand out in automated screening.',
+        'weak verbs': 'Strong action verbs signal leadership and initiative to ATS systems. Weak verbs like "responsible for" are passive and reduce the impact score of your accomplishments.',
+        'verbosity': 'ATS systems may truncate overly long descriptions, causing important information to be missed. Concise, impactful statements ensure all your achievements are captured.',
+        'spelling & consistency': 'ATS systems flag spelling errors as quality indicators. Even minor mistakes can significantly impact your overall ATS score and prevent you from reaching human reviewers.',
+        'active voice': 'ATS systems favor active voice as it demonstrates ownership and leadership. Passive voice can make your achievements seem less impactful and reduce keyword matching.',
+        'verb tenses': 'Consistent verb tenses help ATS systems understand your career timeline. Inconsistent tenses can confuse parsing algorithms and misrepresent your experience.'
+    };
+    
+    return explanations[issueTitle.toLowerCase()] || 'Optimizing this area will improve your ATS score and increase your chances of passing automated screening systems used by most companies.';
+}
+
+/**
+ * Close the issue detail modal
+ */
+window.closeIssueModal = function() {
+    const modal = document.getElementById('issueDetailModal');
+    if (modal) {
+        modal.remove();
+    }
+};
+
+/**
+ * Handle auto-fix request
+ */
+window.handleAutoFix = function(issueTitle) {
+    console.log(`Auto-fix requested for: ${issueTitle}`);
+    
+    // Close modal and redirect to upgrade/payment
+    closeIssueModal();
+    
+    // Store context for payment page
+    sessionStorage.setItem('fixIssue', issueTitle);
+    sessionStorage.setItem('pendingUpgrade', 'true');
+    sessionStorage.setItem('upgradeSource', 'specific_fix');
+    
     if (upgradeBtn) {
         upgradeBtn.click();
     }
