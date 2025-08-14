@@ -1886,21 +1886,19 @@ function displayMainIssuesList(data) {
 }
 
 /**
- * Display strengths section
+ * Display strengths section - dynamically based on completed categories (scores 9-10)
  */
 function displayStrengths(data) {
     if (!strengthsList || !strengthsSection) return;
     
-    const insights = data.insights || {};
-    const strengths = insights.strengths || [
-        { title: "Page density", description: "Your page layout looks right." },
-        { title: "Dates are in the right format", description: "Your dates are in the right format." },
-        { title: "Unique action verbs and phrases", description: "You didn't overuse any verbs or phrases." }
-    ];
+    // Get completed categories (scores 9-10) with detailed descriptions
+    const atsCategories = generateComprehensiveATSScores(data);
+    const completedCategories = atsCategories.filter(cat => cat.score >= 9);
     
     strengthsList.innerHTML = '';
     
-    strengths.slice(0, 3).forEach(strength => {
+    if (completedCategories.length === 0) {
+        // If no completed categories, show encouraging message
         const item = document.createElement('div');
         item.className = 'strength-item';
         item.innerHTML = `
@@ -1910,12 +1908,62 @@ function displayStrengths(data) {
                 </svg>
             </div>
             <div class="flex-1">
-                <h4 class="font-semibold text-gray-900">${strength.title}:</h4>
-                <p class="text-gray-600 mt-1">${strength.description}</p>
+                <h4 class="font-semibold text-gray-900">Your resume is being analyzed</h4>
+                <p class="text-gray-600 mt-1">We're identifying your strengths and areas for improvement to help you create an interview-ready resume.</p>
+            </div>
+        `;
+        strengthsList.appendChild(item);
+        return;
+    }
+    
+    // Show up to 3 completed categories with their specific achievements
+    completedCategories.slice(0, 3).forEach(category => {
+        const item = document.createElement('div');
+        item.className = 'strength-item';
+        item.innerHTML = `
+            <div class="check-icon">
+                <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                </svg>
+            </div>
+            <div class="flex-1">
+                <h4 class="font-semibold text-gray-900">${category.name} (${category.score}/10):</h4>
+                <p class="text-gray-600 mt-1">${getStrengthDescription(category.name, category.score)}</p>
             </div>
         `;
         strengthsList.appendChild(item);
     });
+}
+
+/**
+ * Get specific strength description based on category name and score
+ */
+function getStrengthDescription(categoryName, score) {
+    const descriptions = {
+        'Summary': 'Your professional summary effectively highlights your experience, key skills, and includes quantifiable achievements with appropriate length.',
+        'Quantity Impact': 'Excellent use of numbers and metrics! Most of your achievements are quantified with specific percentages, dollar amounts, or other measurable results.',
+        'Weak Verbs': 'Great action verb diversity! Your resume uses strong, varied action verbs from multiple categories showing leadership, accomplishment, and professional skills.',
+        'Verbosity': 'Perfect balance of detail and conciseness. Your content is comprehensive yet easy to read and scan quickly.',
+        'Spelling & Consistency': 'Excellent spelling and formatting consistency throughout your resume. Professional presentation with no errors detected.',
+        'Grammar': 'Outstanding grammar quality with professional language, proper tense usage, and clear sentence structure throughout.',
+        'Contact Details': 'Complete contact information including mobile number, professional email address, LinkedIn profile, and location details.',
+        'Unnecessary Sections': 'Well-structured resume with only relevant, professional sections that add value for recruiters and hiring managers.',
+        'Repetition': 'Good variety in language and phrasing. No overuse of words or repetitive content that could bore readers.',
+        'Education Section': 'Education section is appropriately detailed for your experience level with proper formatting and relevant information.',
+        'Skills Section': 'Skills section effectively showcases relevant technical and professional competencies appropriate for your career level.',
+        'Active Voice': 'Excellent use of active voice throughout your resume, making your achievements sound impactful and direct.',
+        'Use of Bullets': 'Well-formatted bullet points that are scannable and highlight key achievements effectively.',
+        'Analytical': 'Strong demonstration of analytical thinking and problem-solving capabilities in your experience descriptions.',
+        'Teamwork': 'Good examples of collaboration and teamwork skills demonstrated throughout your professional experience.',
+        'Growth Signals': 'Clear indicators of professional growth, advancement, and increasing responsibilities in your career progression.',
+        'Drive': 'Excellent demonstration of initiative, motivation, and results-driven approach in your accomplishments.',
+        'Job Fit': 'Your experience and skills align well with typical requirements for your target roles and industry.',
+        'Leadership': 'Strong leadership examples showing your ability to guide teams, manage projects, and influence outcomes.',
+        'Page Density': 'Optimal page layout with appropriate white space, readable formatting, and professional presentation that\'s easy to scan.',
+        'Verb Tenses': 'Consistent and correct verb tense usage - past tense for previous roles, present tense for current position.'
+    };
+    
+    return descriptions[categoryName] || `Excellent performance in ${categoryName} with a score of ${score}/10. This area of your resume meets professional standards.`;
 }
 
 /**
