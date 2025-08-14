@@ -62,18 +62,12 @@ function init() {
 function displayOverallScore(data) {
     if (!atsScore) return;
     
-    // Get REAL score from backend analysis - no more hardcoded 75!
-    let score = data.ats_score || data.overall_score || data.insights?.overall_score || 0;
-    
-    // ALTERNATIVE: Calculate from our 21 categories if we want to override backend
-    // Uncomment this to use frontend calculation instead of backend
-    /*
+    // Calculate overall score from our 21 categories (sum / 210 * 100)
     const categories = generateComprehensiveATSScores(data);
     const categorySum = categories.reduce((sum, cat) => sum + cat.score, 0);
     const calculatedScore = Math.round((categorySum / 210) * 100); // 21 categories * 10 max each = 210, scale to 100
-    score = calculatedScore;
-    console.log(`Calculated score from 21 categories: ${calculatedScore} (sum: ${categorySum}/210)`);
-    */
+    let score = calculatedScore;
+    console.log(`Calculated overall score from 21 categories: ${calculatedScore} (sum: ${categorySum}/210)`);
     
     console.log(`Using ATS score: ${score}`);
     
@@ -104,9 +98,10 @@ function displaySidebarCategories(data) {
     topFixesList.innerHTML = '';
     completedList.innerHTML = '';
     
-    // Separate categories into TOP FIXES (<10/10) and COMPLETED (10/10)
-    const topFixes = atsCategories.filter(cat => cat.score < 10);
-    const completed = atsCategories.filter(cat => cat.score === 10);
+    // Separate categories based on correct thresholds:
+    // 9-10: Completed, 6-8: Need Fixes, <6: High Priority
+    const topFixes = atsCategories.filter(cat => cat.score < 9); // <9 needs fixes
+    const completed = atsCategories.filter(cat => cat.score >= 9); // >=9 completed
     
     // Display TOP FIXES
     topFixes.forEach(category => {
@@ -124,7 +119,7 @@ function displaySidebarCategories(data) {
             description: category.issue,
             score: category.score,
             category: 'Top Fixes',
-            severity: category.score <= 6 ? 'high' : 'medium',
+            severity: category.score < 6 ? 'high' : 'medium', // <6: High Priority, 6-8: Medium (Need Fixes)
             impact: category.impact
         });
     });
@@ -135,7 +130,7 @@ function displaySidebarCategories(data) {
         item.className = 'sidebar-item';
         item.innerHTML = `
             <span class="text-sm text-gray-700">${category.name}</span>
-            <span class="text-sm font-bold text-green-600">10/10</span>
+            <span class="text-sm font-bold text-green-600">${category.score}/10</span>
         `;
         completedList.appendChild(item);
     });
@@ -1811,8 +1806,8 @@ function displayMainIssuesList(data) {
     
     issuesList.innerHTML = '';
     
-    // Only show issues that need fixing (score < 10)
-    const issuesNeedingFix = allIssues.filter(issue => issue.score && issue.score < 10);
+    // Only show issues that need fixing (score < 9)
+    const issuesNeedingFix = allIssues.filter(issue => issue.score && issue.score < 9);
     
     if (issuesNeedingFix.length === 0) {
         issuesList.innerHTML = `
@@ -1874,15 +1869,15 @@ function displayMainIssuesList(data) {
         </div>
         <div class="grid grid-cols-3 gap-4 text-center">
             <div>
-                <div class="text-2xl font-bold text-red-600">${issuesNeedingFix.filter(i => i.severity === 'high').length}</div>
+                <div class="text-2xl font-bold text-red-600">${allIssues.filter(i => i.score < 6).length}</div>
                 <div class="text-xs text-gray-600 uppercase">High Priority</div>
             </div>
             <div>
-                <div class="text-2xl font-bold text-yellow-600">${issuesNeedingFix.length}</div>
+                <div class="text-2xl font-bold text-yellow-600">${allIssues.filter(i => i.score >= 6 && i.score <= 8).length}</div>
                 <div class="text-xs text-gray-600 uppercase">Need Fixes</div>
             </div>
             <div>
-                <div class="text-2xl font-bold text-green-600">${21 - issuesNeedingFix.length}</div>
+                <div class="text-2xl font-bold text-green-600">${allIssues.filter(i => i.score >= 9).length}</div>
                 <div class="text-xs text-gray-600 uppercase">Completed</div>
             </div>
         </div>
