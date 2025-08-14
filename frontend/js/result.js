@@ -57,15 +57,29 @@ function init() {
 }
 
 /**
- * Display overall ATS score in the sidebar circle
+ * Display overall ATS score in the sidebar circle - NOW USING REAL DATA
  */
 function displayOverallScore(data) {
     if (!atsScore) return;
     
-    const score = data.insights?.overall_score || data.overall_score || 75;
+    // Get REAL score from backend analysis - no more hardcoded 75!
+    let score = data.ats_score || data.overall_score || data.insights?.overall_score || 0;
+    
+    // ALTERNATIVE: Calculate from our 21 categories if we want to override backend
+    // Uncomment this to use frontend calculation instead of backend
+    /*
+    const categories = generateComprehensiveATSScores(data);
+    const categorySum = categories.reduce((sum, cat) => sum + cat.score, 0);
+    const calculatedScore = Math.round((categorySum / 210) * 100); // 21 categories * 10 max each = 210, scale to 100
+    score = calculatedScore;
+    console.log(`Calculated score from 21 categories: ${calculatedScore} (sum: ${categorySum}/210)`);
+    */
+    
+    console.log(`Using ATS score: ${score}`);
+    
     atsScore.textContent = Math.round(score);
     
-    // Update circle color based on score
+    // Update circle color based on actual score
     if (scoreCircle) {
         if (score >= 80) {
             scoreCircle.style.borderColor = '#10b981'; // Green
@@ -133,184 +147,510 @@ function displaySidebarCategories(data) {
 }
 
 /**
- * Generate comprehensive ATS scores for all 20 categories
+ * Generate comprehensive ATS scores for all 21 categories - NOW USING REAL DATA
  */
 function generateComprehensiveATSScores(data) {
-    const insights = data.insights || {};
-    const overallScore = data.insights?.overall_score || data.overall_score || 75;
+    console.log('Generating scores with real data:', data);
     
-    // Define all 20 ATS categories with intelligent scoring
-    return [
-        {
-            name: 'Summary',
-            score: generateSmartScore(insights, 'summary', overallScore),
-            issue: 'Professional summary needs improvement for better impact',
-            impact: 'IMPACT'
-        },
-        {
-            name: 'Quantity Impact',
-            score: generateSmartScore(insights, 'quantify', overallScore),
-            issue: 'Add more quantified achievements with specific numbers',
-            impact: 'IMPACT'
-        },
-        {
-            name: 'Weak Verbs',
-            score: generateSmartScore(insights, 'verbs', overallScore),
-            issue: 'Replace weak verbs with stronger action words',
-            impact: 'IMPACT'
-        },
-        {
-            name: 'Verbosity',
-            score: generateSmartScore(insights, 'verbosity', overallScore),
-            issue: 'Reduce wordiness for better readability',
-            impact: 'BREVITY'
-        },
-        {
-            name: 'Spelling & Consistency',
-            score: generateSmartScore(insights, 'spelling', overallScore),
-            issue: 'Fix spelling errors and maintain consistency',
-            impact: 'BREVITY'
-        },
-        {
-            name: 'Grammar',
-            score: generateSmartScore(insights, 'grammar', overallScore),
-            issue: 'Correct grammatical errors throughout resume',
-            impact: 'BREVITY'
-        },
-        {
-            name: 'Unnecessary Sections',
-            score: generateSmartScore(insights, 'sections', overallScore),
-            issue: 'Remove sections that don\'t add value',
-            impact: 'SECTIONS'
-        },
-        {
-            name: 'Repetition',
-            score: generateSmartScore(insights, 'repetition', overallScore),
-            issue: 'Eliminate repetitive phrases and content',
-            impact: 'BREVITY'
-        },
-        {
-            name: 'Education Section',
-            score: generateSmartScore(insights, 'education', overallScore),
-            issue: 'Optimize education section format and content',
-            impact: 'SECTIONS'
-        },
-        {
-            name: 'Skills Section',
-            score: generateSmartScore(insights, 'skills', overallScore),
-            issue: 'Improve skills presentation and relevance',
-            impact: 'SECTIONS'
-        },
-        {
-            name: 'Contact Details',
-            score: generateSmartScore(insights, 'contact', overallScore),
-            issue: 'Ensure contact information is complete and professional',
-            impact: 'SECTIONS'
-        },
-        {
-            name: 'Active Voice',
-            score: generateSmartScore(insights, 'active', overallScore),
-            issue: 'Convert passive voice to active voice for impact',
-            impact: 'IMPACT'
-        },
-        {
-            name: 'Page Density',
-            score: generateSmartScore(insights, 'density', overallScore),
-            issue: 'Optimize page layout and white space usage',
-            impact: 'STYLE'
-        },
-        {
-            name: 'Verb Tenses',
-            score: generateSmartScore(insights, 'tense', overallScore),
-            issue: 'Use consistent and appropriate verb tenses',
-            impact: 'BREVITY'
-        },
-        {
-            name: 'Use of Bullets',
-            score: generateSmartScore(insights, 'bullets', overallScore),
-            issue: 'Improve bullet point structure and formatting',
-            impact: 'STYLE'
-        },
-        {
-            name: 'Analytical',
-            score: generateSmartScore(insights, 'analytical', overallScore),
-            issue: 'Highlight analytical and problem-solving skills',
-            impact: 'ALL'
-        },
-        {
-            name: 'Teamwork',
-            score: generateSmartScore(insights, 'teamwork', overallScore),
-            issue: 'Better showcase collaborative experiences',
-            impact: 'ALL'
-        },
-        {
-            name: 'Growth Signals',
-            score: generateSmartScore(insights, 'growth', overallScore),
-            issue: 'Demonstrate career progression and learning',
-            impact: 'ALL'
-        },
-        {
-            name: 'Drive',
-            score: generateSmartScore(insights, 'drive', overallScore),
-            issue: 'Show initiative and self-motivation examples',
-            impact: 'ALL'
-        },
-        {
-            name: 'Job Fit',
-            score: generateSmartScore(insights, 'jobfit', overallScore),
-            issue: 'Better align experience with target role requirements',
-            impact: 'ALL'
-        },
-        {
-            name: 'Leadership',
-            score: generateSmartScore(insights, 'leadership', overallScore),
-            issue: 'Emphasize leadership experiences and impact',
-            impact: 'ALL'
-        }
-    ];
+    // Extract real backend analysis components
+    const componentScores = data.component_scores || {};
+    const detailedAnalysis = data.detailed_analysis || {};
+    const resumeText = data.content || data.text || "";
+    
+    console.log('Backend component scores:', componentScores);
+    console.log('Backend detailed analysis:', detailedAnalysis);
+    
+    // Now calculate REAL scores for each category based on actual backend analysis
+    const categories = [];
+    
+    // Map backend components to our 21 frontend categories with real analysis
+    
+    // 1. CONTACT INFORMATION (from backend 'contact' component)
+    const contactData = detailedAnalysis.contact || {};
+    categories.push({
+        name: 'Contact Details',
+        score: Math.round((componentScores.contact || 0) / 15 * 10), // Backend gives 0-15, scale to 0-10
+        issue: generateContactIssue(contactData),
+        impact: 'SECTIONS'
+    });
+    
+    // 2-3. STRUCTURE ANALYSIS (from backend 'structure' component) 
+    const structureData = detailedAnalysis.structure || {};
+    const structureScore = componentScores.structure || 0;
+    categories.push({
+        name: 'Education Section',
+        score: analyzeEducationSection(resumeText, structureData),
+        issue: 'Optimize education section format and content',
+        impact: 'SECTIONS'
+    });
+    categories.push({
+        name: 'Skills Section', 
+        score: analyzeSkillsSection(resumeText, structureData),
+        issue: 'Improve skills presentation and relevance',
+        impact: 'SECTIONS'
+    });
+    
+    // 4-6. KEYWORD OPTIMIZATION (from backend 'keywords' component)
+    const keywordsData = detailedAnalysis.keywords || {};
+    const keywordScore = componentScores.keywords || 0;
+    categories.push({
+        name: 'Job Fit',
+        score: Math.round(keywordScore / 20 * 10), // Backend gives 0-20, scale to 0-10
+        issue: 'Better align experience with target role requirements',
+        impact: 'ALL'
+    });
+    categories.push({
+        name: 'Analytical',
+        score: analyzeAnalyticalSkills(resumeText, keywordsData),
+        issue: 'Highlight analytical and problem-solving skills',
+        impact: 'ALL'
+    });
+    categories.push({
+        name: 'Leadership',
+        score: analyzeLeadershipSkills(resumeText, keywordsData),
+        issue: 'Emphasize leadership experiences and impact',
+        impact: 'ALL'
+    });
+    
+    // 7-11. FORMATTING & STYLE (from backend 'formatting' component)
+    const formattingData = detailedAnalysis.formatting || {};
+    const formattingScore = componentScores.formatting || 0;
+    categories.push({
+        name: 'Page Density',
+        score: Math.round(formattingScore / 20 * 10), // Backend gives 0-20, scale to 0-10
+        issue: 'Optimize page layout and white space usage',
+        impact: 'STYLE'
+    });
+    categories.push({
+        name: 'Use of Bullets',
+        score: analyzeBulletUsage(resumeText, formattingData),
+        issue: 'Improve bullet point structure and formatting',
+        impact: 'STYLE'
+    });
+    categories.push({
+        name: 'Spelling & Consistency',
+        score: analyzeSpellingConsistency(resumeText),
+        issue: 'Fix spelling errors and maintain consistency',
+        impact: 'BREVITY'
+    });
+    categories.push({
+        name: 'Grammar',
+        score: analyzeGrammar(resumeText),
+        issue: 'Correct grammatical errors throughout resume',
+        impact: 'BREVITY'
+    });
+    categories.push({
+        name: 'Verb Tenses',
+        score: analyzeVerbTenses(resumeText),
+        issue: 'Use consistent and appropriate verb tenses',
+        impact: 'BREVITY'
+    });
+    
+    // 12-16. ACHIEVEMENTS & CONTENT (from backend 'achievements' component)
+    const achievementsData = detailedAnalysis.achievements || {};
+    const achievementsScore = componentScores.achievements || 0;
+    categories.push({
+        name: 'Quantity Impact',
+        score: Math.round(achievementsScore / 25 * 10), // Backend gives 0-25, scale to 0-10
+        issue: 'Add more quantified achievements with specific numbers',
+        impact: 'IMPACT'
+    });
+    categories.push({
+        name: 'Weak Verbs',
+        score: analyzeWeakVerbs(resumeText),
+        issue: 'Replace weak verbs with stronger action words',
+        impact: 'IMPACT'
+    });
+    categories.push({
+        name: 'Active Voice',
+        score: analyzeActiveVoice(resumeText),
+        issue: 'Convert passive voice to active voice for impact',
+        impact: 'IMPACT'
+    });
+    categories.push({
+        name: 'Summary',
+        score: analyzeSummarySection(resumeText),
+        issue: 'Professional summary needs improvement for better impact',
+        impact: 'IMPACT'
+    });
+    categories.push({
+        name: 'Teamwork',
+        score: analyzeTeamworkSkills(resumeText),
+        issue: 'Better showcase collaborative experiences',
+        impact: 'ALL'
+    });
+    
+    // 17-21. READABILITY & CONTENT QUALITY (from backend 'readability' component)
+    const readabilityData = detailedAnalysis.readability || {};
+    const readabilityScore = componentScores.readability || 0;
+    categories.push({
+        name: 'Verbosity',
+        score: Math.round(readabilityScore / 10 * 10), // Backend gives 0-10, scale to 0-10
+        issue: 'Reduce wordiness for better readability',
+        impact: 'BREVITY'
+    });
+    categories.push({
+        name: 'Repetition',
+        score: analyzeRepetition(resumeText),
+        issue: 'Eliminate repetitive phrases and content',
+        impact: 'BREVITY'
+    });
+    categories.push({
+        name: 'Unnecessary Sections',
+        score: analyzeUnnecessarySections(resumeText),
+        issue: 'Remove sections that don\'t add value',
+        impact: 'SECTIONS'
+    });
+    categories.push({
+        name: 'Growth Signals',
+        score: analyzeGrowthSignals(resumeText),
+        issue: 'Demonstrate career progression and learning',
+        impact: 'ALL'
+    });
+    categories.push({
+        name: 'Drive',
+        score: analyzeDriveAndInitiative(resumeText),
+        issue: 'Show initiative and self-motivation examples',
+        impact: 'ALL'
+    });
+    
+    console.log('Generated categories with real scores:', categories);
+    return categories;
+}
+
+// =====================================================================================
+// REAL ANALYSIS FUNCTIONS - These analyze actual resume content, no more fake scoring!
+// =====================================================================================
+
+/**
+ * Generate contact issue based on actual missing contact information
+ */
+function generateContactIssue(contactData) {
+    const missing = contactData.missing || [];
+    if (missing.length > 0) {
+        return `Missing ${missing.join(', ')} - complete contact information required`;
+    }
+    return 'Contact information is complete and professional';
 }
 
 /**
- * Generate smart scores based on analysis data and overall performance
+ * Analyze education section based on resume content
  */
-function generateSmartScore(insights, category, overallScore) {
-    // Base score influenced by overall ATS score
-    let baseScore = Math.max(6, Math.min(10, Math.round(overallScore / 10)));
+function analyzeEducationSection(resumeText, structureData) {
+    const text = resumeText.toLowerCase();
+    let score = 5; // Base score
     
-    // Apply category-specific logic based on actual insights
-    const quickWins = insights.quick_wins || [];
-    const criticalIssues = insights.critical_issues || [];
-    const improvementSuggestions = insights.improvement_suggestions || [];
+    // Check for education section presence
+    if (text.includes('education') || text.includes('degree') || text.includes('university') || text.includes('college')) {
+        score += 3;
+    }
     
-    // Check if category has specific issues mentioned
-    const allIssues = [...quickWins, ...criticalIssues, ...improvementSuggestions];
-    const categoryMentioned = allIssues.some(issue => {
-        const text = (issue.title || issue.issue || '').toLowerCase();
-        return text.includes(category) || 
-               (category === 'verbs' && (text.includes('verb') || text.includes('action'))) ||
-               (category === 'spelling' && text.includes('spell')) ||
-               (category === 'bullets' && text.includes('bullet')) ||
-               (category === 'education' && text.includes('education')) ||
-               (category === 'tense' && text.includes('tense'));
+    // Check for graduation dates
+    if (text.match(/\b(19|20)\d{2}\b/)) {
+        score += 1;
+    }
+    
+    // Check for GPA or honors
+    if (text.includes('gpa') || text.includes('magna cum laude') || text.includes('summa cum laude')) {
+        score += 1;
+    }
+    
+    return Math.min(score, 10);
+}
+
+/**
+ * Analyze skills section quality
+ */
+function analyzeSkillsSection(resumeText, structureData) {
+    const text = resumeText.toLowerCase();
+    let score = 4; // Base score
+    
+    // Check for skills section
+    if (text.includes('skills') || text.includes('technical skills') || text.includes('competencies')) {
+        score += 3;
+    }
+    
+    // Check for specific technology mentions
+    const techKeywords = ['python', 'java', 'javascript', 'sql', 'excel', 'aws', 'react', 'node'];
+    const foundTech = techKeywords.filter(tech => text.includes(tech)).length;
+    score += Math.min(foundTech, 3);
+    
+    return Math.min(score, 10);
+}
+
+/**
+ * Analyze analytical skills mentions
+ */
+function analyzeAnalyticalSkills(resumeText, keywordsData) {
+    const text = resumeText.toLowerCase();
+    const analyticalWords = ['analysis', 'analytical', 'data', 'research', 'investigate', 'evaluate', 'assess', 'statistics'];
+    
+    let score = 3; // Base score
+    const foundWords = analyticalWords.filter(word => text.includes(word)).length;
+    score += Math.min(foundWords, 7);
+    
+    return Math.min(score, 10);
+}
+
+/**
+ * Analyze leadership skills and experience
+ */
+function analyzeLeadershipSkills(resumeText, keywordsData) {
+    const text = resumeText.toLowerCase();
+    const leadershipWords = ['lead', 'leader', 'manage', 'director', 'supervisor', 'team', 'mentor', 'coach'];
+    
+    let score = 2; // Base score
+    const foundWords = leadershipWords.filter(word => text.includes(word)).length;
+    score += Math.min(foundWords, 8);
+    
+    return Math.min(score, 10);
+}
+
+/**
+ * Analyze bullet point usage and formatting
+ */
+function analyzeBulletUsage(resumeText, formattingData) {
+    const bulletCount = (resumeText.match(/[•▪▫■□◦‣⁃]/g) || []).length;
+    const dashCount = (resumeText.match(/^\s*[-*]\s/gm) || []).length;
+    
+    let score = 4; // Base score
+    
+    if (bulletCount + dashCount > 5) {
+        score += 4; // Good use of bullets
+    } else if (bulletCount + dashCount > 0) {
+        score += 2; // Some bullets
+    }
+    
+    // Check for consistent bullet usage
+    if (bulletCount > dashCount || dashCount > bulletCount) {
+        score += 2; // Consistent style
+    }
+    
+    return Math.min(score, 10);
+}
+
+/**
+ * Analyze spelling and consistency issues
+ */
+function analyzeSpellingConsistency(resumeText) {
+    let score = 8; // Start high, deduct for issues
+    
+    // Common spelling errors to check for
+    const commonErrors = ['recieved', 'seperate', 'managment', 'acheivement', 'excelent', 'experiance'];
+    const foundErrors = commonErrors.filter(error => resumeText.toLowerCase().includes(error)).length;
+    
+    score -= foundErrors * 2;
+    
+    // Check for inconsistent date formats
+    const dateFormats = [
+        /\d{1,2}\/\d{4}/g, // MM/YYYY
+        /\d{4}-\d{2}/g,    // YYYY-MM
+        /[A-Za-z]+ \d{4}/g // Month YYYY
+    ];
+    
+    const formatCounts = dateFormats.map(regex => (resumeText.match(regex) || []).length);
+    const multipleFormats = formatCounts.filter(count => count > 0).length;
+    
+    if (multipleFormats > 1) {
+        score -= 1; // Inconsistent date formats
+    }
+    
+    return Math.max(score, 0);
+}
+
+/**
+ * Analyze grammar issues
+ */
+function analyzeGrammar(resumeText) {
+    let score = 8; // Start high
+    
+    // Check for basic grammar issues
+    const grammarIssues = [
+        /\bis\s+are\b/gi,  // Subject-verb disagreement
+        /\bare\s+is\b/gi,
+        /\bi\s+are\b/gi,
+        /\byou\s+is\b/gi
+    ];
+    
+    let issueCount = 0;
+    grammarIssues.forEach(pattern => {
+        issueCount += (resumeText.match(pattern) || []).length;
     });
     
-    if (categoryMentioned) {
-        baseScore = Math.max(4, baseScore - 2); // Reduce score if issues found
+    score -= Math.min(issueCount * 2, 6);
+    
+    return Math.max(score, 2);
+}
+
+/**
+ * Analyze verb tense consistency
+ */
+function analyzeVerbTenses(resumeText) {
+    let score = 7; // Base score
+    
+    // Count present vs past tense in experience descriptions
+    const pastTenseMarkers = resumeText.match(/\b\w+ed\b/g) || [];
+    const presentTenseMarkers = resumeText.match(/\b(manage|lead|develop|create|implement)\b/gi) || [];
+    
+    // Mixed tenses in same role indicate problems
+    if (pastTenseMarkers.length > 0 && presentTenseMarkers.length > 0) {
+        const ratio = Math.min(pastTenseMarkers.length, presentTenseMarkers.length) / 
+                     Math.max(pastTenseMarkers.length, presentTenseMarkers.length);
+        
+        if (ratio > 0.3) { // Significant mixing
+            score -= 3;
+        }
     }
     
-    // Ensure variety - some categories should be perfect (10/10)
-    const perfectCategories = ['density', 'contact', 'tense']; // Categories that are often done well
-    if (perfectCategories.includes(category) && overallScore >= 70) {
-        baseScore = 10;
+    return Math.max(score, 3);
+}
+
+/**
+ * Analyze weak verbs usage
+ */
+function analyzeWeakVerbs(resumeText) {
+    const weakVerbs = ['responsible for', 'duties included', 'helped with', 'assisted in', 'involved in', 'worked on'];
+    const strongVerbs = ['led', 'managed', 'developed', 'created', 'implemented', 'achieved', 'increased', 'improved'];
+    
+    let score = 5; // Base score
+    
+    const weakCount = weakVerbs.reduce((count, verb) => {
+        return count + (resumeText.toLowerCase().split(verb).length - 1);
+    }, 0);
+    
+    const strongCount = strongVerbs.reduce((count, verb) => {
+        return count + (resumeText.toLowerCase().split(verb).length - 1);
+    }, 0);
+    
+    if (strongCount > weakCount) {
+        score += 4; // Good use of strong verbs
+    } else if (weakCount > strongCount) {
+        score -= 2; // Too many weak verbs
     }
     
-    // Ensure some categories need work for realistic assessment
-    const challengingCategories = ['quantify', 'leadership', 'growth', 'analytical'];
-    if (challengingCategories.includes(category) && overallScore < 85) {
-        baseScore = Math.min(8, baseScore);
+    return Math.max(Math.min(score, 10), 1);
+}
+
+/**
+ * Analyze active vs passive voice usage
+ */
+function analyzeActiveVoice(resumeText) {
+    const passiveIndicators = ['was completed', 'were handled', 'was managed', 'were developed', 'was created'];
+    let score = 8; // Start high
+    
+    const passiveCount = passiveIndicators.reduce((count, phrase) => {
+        return count + (resumeText.toLowerCase().split(phrase).length - 1);
+    }, 0);
+    
+    score -= Math.min(passiveCount * 2, 6);
+    
+    return Math.max(score, 2);
+}
+
+/**
+ * Analyze summary section quality
+ */
+function analyzeSummarySection(resumeText) {
+    const text = resumeText.toLowerCase();
+    let score = 4; // Base score
+    
+    // Check for summary/objective section
+    if (text.includes('summary') || text.includes('objective') || text.includes('profile')) {
+        score += 2;
     }
     
-    return baseScore;
+    // Check for years of experience mention
+    if (text.match(/\d+\+?\s*years?\s*(of\s*)?(experience|exp)/)) {
+        score += 2;
+    }
+    
+    // Check for specific industry/role mention
+    if (text.includes('engineer') || text.includes('manager') || text.includes('developer') || text.includes('analyst')) {
+        score += 2;
+    }
+    
+    return Math.min(score, 10);
+}
+
+/**
+ * Analyze teamwork and collaboration mentions
+ */
+function analyzeTeamworkSkills(resumeText) {
+    const teamWords = ['team', 'collaborate', 'cooperation', 'partnership', 'group', 'cross-functional'];
+    const text = resumeText.toLowerCase();
+    
+    let score = 3;
+    const foundWords = teamWords.filter(word => text.includes(word)).length;
+    score += Math.min(foundWords * 1.5, 7);
+    
+    return Math.min(score, 10);
+}
+
+/**
+ * Analyze repetition in content
+ */
+function analyzeRepetition(resumeText) {
+    let score = 8; // Start high
+    
+    // Check for repeated phrases (simple analysis)
+    const words = resumeText.toLowerCase().split(/\s+/);
+    const wordCount = {};
+    
+    words.forEach(word => {
+        if (word.length > 4) { // Only check substantial words
+            wordCount[word] = (wordCount[word] || 0) + 1;
+        }
+    });
+    
+    // Count words that appear more than 5 times
+    const overusedWords = Object.values(wordCount).filter(count => count > 5).length;
+    score -= Math.min(overusedWords, 5);
+    
+    return Math.max(score, 3);
+}
+
+/**
+ * Analyze unnecessary sections
+ */
+function analyzeUnnecessarySections(resumeText) {
+    const text = resumeText.toLowerCase();
+    let score = 8; // Start high
+    
+    // Check for potentially unnecessary sections
+    const unnecessarySections = ['references available', 'hobbies', 'interests', 'personal information'];
+    const foundUnnecessary = unnecessarySections.filter(section => text.includes(section)).length;
+    
+    score -= foundUnnecessary * 2;
+    
+    return Math.max(score, 4);
+}
+
+/**
+ * Analyze career growth and progression signals
+ */
+function analyzeGrowthSignals(resumeText) {
+    const text = resumeText.toLowerCase();
+    const growthWords = ['promoted', 'advancement', 'progression', 'senior', 'lead', 'principal', 'director'];
+    
+    let score = 4;
+    const foundWords = growthWords.filter(word => text.includes(word)).length;
+    score += Math.min(foundWords * 1.5, 6);
+    
+    return Math.min(score, 10);
+}
+
+/**
+ * Analyze drive and initiative indicators
+ */
+function analyzeDriveAndInitiative(resumeText) {
+    const text = resumeText.toLowerCase();
+    const driveWords = ['initiative', 'self-motivated', 'proactive', 'launched', 'founded', 'created', 'innovated'];
+    
+    let score = 4;
+    const foundWords = driveWords.filter(word => text.includes(word)).length;
+    score += Math.min(foundWords * 1.5, 6);
+    
+    return Math.min(score, 10);
 }
 
 /**
@@ -389,7 +729,7 @@ function displayMainIssuesList(data) {
             </div>
             <div>
                 <div class="text-2xl font-bold text-yellow-600">${issuesNeedingFix.length}</div>
-                <div class="text-xs text-gray-600 uppercase">Medium Priority</div>
+                <div class="text-xs text-gray-600 uppercase">Need Fixes</div>
             </div>
             <div>
                 <div class="text-2xl font-bold text-green-600">${21 - issuesNeedingFix.length}</div>
