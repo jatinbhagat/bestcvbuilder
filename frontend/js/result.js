@@ -29,7 +29,7 @@ let allIssues = [];
 function init() {
     try {
         // Load analysis data from session storage
-        const storedData = sessionStorage.getItem('atsAnalysisResult');
+        const storedData = sessionStorage.getItem('atsAnalysis');
         if (!storedData) {
             console.error('No analysis data found in session storage');
             window.location.href = './index.html';
