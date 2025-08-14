@@ -183,10 +183,8 @@ PDFPLUMBER_AVAILABLE = False
 PYMUPDF_AVAILABLE = False
 PDFMINER_AVAILABLE = False
 
-# PyMuPDF is our primary PDF library (always available in deployment)
-PYMUPDF_AVAILABLE = FITZ_AVAILABLE  # Use existing fitz availability check
-PYPDF2_AVAILABLE = False  # PyPDF2 not used - removed dependency
-logger.info(f"✅ PDF processing available via PyMuPDF: {PYMUPDF_AVAILABLE}")
+# PyPDF2 not used - removed dependency
+PYPDF2_AVAILABLE = False
 
 # Check python-docx (for DOCX files) - Optional for minimal deployment
 try:
@@ -466,7 +464,7 @@ def extract_pdf_text(file_content: bytes) -> str:
         if PYMUPDF_AVAILABLE:
             try:
                 logger.warning("🚨 Falling back to basic PyMuPDF extraction (last resort)")
-                basic_text = extract_with_fitz_basic(file_content)
+                basic_text = extract_with_pymupdf(file_content)
                 if basic_text and len(basic_text.strip()) >= 20:  # Lower threshold for last resort
                     logger.info(f"✅ Basic PyMuPDF extracted {len(basic_text)} characters")
                     return basic_text
