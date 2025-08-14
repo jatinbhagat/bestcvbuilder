@@ -2,6 +2,7 @@
  * Results page JavaScript for displaying ATS analysis results
  * Handles score display, upgrade flow, and user interactions
  * Updated with sidebar layout to match screenshot design
+ * Clean version - Aug 14, 2025
  */
 
 import { supabase, DatabaseService } from './supabase.js';
