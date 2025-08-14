@@ -2,6 +2,7 @@
 Advanced CV Parser API for Comprehensive ATS Analysis
 Production-ready implementation with industry-aligned scoring
 Hosted on Vercel as serverless function
+Updated: Fix FITZ_AVAILABLE build error - Aug 14, 2025
 """
 
 import json
