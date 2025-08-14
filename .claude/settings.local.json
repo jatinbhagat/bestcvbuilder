@@ -30,7 +30,8 @@
       "Bash(git init:*)",
       "Bash(find:*)",
       "Bash(npx tailwindcss:*)",
-      "Bash(touch:*)"
+      "Bash(touch:*)",
+      "WebFetch(domain:bestcvbuilder-frontend.onrender.com)"
     ],
     "deny": []
   }

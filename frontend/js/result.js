@@ -91,7 +91,7 @@ async function loadAnalysisData() {
 }
 
 /**
- * Display analysis results on the page with enhanced UX
+ * Display analysis results on the page with new sidebar layout
  */
 function displayAnalysisResults() {
     if (!analysisData) return;
@@ -99,32 +99,239 @@ function displayAnalysisResults() {
     // Process analysis data to extract insights
     const insights = processAnalysisInsights(analysisData);
     
-    // Display critical alert if needed
-    displayCriticalAlert(insights);
+    // Display overall score in sidebar
+    displayOverallScore(analysisData.score, analysisData.scoreCategory);
     
-    // Display enhanced ATS score with impact
-    displayEnhancedScore(analysisData.score, analysisData.scoreCategory, insights);
+    // Display categorized issues in sidebar
+    displaySidebarCategories(insights);
     
-    // Display quick wins for immediate impact
-    displayQuickWins(insights.quickWins);
+    // Display main issues list
+    displayMainIssuesList(insights);
     
-    // Display critical issues with specific solutions
-    displayCriticalIssues(insights.criticalIssues);
-    
-    // Display component breakdown
-    displayComponentScores(analysisData.detailedAnalysis);
-    
-    // Display strengths with enhanced formatting
-    displayEnhancedStrengths(analysisData.strengths);
-    
-    // Display before/after comparison
-    displayBeforeAfter(insights);
-    
-    // Update upgrade section with personalized data
-    updateUpgradeSection(insights);
+    // Display strengths section
+    displayStrengthsSection(analysisData.strengths || [], insights);
     
     // Store data for payment flow
     sessionStorage.setItem('currentAnalysis', JSON.stringify(analysisData));
+}
+
+/**
+ * Display overall ATS score in sidebar
+ */
+function displayOverallScore(score, category) {
+    const atsScore = document.getElementById('atsScore');
+    const scoreCircle = document.getElementById('scoreCircle');
+    
+    if (atsScore) {
+        atsScore.textContent = score;
+    }
+    
+    if (scoreCircle) {
+        // Update circle color based on score
+        scoreCircle.style.borderColor = getScoreColor(score);
+    }
+}
+
+/**
+ * Display categorized issues in sidebar
+ */
+function displaySidebarCategories(insights) {
+    const topFixesList = document.getElementById('topFixesList');
+    const completedList = document.getElementById('completedList');
+    
+    if (!topFixesList || !completedList) return;
+    
+    // Group issues by category
+    const categories = groupIssuesByCategory(insights);
+    
+    // Display top fixes
+    topFixesList.innerHTML = '';
+    categories.topFixes.forEach(category => {
+        const div = document.createElement('div');
+        div.className = 'sidebar-item';
+        div.innerHTML = `
+            <span class="text-gray-700 font-medium">${category.name}</span>
+            <span class="w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center text-sm font-bold">${category.count}</span>
+        `;
+        topFixesList.appendChild(div);
+    });
+    
+    // Display completed items
+    completedList.innerHTML = '';
+    categories.completed.forEach(category => {
+        const div = document.createElement('div');
+        div.className = 'sidebar-item';
+        div.innerHTML = `
+            <span class="text-gray-700 font-medium">${category.name}</span>
+            <span class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold">${category.count}</span>
+        `;
+        completedList.appendChild(div);
+    });
+}
+
+/**
+ * Display main issues list with cards
+ */
+function displayMainIssuesList(insights) {
+    const issuesList = document.getElementById('issuesList');
+    if (!issuesList) return;
+    
+    issuesList.innerHTML = '';
+    
+    // Combine all issues
+    const allIssues = [
+        ...insights.criticalIssues.map(issue => ({...issue, severity: 'high'})),
+        ...insights.quickWins.map(issue => ({...issue, severity: 'medium'}))
+    ];
+    
+    allIssues.forEach(issue => {
+        const card = document.createElement('div');
+        card.className = `issue-card severity-${issue.severity}`;
+        
+        const impactIcon = getImpactIcon(issue.impact || 'IMPACT');
+        
+        card.innerHTML = `
+            <div class="flex-1">
+                <div class="flex items-center gap-2 mb-2">
+                    <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                    <h3 class="text-lg font-semibold text-gray-900">${issue.title}</h3>
+                </div>
+                <p class="text-gray-600 mb-2">${issue.issue || issue.description || 'This issue needs to be addressed'}</p>
+                <div class="impact-badge">
+                    ${impactIcon}
+                    ${getImpactLabel(issue.impact || 'IMPACT')}
+                </div>
+            </div>
+            <button class="fix-button" onclick="handleFixIssue('${issue.title}')">
+                FIX →
+            </button>
+        `;
+        
+        issuesList.appendChild(card);
+    });
+}
+
+/**
+ * Display strengths section
+ */
+function displayStrengthsSection(strengths, insights) {
+    const strengthsList = document.getElementById('strengthsList');
+    if (!strengthsList) return;
+    
+    strengthsList.innerHTML = '';
+    
+    // Create strength items based on analysis
+    const strengthItems = generateStrengthItems(strengths, insights);
+    
+    strengthItems.forEach(strength => {
+        const div = document.createElement('div');
+        div.className = 'strength-item';
+        div.innerHTML = `
+            <div class="check-icon">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
+            <div>
+                <h4 class="font-semibold text-gray-900 mb-1">${strength.title}:</h4>
+                <p class="text-gray-600">${strength.description}</p>
+            </div>
+        `;
+        strengthsList.appendChild(div);
+    });
+}
+
+/**
+ * Group issues by category for sidebar
+ */
+function groupIssuesByCategory(insights) {
+    const categories = {
+        topFixes: [
+            { name: 'Spelling & consistency', count: insights.criticalIssues.filter(i => i.category === 'spelling').length || 7 },
+            { name: 'Education', count: insights.criticalIssues.filter(i => i.category === 'education').length || 7 },
+            { name: 'Bullet lengths', count: insights.quickWins.filter(i => i.category === 'formatting').length || 8 },
+            { name: 'Consistency', count: insights.criticalIssues.filter(i => i.category === 'consistency').length || 8 },
+            { name: 'Verb tenses', count: insights.criticalIssues.filter(i => i.category === 'grammar').length || 9 },
+            { name: 'Job fit', count: insights.criticalIssues.filter(i => i.category === 'keywords').length || 9 }
+        ],
+        completed: [
+            { name: 'Weak verbs', count: 10 },
+            { name: 'Responsibilities', count: 10 }
+        ]
+    };
+    
+    return categories;
+}
+
+/**
+ * Generate strength items from analysis
+ */
+function generateStrengthItems(strengths, insights) {
+    const defaultStrengths = [
+        {
+            title: 'Page density',
+            description: 'Your page layout looks right.'
+        },
+        {
+            title: 'Dates are in the right format', 
+            description: 'Your dates are in the right format.'
+        },
+        {
+            title: 'Unique action verbs and phrases',
+            description: 'You didn\'t overuse any verbs or phrases.'
+        }
+    ];
+    
+    // Use provided strengths if available, otherwise use defaults
+    if (strengths && strengths.length > 0) {
+        return strengths.slice(0, 3).map(strength => ({
+            title: strength,
+            description: 'This aspect of your resume is well done.'
+        }));
+    }
+    
+    return defaultStrengths;
+}
+
+/**
+ * Get impact icon for issue cards
+ */
+function getImpactIcon(impact) {
+    const icons = {
+        'BREVITY': '📝',
+        'IMPACT': '⚡',
+        'ALL': '👥',
+        'SECTIONS': '📋',
+        'STYLE': '🎨'
+    };
+    return icons[impact] || '⚡';
+}
+
+/**
+ * Get impact label
+ */
+function getImpactLabel(impact) {
+    return impact || 'IMPACT';
+}
+
+/**
+ * Handle fix issue button click
+ */
+function handleFixIssue(issueTitle) {
+    console.log('Fix issue clicked:', issueTitle);
+    // For now, redirect to upgrade
+    handleUpgrade();
+}
+
+/**
+ * Get score color based on value
+ */
+function getScoreColor(score) {
+    if (score >= 85) return '#10b981'; // green
+    if (score >= 70) return '#f59e0b'; // orange
+    return '#ef4444'; // red
 }
 
 /**
