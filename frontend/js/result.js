@@ -338,20 +338,27 @@ function generateContactIssue(contactData) {
  */
 function analyzeEducationSection(resumeText, structureData) {
     const text = resumeText.toLowerCase();
-    let score = 5; // Base score
+    let score = 0; // Start from 0 - purely content-based
     
-    // Check for education section presence
+    // Check for education section presence (5 points)
     if (text.includes('education') || text.includes('degree') || text.includes('university') || text.includes('college')) {
-        score += 3;
+        score += 5;
     }
     
-    // Check for graduation dates
+    // Check for graduation dates (2 points)
     if (text.match(/\b(19|20)\d{2}\b/)) {
-        score += 1;
+        score += 2;
     }
     
-    // Check for GPA or honors
+    // Check for GPA or honors (2 points)
     if (text.includes('gpa') || text.includes('magna cum laude') || text.includes('summa cum laude')) {
+        score += 2;
+    }
+    
+    // Check for multiple degrees (1 point)
+    const degreeWords = ['bachelor', 'master', 'phd', 'doctorate', 'associate'];
+    const degreeCount = degreeWords.filter(degree => text.includes(degree)).length;
+    if (degreeCount > 1) {
         score += 1;
     }
     
@@ -363,45 +370,86 @@ function analyzeEducationSection(resumeText, structureData) {
  */
 function analyzeSkillsSection(resumeText, structureData) {
     const text = resumeText.toLowerCase();
-    let score = 4; // Base score
+    let score = 0; // Start from 0 - purely content-based
     
-    // Check for skills section
+    // Check for skills section (4 points)
     if (text.includes('skills') || text.includes('technical skills') || text.includes('competencies')) {
-        score += 3;
+        score += 4;
     }
     
-    // Check for specific technology mentions
-    const techKeywords = ['python', 'java', 'javascript', 'sql', 'excel', 'aws', 'react', 'node'];
+    // Check for specific technology mentions (up to 4 points)
+    const techKeywords = ['python', 'java', 'javascript', 'sql', 'excel', 'aws', 'react', 'node', 'html', 'css'];
     const foundTech = techKeywords.filter(tech => text.includes(tech)).length;
-    score += Math.min(foundTech, 3);
+    score += Math.min(foundTech, 4);
+    
+    // Check for soft skills (2 points)
+    const softSkills = ['communication', 'leadership', 'teamwork', 'problem solving'];
+    const foundSoft = softSkills.filter(skill => text.includes(skill)).length;
+    if (foundSoft > 0) {
+        score += 2;
+    }
     
     return Math.min(score, 10);
 }
 
 /**
- * Analyze analytical skills mentions
+ * Analyze analytical skills mentions using categorized action verbs
  */
 function analyzeAnalyticalSkills(resumeText, keywordsData) {
-    const text = resumeText.toLowerCase();
-    const analyticalWords = ['analysis', 'analytical', 'data', 'research', 'investigate', 'evaluate', 'assess', 'statistics'];
+    let score = 0; // Start from 0 - purely content-based
     
-    let score = 3; // Base score
-    const foundWords = analyticalWords.filter(word => text.includes(word)).length;
-    score += Math.min(foundWords, 7);
+    if (window.ActionVerbs) {
+        // Count research and analysis action verbs
+        const researchVerbCount = window.ActionVerbs.countVerbsInText(resumeText, 'RESEARCH_AND_ANALYSIS_SKILLS');
+        const problemSolvingCount = window.ActionVerbs.countVerbsInText(resumeText, 'PROBLEM_SOLVING_SKILLS');
+        
+        // Score based on strong analytical action verbs found
+        score += Math.min(researchVerbCount * 1.5, 6); // Up to 6 points for research verbs
+        score += Math.min(problemSolvingCount * 1.2, 4); // Up to 4 points for problem-solving verbs
+        
+        // Check for analytical keywords in text
+        const analyticalKeywords = ['analysis', 'analytical', 'data', 'research', 'statistics', 'metrics', 'insights'];
+        const keywordCount = analyticalKeywords.filter(keyword => 
+            resumeText.toLowerCase().includes(keyword)).length;
+        score += Math.min(keywordCount * 0.3, 2); // Up to 2 points for keywords
+    } else {
+        // Fallback to original method if ActionVerbs not available
+        const text = resumeText.toLowerCase();
+        const analyticalWords = ['analysis', 'analytical', 'data', 'research', 'investigate', 'evaluate', 'assess', 'statistics'];
+        const foundWords = analyticalWords.filter(word => text.includes(word)).length;
+        score += Math.min(foundWords * 1.25, 10);
+    }
     
     return Math.min(score, 10);
 }
 
 /**
- * Analyze leadership skills and experience
+ * Analyze leadership skills and experience using categorized action verbs
  */
 function analyzeLeadershipSkills(resumeText, keywordsData) {
-    const text = resumeText.toLowerCase();
-    const leadershipWords = ['lead', 'leader', 'manage', 'director', 'supervisor', 'team', 'mentor', 'coach'];
+    let score = 0; // Start from 0 - purely content-based
     
-    let score = 2; // Base score
-    const foundWords = leadershipWords.filter(word => text.includes(word)).length;
-    score += Math.min(foundWords, 8);
+    if (window.ActionVerbs) {
+        // Count leadership and management action verbs
+        const leadershipVerbCount = window.ActionVerbs.countVerbsInText(resumeText, 'LEADERSHIP_MENTORSHIP_AND_TEACHING_SKILLS');
+        const managementVerbCount = window.ActionVerbs.countVerbsInText(resumeText, 'MANAGEMENT_SKILLS');
+        
+        // Score based on strong leadership action verbs found
+        score += Math.min(leadershipVerbCount * 0.8, 6); // Up to 6 points for leadership verbs
+        score += Math.min(managementVerbCount * 0.7, 4); // Up to 4 points for management verbs
+        
+        // Check for leadership position indicators
+        const leadershipTitles = ['director', 'manager', 'lead', 'supervisor', 'head', 'chief', 'senior'];
+        const titleCount = leadershipTitles.filter(title => 
+            resumeText.toLowerCase().includes(title)).length;
+        score += Math.min(titleCount * 0.3, 1); // Up to 1 point for titles
+    } else {
+        // Fallback to original method if ActionVerbs not available
+        const text = resumeText.toLowerCase();
+        const leadershipWords = ['lead', 'leader', 'manage', 'director', 'supervisor', 'team', 'mentor', 'coach'];
+        const foundWords = leadershipWords.filter(word => text.includes(word)).length;
+        score += Math.min(foundWords * 1.25, 10);
+    }
     
     return Math.min(score, 10);
 }
@@ -413,17 +461,24 @@ function analyzeBulletUsage(resumeText, formattingData) {
     const bulletCount = (resumeText.match(/[•▪▫■□◦‣⁃]/g) || []).length;
     const dashCount = (resumeText.match(/^\s*[-*]\s/gm) || []).length;
     
-    let score = 4; // Base score
+    let score = 0; // Start from 0 - purely content-based
     
-    if (bulletCount + dashCount > 5) {
+    if (bulletCount + dashCount > 10) {
+        score += 6; // Excellent use of bullets
+    } else if (bulletCount + dashCount > 5) {
         score += 4; // Good use of bullets
     } else if (bulletCount + dashCount > 0) {
         score += 2; // Some bullets
     }
     
-    // Check for consistent bullet usage
+    // Check for consistent bullet usage (2 points)
     if (bulletCount > dashCount || dashCount > bulletCount) {
         score += 2; // Consistent style
+    }
+    
+    // Bonus for proper formatting (2 points)
+    if ((bulletCount + dashCount) >= 3) {
+        score += 2;
     }
     
     return Math.min(score, 10);
@@ -433,13 +488,53 @@ function analyzeBulletUsage(resumeText, formattingData) {
  * Analyze spelling and consistency issues
  */
 function analyzeSpellingConsistency(resumeText) {
-    let score = 8; // Start high, deduct for issues
+    // Start async LLM analysis but return immediate fallback score
+    analyzeLLMSpelling(resumeText).then(score => {
+        updateSpellingScore(score);
+    });
+    
+    // Return immediate fallback score  
+    return getFallbackSpellingScore(resumeText);
+}
+
+/**
+ * Analyze spelling using LLM for accurate assessment
+ */
+async function analyzeLLMSpelling(resumeText) {
+    try {
+        const response = await fetch('/api/grammar-check', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.dumps({
+                text: resumeText,
+                check_type: 'spelling'
+            })
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            return Math.max(Math.min(result.spelling_score || 8, 10), 0);
+        }
+    } catch (error) {
+        console.warn('LLM spelling check failed, using fallback:', error);
+    }
+    
+    // Fallback to basic spelling check
+    let score = 0; // Start from 0 - purely content-based
+    
+    // Start with base score based on content length and quality indicators
+    if (resumeText.length > 200) score = 8;
+    else if (resumeText.length > 100) score = 6;
+    else if (resumeText.length > 50) score = 4;
+    else score = 2;
     
     // Common spelling errors to check for
-    const commonErrors = ['recieved', 'seperate', 'managment', 'acheivement', 'excelent', 'experiance'];
+    const commonErrors = ['recieved', 'seperate', 'managment', 'acheivement', 'excelent', 'experiance', 'responsibilty', 'occured'];
     const foundErrors = commonErrors.filter(error => resumeText.toLowerCase().includes(error)).length;
     
-    score -= foundErrors * 2;
+    score -= foundErrors * 1.5;
     
     // Check for inconsistent date formats
     const dateFormats = [
@@ -462,7 +557,41 @@ function analyzeSpellingConsistency(resumeText) {
  * Analyze grammar issues
  */
 function analyzeGrammar(resumeText) {
-    let score = 8; // Start high
+    // Start async LLM analysis but return immediate fallback score
+    analyzeLLMGrammar(resumeText).then(score => {
+        updateGrammarScore(score);
+    });
+    
+    // Return immediate fallback score
+    return getFallbackGrammarScore(resumeText);
+}
+
+/**
+ * Analyze grammar using LLM for accurate assessment
+ */
+async function analyzeLLMGrammar(resumeText) {
+    try {
+        const response = await fetch('/api/grammar-check', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                text: resumeText,
+                check_type: 'grammar'
+            })
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            return Math.max(Math.min(result.grammar_score || 8, 10), 0);
+        }
+    } catch (error) {
+        console.warn('LLM grammar check failed, using fallback:', error);
+    }
+    
+    // Fallback to basic grammar check
+    let score = 0; // Start from 0 - purely content-based
     
     // Check for basic grammar issues
     const grammarIssues = [
@@ -477,16 +606,26 @@ function analyzeGrammar(resumeText) {
         issueCount += (resumeText.match(pattern) || []).length;
     });
     
+    // Start with base score based on content quality
+    if (resumeText.length > 100) score = 8;
+    else if (resumeText.length > 50) score = 6;
+    else score = 4;
+    
     score -= Math.min(issueCount * 2, 6);
     
-    return Math.max(score, 2);
+    return Math.max(score, 0);
 }
 
 /**
  * Analyze verb tense consistency
  */
 function analyzeVerbTenses(resumeText) {
-    let score = 7; // Base score
+    let score = 0; // Start from 0 - purely content-based
+    
+    // Base score based on content quality
+    if (resumeText.length > 100) score = 7;
+    else if (resumeText.length > 50) score = 5;
+    else score = 3;
     
     // Count present vs past tense in experience descriptions
     const pastTenseMarkers = resumeText.match(/\b\w+ed\b/g) || [];
@@ -509,26 +648,60 @@ function analyzeVerbTenses(resumeText) {
  * Analyze weak verbs usage
  */
 function analyzeWeakVerbs(resumeText) {
-    const weakVerbs = ['responsible for', 'duties included', 'helped with', 'assisted in', 'involved in', 'worked on'];
-    const strongVerbs = ['led', 'managed', 'developed', 'created', 'implemented', 'achieved', 'increased', 'improved'];
+    let score = 0; // Start from 0 - purely content-based
     
-    let score = 5; // Base score
-    
-    const weakCount = weakVerbs.reduce((count, verb) => {
-        return count + (resumeText.toLowerCase().split(verb).length - 1);
-    }, 0);
-    
-    const strongCount = strongVerbs.reduce((count, verb) => {
-        return count + (resumeText.toLowerCase().split(verb).length - 1);
-    }, 0);
-    
-    if (strongCount > weakCount) {
-        score += 4; // Good use of strong verbs
-    } else if (weakCount > strongCount) {
-        score -= 2; // Too many weak verbs
+    if (window.ActionVerbs) {
+        // Use comprehensive verb analysis from ActionVerbs module
+        const verbStrength = window.ActionVerbs.calculateVerbStrengthRatio(resumeText);
+        const diversityScore = window.ActionVerbs.getVerbDiversityScore(resumeText);
+        
+        // Score based on strong vs weak verb ratio
+        if (verbStrength.total === 0) {
+            score = 5; // Neutral if no action verbs found
+        } else if (verbStrength.ratio >= 0.9) {
+            score = 10; // Excellent - 90%+ strong verbs
+        } else if (verbStrength.ratio >= 0.7) {
+            score = 8; // Good - 70%+ strong verbs
+        } else if (verbStrength.ratio >= 0.5) {
+            score = 6; // Average - 50%+ strong verbs
+        } else if (verbStrength.ratio >= 0.3) {
+            score = 4; // Poor - 30%+ strong verbs
+        } else {
+            score = 2; // Very poor - <30% strong verbs
+        }
+        
+        // Bonus for verb diversity (using multiple categories)
+        score += diversityScore.score * 0.2; // Up to 2 point bonus
+        
+    } else {
+        // Fallback method if ActionVerbs not available
+        const weakVerbs = ['responsible for', 'duties included', 'helped with', 'assisted in', 'involved in', 'worked on'];
+        const strongVerbs = ['led', 'managed', 'developed', 'created', 'implemented', 'achieved', 'increased', 'improved'];
+        
+        const weakCount = weakVerbs.reduce((count, verb) => {
+            return count + (resumeText.toLowerCase().split(verb).length - 1);
+        }, 0);
+        
+        const strongCount = strongVerbs.reduce((count, verb) => {
+            return count + (resumeText.toLowerCase().split(verb).length - 1);
+        }, 0);
+        
+        if (strongCount > 0 && weakCount === 0) {
+            score = 10;
+        } else if (strongCount > weakCount) {
+            score = 7;
+        } else if (strongCount === weakCount && strongCount > 0) {
+            score = 5;
+        } else if (weakCount > strongCount && strongCount > 0) {
+            score = 3;
+        } else if (weakCount > 0 && strongCount === 0) {
+            score = 1;
+        } else {
+            score = 4;
+        }
     }
     
-    return Math.max(Math.min(score, 10), 1);
+    return Math.max(Math.min(score, 10), 0);
 }
 
 /**
@@ -536,7 +709,12 @@ function analyzeWeakVerbs(resumeText) {
  */
 function analyzeActiveVoice(resumeText) {
     const passiveIndicators = ['was completed', 'were handled', 'was managed', 'were developed', 'was created'];
-    let score = 8; // Start high
+    let score = 0; // Start from 0 - purely content-based
+    
+    // Base score based on content quality
+    if (resumeText.length > 100) score = 8;
+    else if (resumeText.length > 50) score = 6;
+    else score = 4;
     
     const passiveCount = passiveIndicators.reduce((count, phrase) => {
         return count + (resumeText.toLowerCase().split(phrase).length - 1);
@@ -552,7 +730,7 @@ function analyzeActiveVoice(resumeText) {
  */
 function analyzeSummarySection(resumeText) {
     const text = resumeText.toLowerCase();
-    let score = 4; // Base score
+    let score = 0; // Start from 0 - purely content-based
     
     // Check for summary/objective section
     if (text.includes('summary') || text.includes('objective') || text.includes('profile')) {
@@ -573,15 +751,32 @@ function analyzeSummarySection(resumeText) {
 }
 
 /**
- * Analyze teamwork and collaboration mentions
+ * Analyze teamwork and collaboration mentions using categorized action verbs
  */
 function analyzeTeamworkSkills(resumeText) {
-    const teamWords = ['team', 'collaborate', 'cooperation', 'partnership', 'group', 'cross-functional'];
-    const text = resumeText.toLowerCase();
+    let score = 0; // Start from 0 - purely content-based
     
-    let score = 3;
-    const foundWords = teamWords.filter(word => text.includes(word)).length;
-    score += Math.min(foundWords * 1.5, 7);
+    if (window.ActionVerbs) {
+        // Count teamwork and collaboration action verbs
+        const teamworkVerbCount = window.ActionVerbs.countVerbsInText(resumeText, 'TEAMWORK_COLLABORATION_SKILLS');
+        const communicationVerbCount = window.ActionVerbs.countVerbsInText(resumeText, 'COMMUNICATION_SKILLS');
+        
+        // Score based on collaboration action verbs found
+        score += Math.min(teamworkVerbCount * 1.5, 6); // Up to 6 points for teamwork verbs
+        score += Math.min(communicationVerbCount * 0.2, 2); // Up to 2 points for communication verbs
+        
+        // Check for teamwork keywords
+        const teamKeywords = ['team', 'cross-functional', 'partnership', 'stakeholders', 'collaboration'];
+        const keywordCount = teamKeywords.filter(keyword => 
+            resumeText.toLowerCase().includes(keyword)).length;
+        score += Math.min(keywordCount * 0.4, 2); // Up to 2 points for keywords
+    } else {
+        // Fallback to original method if ActionVerbs not available
+        const teamWords = ['team', 'collaborate', 'cooperation', 'partnership', 'group', 'cross-functional'];
+        const text = resumeText.toLowerCase();
+        const foundWords = teamWords.filter(word => text.includes(word)).length;
+        score += Math.min(foundWords * 1.7, 10);
+    }
     
     return Math.min(score, 10);
 }
@@ -590,7 +785,7 @@ function analyzeTeamworkSkills(resumeText) {
  * Analyze repetition in content
  */
 function analyzeRepetition(resumeText) {
-    let score = 8; // Start high
+    let score = 10; // Start at max, deduct for repetition issues
     
     // Check for repeated phrases (simple analysis)
     const words = resumeText.toLowerCase().split(/\s+/);
@@ -614,7 +809,7 @@ function analyzeRepetition(resumeText) {
  */
 function analyzeUnnecessarySections(resumeText) {
     const text = resumeText.toLowerCase();
-    let score = 8; // Start high
+    let score = 10; // Start at max, deduct for unnecessary sections
     
     // Check for potentially unnecessary sections
     const unnecessarySections = ['references available', 'hobbies', 'interests', 'personal information'];
@@ -632,9 +827,10 @@ function analyzeGrowthSignals(resumeText) {
     const text = resumeText.toLowerCase();
     const growthWords = ['promoted', 'advancement', 'progression', 'senior', 'lead', 'principal', 'director'];
     
-    let score = 4;
+    let score = 0; // Start from 0 - purely content-based
     const foundWords = growthWords.filter(word => text.includes(word)).length;
-    score += Math.min(foundWords * 1.5, 6);
+    // Each growth word adds 1.4 points (up to 10 total)
+    score += Math.min(foundWords * 1.4, 10);
     
     return Math.min(score, 10);
 }
@@ -646,9 +842,10 @@ function analyzeDriveAndInitiative(resumeText) {
     const text = resumeText.toLowerCase();
     const driveWords = ['initiative', 'self-motivated', 'proactive', 'launched', 'founded', 'created', 'innovated'];
     
-    let score = 4;
+    let score = 0; // Start from 0 - purely content-based
     const foundWords = driveWords.filter(word => text.includes(word)).length;
-    score += Math.min(foundWords * 1.5, 6);
+    // Each drive word adds 1.4 points (up to 10 total)
+    score += Math.min(foundWords * 1.4, 10);
     
     return Math.min(score, 10);
 }
@@ -1190,11 +1387,158 @@ function handleError(error, context = '') {
     main.insertBefore(errorDiv, main.firstChild);
 }
 
-// Initialize when DOM is loaded
+// Initialize when DOM is loaded and ActionVerbs is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', initializeWithActionVerbs);
 } else {
+    initializeWithActionVerbs();
+}
+
+/**
+ * Initialize application with ActionVerbs support
+ */
+async function initializeWithActionVerbs() {
+    try {
+        // Ensure ActionVerbs is loaded
+        if (window.ActionVerbs) {
+            await window.ActionVerbs.loadActionVerbs();
+        }
+        console.log('ActionVerbs module loaded, initializing results page');
+    } catch (error) {
+        console.warn('Failed to load ActionVerbs, proceeding with fallback analysis:', error);
+    }
+    
+    // Initialize the main application
     init();
+}
+
+/**
+ * Get fallback grammar score while LLM processes
+ */
+function getFallbackGrammarScore(resumeText) {
+    let score = 0; // Start from 0 - purely content-based
+    
+    // Check for basic grammar issues
+    const grammarIssues = [
+        /\bis\s+are\b/gi,  // Subject-verb disagreement
+        /\bare\s+is\b/gi,
+        /\bi\s+are\b/gi,
+        /\byou\s+is\b/gi
+    ];
+    
+    let issueCount = 0;
+    grammarIssues.forEach(pattern => {
+        issueCount += (resumeText.match(pattern) || []).length;
+    });
+    
+    // Start with base score based on content quality
+    if (resumeText.length > 100) score = 8;
+    else if (resumeText.length > 50) score = 6;
+    else score = 4;
+    
+    score -= Math.min(issueCount * 2, 6);
+    
+    return Math.max(score, 0);
+}
+
+/**
+ * Get fallback spelling score while LLM processes
+ */
+function getFallbackSpellingScore(resumeText) {
+    let score = 0; // Start from 0 - purely content-based
+    
+    // Start with base score based on content length and quality indicators
+    if (resumeText.length > 200) score = 8;
+    else if (resumeText.length > 100) score = 6;
+    else if (resumeText.length > 50) score = 4;
+    else score = 2;
+    
+    // Common spelling errors to check for
+    const commonErrors = ['recieved', 'seperate', 'managment', 'acheivement', 'excelent', 'experiance', 'responsibilty', 'occured'];
+    const foundErrors = commonErrors.filter(error => resumeText.toLowerCase().includes(error)).length;
+    
+    score -= foundErrors * 1.5;
+    
+    // Check for inconsistent date formats
+    const dateFormats = [
+        /\d{1,2}\/\d{4}/g, // MM/YYYY
+        /\d{4}-\d{2}/g,    // YYYY-MM
+        /[A-Za-z]+ \d{4}/g // Month YYYY
+    ];
+    
+    const formatCounts = dateFormats.map(regex => (resumeText.match(regex) || []).length);
+    const multipleFormats = formatCounts.filter(count => count > 0).length;
+    
+    if (multipleFormats > 1) {
+        score -= 1; // Inconsistent date formats
+    }
+    
+    return Math.max(score, 0);
+}
+
+/**
+ * Update grammar score when LLM analysis completes
+ */
+function updateGrammarScore(newScore) {
+    // Find and update the grammar category score in the UI
+    const grammarElements = document.querySelectorAll('[data-category="Grammar"]');
+    grammarElements.forEach(element => {
+        const scoreElement = element.querySelector('.score');
+        if (scoreElement) {
+            scoreElement.textContent = `${newScore}/10`;
+            // Update color based on new score
+            scoreElement.className = `score ${newScore >= 8 ? 'text-green-600' : newScore >= 6 ? 'text-yellow-600' : 'text-red-600'}`;
+        }
+    });
+    
+    // Recalculate overall score
+    recalculateOverallScore();
+}
+
+/**
+ * Update spelling score when LLM analysis completes
+ */
+function updateSpellingScore(newScore) {
+    // Find and update the spelling category score in the UI
+    const spellingElements = document.querySelectorAll('[data-category="Spelling & Consistency"]');
+    spellingElements.forEach(element => {
+        const scoreElement = element.querySelector('.score');
+        if (scoreElement) {
+            scoreElement.textContent = `${newScore}/10`;
+            // Update color based on new score
+            scoreElement.className = `score ${newScore >= 8 ? 'text-green-600' : newScore >= 6 ? 'text-yellow-600' : 'text-red-600'}`;
+        }
+    });
+    
+    // Recalculate overall score
+    recalculateOverallScore();
+}
+
+/**
+ * Recalculate overall score when individual scores are updated
+ */
+function recalculateOverallScore() {
+    // This would recalculate the total score from all visible category scores
+    // and update the main score display
+    const allScoreElements = document.querySelectorAll('.score');
+    let totalScore = 0;
+    let categoryCount = 0;
+    
+    allScoreElements.forEach(element => {
+        const scoreText = element.textContent.match(/(\d+)\/10/);
+        if (scoreText) {
+            totalScore += parseInt(scoreText[1]);
+            categoryCount++;
+        }
+    });
+    
+    if (categoryCount > 0) {
+        const averageScore = Math.round((totalScore / categoryCount) * (100/10)); // Scale to 100
+        const overallScoreElement = document.querySelector('#overall-score');
+        if (overallScoreElement) {
+            overallScoreElement.textContent = averageScore;
+        }
+    }
 }
 
 // Export for debugging
