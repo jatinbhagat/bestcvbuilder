@@ -135,12 +135,20 @@ def create_grammar_check_prompt(text: str) -> str:
     """Create prompt for grammar analysis"""
     return f"""Analyze the grammar quality of this resume text and provide a score from 0-10.
 
+Scoring Guidelines:
+- 9-10: Excellent grammar, professional language, no errors
+- 7-8: Good grammar, minor issues, mostly professional  
+- 5-6: Average grammar, several issues need fixing
+- 3-4: Poor grammar, many errors, unprofessional
+- 0-2: Very poor grammar, extensive errors throughout
+
 Consider:
 - Subject-verb agreement
-- Verb tense consistency
-- Sentence structure
-- Proper punctuation
-- Professional language usage
+- Verb tense consistency (past tense for previous jobs, present for current)
+- Sentence structure and flow
+- Proper punctuation usage
+- Professional language and clarity
+- Consistent formatting of dates, numbers, etc.
 
 Text to analyze:
 {text}
@@ -159,12 +167,21 @@ def create_spelling_check_prompt(text: str) -> str:
     """Create prompt for spelling analysis"""
     return f"""Analyze the spelling and consistency quality of this resume text and provide a score from 0-10.
 
+Scoring Guidelines:
+- 9-10: Perfect spelling, consistent formatting, professional
+- 7-8: Good spelling, minor inconsistencies, mostly professional
+- 5-6: Average spelling, some errors and inconsistencies
+- 3-4: Poor spelling, many errors, inconsistent formatting  
+- 0-2: Very poor spelling, extensive errors throughout
+
 Consider:
-- Spelling errors
-- Consistent formatting
-- Date format consistency
-- Professional terminology usage
-- Typos and common mistakes
+- Spelling accuracy (no misspelled words)
+- Consistent date formatting (same format throughout)
+- Professional terminology spelling
+- Consistent capitalization and punctuation
+- Consistent formatting of numbers, percentages, etc.
+- No typos or obvious mistakes
+- Consistent use of abbreviations
 
 Text to analyze:
 {text}

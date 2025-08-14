@@ -169,7 +169,7 @@ function generateComprehensiveATSScores(data) {
     const contactData = detailedAnalysis.contact || {};
     categories.push({
         name: 'Contact Details',
-        score: Math.round((componentScores.contact || 0) / 15 * 10), // Backend gives 0-15, scale to 0-10
+        score: analyzeContactDetails(resumeText),
         issue: generateContactIssue(contactData),
         impact: 'SECTIONS'
     });
@@ -217,7 +217,7 @@ function generateComprehensiveATSScores(data) {
     const formattingScore = componentScores.formatting || 0;
     categories.push({
         name: 'Page Density',
-        score: Math.round(formattingScore / 20 * 10), // Backend gives 0-20, scale to 0-10
+        score: analyzePageDensity(resumeText),
         issue: 'Optimize page layout and white space usage',
         impact: 'STYLE'
     });
@@ -251,7 +251,7 @@ function generateComprehensiveATSScores(data) {
     const achievementsScore = componentScores.achievements || 0;
     categories.push({
         name: 'Quantity Impact',
-        score: Math.round(achievementsScore / 25 * 10), // Backend gives 0-25, scale to 0-10
+        score: analyzeQuantityImpact(resumeText),
         issue: 'Add more quantified achievements with specific numbers',
         impact: 'IMPACT'
     });
@@ -323,6 +323,131 @@ function generateComprehensiveATSScores(data) {
 // =====================================================================================
 
 /**
+ * Analyze contact details completeness (mobile, email, LinkedIn, location)
+ */
+function analyzeContactDetails(resumeText) {
+    let score = 10; // Start with perfect score, deduct 2.5 for each missing element
+    
+    // 1. Mobile Number (2.5 points)
+    const hasMobile = hasMobileNumber(resumeText);
+    if (!hasMobile) {
+        score -= 2.5;
+    }
+    
+    // 2. Email Address (2.5 points)
+    const hasEmail = hasEmailAddress(resumeText);
+    if (!hasEmail) {
+        score -= 2.5;
+    }
+    
+    // 3. LinkedIn Profile (2.5 points)
+    const hasLinkedIn = hasLinkedInProfile(resumeText);
+    if (!hasLinkedIn) {
+        score -= 2.5;
+    }
+    
+    // 4. Location (2.5 points)
+    const hasLocation = hasLocationInfo(resumeText);
+    if (!hasLocation) {
+        score -= 2.5;
+    }
+    
+    return Math.max(score, 0);
+}
+
+/**
+ * Check for mobile number presence
+ */
+function hasMobileNumber(resumeText) {
+    const phonePatterns = [
+        /\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/g,           // US format: 123-456-7890
+        /\b\(\d{3}\)\s?\d{3}[-.\s]?\d{4}\b/g,          // US format: (123) 456-7890
+        /\b\+\d{1,3}[-.\s]?\d{1,14}[-.\s]?\d{1,14}\b/g, // International: +1-234-567-8900
+        /\b\d{10,15}\b/g,                              // Simple 10+ digit number
+        /\bphone\s*:?\s*\d/gi,                         // "Phone: 123..."
+        /\bmobile\s*:?\s*\d/gi,                        // "Mobile: 123..."
+        /\bcell\s*:?\s*\d/gi                           // "Cell: 123..."
+    ];
+    
+    return phonePatterns.some(pattern => pattern.test(resumeText));
+}
+
+/**
+ * Check for email address presence
+ */
+function hasEmailAddress(resumeText) {
+    const emailPattern = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
+    return emailPattern.test(resumeText);
+}
+
+/**
+ * Check for LinkedIn profile presence
+ */
+function hasLinkedInProfile(resumeText) {
+    const text = resumeText.toLowerCase();
+    
+    const linkedinPatterns = [
+        /linkedin\.com\/in\/[a-z0-9-]+/gi,              // Full LinkedIn URL
+        /linkedin\.com\/pub\/[a-z0-9-]+/gi,             // Public LinkedIn URL
+        /www\.linkedin\.com/gi,                         // LinkedIn domain
+        /linkedin:\s*[a-z0-9.-]+/gi,                    // "LinkedIn: username"
+        /\blinkedin\b.*profile/gi,                      // "LinkedIn profile"
+        /\blinkedin\b/gi && /profile/gi                 // LinkedIn + profile mentioned
+    ];
+    
+    // Check for explicit LinkedIn mentions
+    if (/\blinkedin\b/gi.test(resumeText)) {
+        return true;
+    }
+    
+    // Check for LinkedIn URL patterns
+    return linkedinPatterns.some(pattern => pattern.test(resumeText));
+}
+
+/**
+ * Check for location information presence
+ */
+function hasLocationInfo(resumeText) {
+    const text = resumeText.toLowerCase();
+    
+    // US States (abbreviated and full names)
+    const usStates = [
+        'al', 'ak', 'az', 'ar', 'ca', 'co', 'ct', 'de', 'fl', 'ga', 'hi', 'id', 
+        'il', 'in', 'ia', 'ks', 'ky', 'la', 'me', 'md', 'ma', 'mi', 'mn', 'ms', 
+        'mo', 'mt', 'ne', 'nv', 'nh', 'nj', 'nm', 'ny', 'nc', 'nd', 'oh', 'ok', 
+        'or', 'pa', 'ri', 'sc', 'sd', 'tn', 'tx', 'ut', 'vt', 'va', 'wa', 'wv', 
+        'wi', 'wy', 'alabama', 'alaska', 'arizona', 'arkansas', 'california', 
+        'colorado', 'connecticut', 'delaware', 'florida', 'georgia', 'hawaii', 
+        'idaho', 'illinois', 'indiana', 'iowa', 'kansas', 'kentucky', 'louisiana', 
+        'maine', 'maryland', 'massachusetts', 'michigan', 'minnesota', 'mississippi', 
+        'missouri', 'montana', 'nebraska', 'nevada', 'new hampshire', 'new jersey', 
+        'new mexico', 'new york', 'north carolina', 'north dakota', 'ohio', 
+        'oklahoma', 'oregon', 'pennsylvania', 'rhode island', 'south carolina', 
+        'south dakota', 'tennessee', 'texas', 'utah', 'vermont', 'virginia', 
+        'washington', 'west virginia', 'wisconsin', 'wyoming'
+    ];
+    
+    // Common location patterns
+    const locationPatterns = [
+        /\b\w+,\s*[A-Z]{2}\b/g,                         // City, ST format
+        /\b\w+,\s*\w+\s*\d{5}\b/g,                      // City, State ZIP
+        /\b\d{5}(-\d{4})?\b/g,                          // ZIP code
+        /location\s*:?\s*\w+/gi,                        // "Location: City"
+        /address\s*:?\s*\w+/gi,                         // "Address: ..."
+        /based\s+in\s+\w+/gi,                           // "Based in City"
+        /located\s+in\s+\w+/gi                          // "Located in City"
+    ];
+    
+    // Check for US states
+    const hasUSState = usStates.some(state => text.includes(` ${state} `) || text.includes(`,${state}`) || text.includes(` ${state},`));
+    
+    // Check for location patterns
+    const hasLocationPattern = locationPatterns.some(pattern => pattern.test(resumeText));
+    
+    return hasUSState || hasLocationPattern;
+}
+
+/**
  * Generate contact issue based on actual missing contact information
  */
 function generateContactIssue(contactData) {
@@ -334,62 +459,313 @@ function generateContactIssue(contactData) {
 }
 
 /**
- * Analyze education section based on resume content
+ * Analyze education section quality with GPA requirements based on experience
  */
 function analyzeEducationSection(resumeText, structureData) {
+    let score = 0; // Start from 0, add points for each element
     const text = resumeText.toLowerCase();
-    let score = 0; // Start from 0 - purely content-based
     
-    // Check for education section presence (5 points)
-    if (text.includes('education') || text.includes('degree') || text.includes('university') || text.includes('college')) {
-        score += 5;
+    // Extract years of experience for GPA requirement logic
+    const yearsOfExperience = extractYearsOfExperience(resumeText);
+    
+    // 1. Has Education Section (3 points)
+    const hasEducationSection = text.includes('education') || 
+                               text.includes('academic') || 
+                               text.includes('qualification');
+    if (hasEducationSection) {
+        score += 3;
     }
     
-    // Check for graduation dates (2 points)
-    if (text.match(/\b(19|20)\d{2}\b/)) {
+    // 2. Degree/Qualification (3 points)
+    const degreeWords = [
+        'bachelor', 'master', 'phd', 'doctorate', 'associate', 
+        'diploma', 'certificate', 'degree', 'b.s.', 'b.a.', 
+        'm.s.', 'm.a.', 'mba', 'ph.d.'
+    ];
+    const hasDegree = degreeWords.some(degree => text.includes(degree));
+    if (hasDegree) {
+        score += 3;
+    }
+    
+    // 3. Institution Name (2 points)
+    const hasInstitution = hasEducationInstitution(resumeText);
+    if (hasInstitution) {
         score += 2;
     }
     
-    // Check for GPA or honors (2 points)
-    if (text.includes('gpa') || text.includes('magna cum laude') || text.includes('summa cum laude')) {
+    // 4. Graduation Dates with proper formatting (2 points)
+    const hasProperDates = hasEducationDates(resumeText);
+    if (hasProperDates) {
         score += 2;
     }
     
-    // Check for multiple degrees (1 point)
-    const degreeWords = ['bachelor', 'master', 'phd', 'doctorate', 'associate'];
-    const degreeCount = degreeWords.filter(degree => text.includes(degree)).length;
-    if (degreeCount > 1) {
-        score += 1;
+    // Special logic for GPA/Honors based on experience
+    if (yearsOfExperience < 3) {
+        // For <3 years experience: GPA/honors are important
+        const hasGPAOrHonors = hasGPAOrHonorsInfo(resumeText);
+        if (!hasGPAOrHonors) {
+            score -= 2; // Deduct for missing GPA/honors for junior professionals
+        }
     }
+    // For 3+ years experience: GPA/honors don't matter (no bonus/penalty)
     
-    return Math.min(score, 10);
+    return Math.max(Math.min(score, 10), 0);
+}
+
+/**
+ * Check for education institution names
+ */
+function hasEducationInstitution(resumeText) {
+    const institutionKeywords = [
+        'university', 'college', 'institute', 'school', 'academy',
+        'tech', 'polytechnic', 'community college'
+    ];
+    
+    const text = resumeText.toLowerCase();
+    return institutionKeywords.some(keyword => text.includes(keyword));
+}
+
+/**
+ * Check for proper education date formatting
+ */
+function hasEducationDates(resumeText) {
+    const datePatterns = [
+        /\b(19|20)\d{2}\b/g,           // Year format (2020)
+        /\d{1,2}\/\d{4}/g,             // MM/YYYY format
+        /[A-Za-z]+\s+\d{4}/g,          // Month Year format
+        /\d{4}\s*[-–]\s*\d{4}/g        // Range format (2018-2022)
+    ];
+    
+    return datePatterns.some(pattern => pattern.test(resumeText));
+}
+
+/**
+ * Check for GPA or honors information
+ */
+function hasGPAOrHonorsInfo(resumeText) {
+    const text = resumeText.toLowerCase();
+    
+    // GPA patterns
+    const gpaPatterns = [
+        /gpa\s*:?\s*\d\.\d/gi,         // GPA: 3.8
+        /\d\.\d{1,2}\s*gpa/gi,         // 3.8 GPA
+        /\d\.\d{1,2}\/4\.0/gi          // 3.8/4.0
+    ];
+    
+    // Honors patterns
+    const honorsKeywords = [
+        'magna cum laude', 'summa cum laude', 'cum laude',
+        'honors', 'dean\'s list', 'honor roll', 'distinction',
+        'academic excellence', 'merit', 'scholarship'
+    ];
+    
+    const hasGPA = gpaPatterns.some(pattern => pattern.test(resumeText));
+    const hasHonors = honorsKeywords.some(honor => text.includes(honor));
+    
+    return hasGPA || hasHonors;
 }
 
 /**
  * Analyze skills section quality
  */
 function analyzeSkillsSection(resumeText, structureData) {
-    const text = resumeText.toLowerCase();
-    let score = 0; // Start from 0 - purely content-based
+    let score = 0; // Start from 0, add points for each component
     
-    // Check for skills section (4 points)
-    if (text.includes('skills') || text.includes('technical skills') || text.includes('competencies')) {
-        score += 4;
-    }
+    // Extract years of experience for skill count expectations
+    const yearsOfExperience = extractYearsOfExperience(resumeText);
     
-    // Check for specific technology mentions (up to 4 points)
-    const techKeywords = ['python', 'java', 'javascript', 'sql', 'excel', 'aws', 'react', 'node', 'html', 'css'];
-    const foundTech = techKeywords.filter(tech => text.includes(tech)).length;
-    score += Math.min(foundTech, 4);
-    
-    // Check for soft skills (2 points)
-    const softSkills = ['communication', 'leadership', 'teamwork', 'problem solving'];
-    const foundSoft = softSkills.filter(skill => text.includes(skill)).length;
-    if (foundSoft > 0) {
+    // 1. Has Skills Section (2 points)
+    const hasSkillsSection = hasSkillsSectionPresent(resumeText);
+    if (hasSkillsSection) {
         score += 2;
     }
     
+    // 2. Technical Skills Count based on experience (3 points)
+    const skillsCount = countSkillsMentioned(resumeText);
+    const expectedSkills = getExpectedSkillsCount(yearsOfExperience);
+    
+    if (skillsCount >= expectedSkills.ideal) {
+        score += 3; // Meets or exceeds ideal count
+    } else if (skillsCount >= expectedSkills.minimum) {
+        score += 2; // Meets minimum but below ideal
+    } else if (skillsCount >= expectedSkills.minimum * 0.5) {
+        score += 1; // Below minimum but has some skills
+    }
+    // 0 points if very few skills
+    
+    // 3. Industry Buzz Words/Relevant Terms (3 points)
+    const buzzWordScore = analyzeBuzzWordsInSkills(resumeText);
+    score += Math.min(buzzWordScore, 3);
+    
+    // 4. Organization Quality (2 points)
+    const organizationScore = analyzeSkillsOrganization(resumeText);
+    score += Math.min(organizationScore, 2);
+    
     return Math.min(score, 10);
+}
+
+/**
+ * Check if skills section is present
+ */
+function hasSkillsSectionPresent(resumeText) {
+    const text = resumeText.toLowerCase();
+    const skillsMarkers = [
+        'skills', 'technical skills', 'core competencies', 'competencies',
+        'expertise', 'proficiencies', 'technologies', 'tools'
+    ];
+    
+    return skillsMarkers.some(marker => text.includes(marker));
+}
+
+/**
+ * Count skills mentioned in resume
+ */
+function countSkillsMentioned(resumeText) {
+    const text = resumeText.toLowerCase();
+    
+    // Comprehensive skill categories
+    const technicalSkills = [
+        // Programming Languages
+        'python', 'java', 'javascript', 'typescript', 'c++', 'c#', 'php', 'ruby', 'go', 'rust',
+        'swift', 'kotlin', 'scala', 'r', 'matlab', 'sql', 'html', 'css',
+        
+        // Frameworks & Libraries
+        'react', 'angular', 'vue', 'node.js', 'express', 'django', 'flask', 'spring',
+        'bootstrap', 'jquery', 'tensorflow', 'pytorch', 'pandas', 'numpy',
+        
+        // Databases
+        'mysql', 'postgresql', 'mongodb', 'redis', 'elasticsearch', 'oracle', 'sqlite',
+        
+        // Cloud & DevOps
+        'aws', 'azure', 'gcp', 'docker', 'kubernetes', 'jenkins', 'git', 'github',
+        'terraform', 'ansible', 'ci/cd', 'linux', 'bash',
+        
+        // Tools & Software
+        'jira', 'confluence', 'slack', 'trello', 'figma', 'photoshop', 'excel',
+        'tableau', 'power bi', 'salesforce', 'hubspot'
+    ];
+    
+    const professionalSkills = [
+        'project management', 'agile', 'scrum', 'kanban', 'waterfall',
+        'leadership', 'team management', 'communication', 'presentation',
+        'problem solving', 'analytical thinking', 'strategic planning',
+        'business analysis', 'process improvement', 'quality assurance',
+        'stakeholder management', 'budget management', 'risk management'
+    ];
+    
+    const allSkills = [...technicalSkills, ...professionalSkills];
+    const foundSkills = allSkills.filter(skill => text.includes(skill));
+    
+    return foundSkills.length;
+}
+
+/**
+ * Get expected skills count based on experience level
+ */
+function getExpectedSkillsCount(yearsOfExperience) {
+    if (yearsOfExperience < 3) {
+        return { minimum: 8, ideal: 12 }; // Junior: 8-12 skills
+    } else if (yearsOfExperience < 6) {
+        return { minimum: 12, ideal: 18 }; // Mid-level: 12-18 skills
+    } else {
+        return { minimum: 18, ideal: 25 }; // Senior: 18+ skills
+    }
+}
+
+/**
+ * Analyze buzz words and industry relevance in skills
+ */
+function analyzeBuzzWordsInSkills(resumeText) {
+    const text = resumeText.toLowerCase();
+    
+    const industryBuzzWords = [
+        // Modern Tech
+        'artificial intelligence', 'machine learning', 'deep learning', 'ai/ml',
+        'cloud computing', 'microservices', 'apis', 'restful', 'graphql',
+        'blockchain', 'iot', 'big data', 'data science', 'analytics',
+        
+        // Methodologies
+        'agile methodology', 'devops', 'continuous integration', 'automation',
+        'test-driven development', 'object-oriented', 'responsive design',
+        
+        // Business Terms
+        'digital transformation', 'scalability', 'performance optimization',
+        'user experience', 'customer satisfaction', 'roi', 'kpi'
+    ];
+    
+    const foundBuzzWords = industryBuzzWords.filter(word => text.includes(word));
+    
+    if (foundBuzzWords.length >= 4) return 3;
+    if (foundBuzzWords.length >= 2) return 2;
+    if (foundBuzzWords.length >= 1) return 1;
+    return 0;
+}
+
+/**
+ * Analyze skills section organization quality
+ */
+function analyzeSkillsOrganization(resumeText) {
+    let organizationScore = 0;
+    const text = resumeText.toLowerCase();
+    
+    // Check for categorization indicators
+    const categoryIndicators = [
+        'programming languages', 'frameworks', 'databases', 'tools',
+        'technical skills', 'soft skills', 'languages', 'certifications'
+    ];
+    
+    const foundCategories = categoryIndicators.filter(category => text.includes(category));
+    if (foundCategories.length >= 2) {
+        organizationScore += 1; // Well-categorized skills
+    }
+    
+    // Check for proper formatting (bullets, commas, etc.)
+    const skillsSection = extractSkillsSection(resumeText);
+    if (skillsSection) {
+        const hasBullets = /[•▪▫■□◦‣⁃-]/.test(skillsSection);
+        const hasCommas = skillsSection.includes(',');
+        const hasLineBreaks = skillsSection.includes('\n');
+        
+        if (hasBullets || hasCommas || hasLineBreaks) {
+            organizationScore += 1; // Good formatting
+        }
+    }
+    
+    return organizationScore;
+}
+
+/**
+ * Extract skills section from resume
+ */
+function extractSkillsSection(resumeText) {
+    const text = resumeText.toLowerCase();
+    
+    // Find skills section
+    const skillsMarkers = ['skills', 'technical skills', 'competencies'];
+    let skillsStart = -1;
+    
+    for (const marker of skillsMarkers) {
+        const index = text.indexOf(marker);
+        if (index !== -1) {
+            skillsStart = index;
+            break;
+        }
+    }
+    
+    if (skillsStart === -1) return null;
+    
+    // Find end of skills section
+    const endMarkers = ['experience', 'education', 'projects', 'certifications'];
+    let skillsEnd = resumeText.length;
+    
+    for (const endMarker of endMarkers) {
+        const endIndex = text.indexOf(endMarker, skillsStart + 10);
+        if (endIndex !== -1 && endIndex < skillsEnd) {
+            skillsEnd = endIndex;
+        }
+    }
+    
+    return resumeText.substring(skillsStart, skillsEnd);
 }
 
 /**
@@ -648,57 +1024,179 @@ function analyzeVerbTenses(resumeText) {
  * Analyze weak verbs usage
  */
 function analyzeWeakVerbs(resumeText) {
-    let score = 0; // Start from 0 - purely content-based
-    
     if (window.ActionVerbs) {
-        // Use comprehensive verb analysis from ActionVerbs module
-        const verbStrength = window.ActionVerbs.calculateVerbStrengthRatio(resumeText);
-        const diversityScore = window.ActionVerbs.getVerbDiversityScore(resumeText);
-        
-        // Score based on strong vs weak verb ratio
-        if (verbStrength.total === 0) {
-            score = 5; // Neutral if no action verbs found
-        } else if (verbStrength.ratio >= 0.9) {
-            score = 10; // Excellent - 90%+ strong verbs
-        } else if (verbStrength.ratio >= 0.7) {
-            score = 8; // Good - 70%+ strong verbs
-        } else if (verbStrength.ratio >= 0.5) {
-            score = 6; // Average - 50%+ strong verbs
-        } else if (verbStrength.ratio >= 0.3) {
-            score = 4; // Poor - 30%+ strong verbs
-        } else {
-            score = 2; // Very poor - <30% strong verbs
-        }
-        
-        // Bonus for verb diversity (using multiple categories)
-        score += diversityScore.score * 0.2; // Up to 2 point bonus
-        
+        return analyzeActionVerbsComprehensive(resumeText);
     } else {
         // Fallback method if ActionVerbs not available
-        const weakVerbs = ['responsible for', 'duties included', 'helped with', 'assisted in', 'involved in', 'worked on'];
-        const strongVerbs = ['led', 'managed', 'developed', 'created', 'implemented', 'achieved', 'increased', 'improved'];
+        return analyzeActionVerbsFallback(resumeText);
+    }
+}
+
+/**
+ * Comprehensive action verb analysis using the config system
+ */
+function analyzeActionVerbsComprehensive(resumeText) {
+    let score = 10; // Start with perfect score
+    
+    // Get all strong verb categories (excluding WEAK_VERBS)
+    const strongVerbCategories = [
+        'STRONG_ACCOMPLISHMENT_DRIVEN_VERBS',
+        'ENTREPRENEURIAL_SKILLS', 
+        'MANAGEMENT_SKILLS',
+        'LEADERSHIP_MENTORSHIP_AND_TEACHING_SKILLS',
+        'PROBLEM_SOLVING_SKILLS',
+        'COMMUNICATION_SKILLS',
+        'RESEARCH_AND_ANALYSIS_SKILLS',
+        'PROCESS_IMPROVEMENT_CONSULTING_AND_OPERATIONS',
+        'FINANCIAL_SKILLS',
+        'DESIGN_AND_CREATIVE_SKILLS',
+        'ENGINEERING_TECHNICAL_ROLES',
+        'TEAMWORK_COLLABORATION_SKILLS'
+    ];
+    
+    // Find all action verbs used in resume
+    const foundVerbs = extractActionVerbsFromText(resumeText);
+    
+    if (foundVerbs.length === 0) {
+        return 3; // No action verbs found - poor score
+    }
+    
+    // Categorize found verbs
+    const categorizedVerbs = categorizeFoundVerbs(foundVerbs, strongVerbCategories);
+    const weakVerbs = window.ActionVerbs.getVerbsForCategory('WEAK_VERBS');
+    
+    // Count categories represented
+    const categoriesUsed = Object.keys(categorizedVerbs).length;
+    
+    // Apply category diversity penalty
+    if (categoriesUsed < 5) {
+        if (categoriesUsed === 4) score -= 1;
+        else if (categoriesUsed === 3) score -= 2;
+        else if (categoriesUsed === 2) score -= 3;
+        else if (categoriesUsed === 1) score -= 4;
+        else score -= 5; // 0 categories
+    }
+    
+    // Count weak verbs and unknown verbs
+    let weakVerbCount = 0;
+    let unknownVerbCount = 0;
+    
+    for (const verb of foundVerbs) {
+        const isWeak = weakVerbs.some(weakVerb => 
+            verb.toLowerCase().includes(weakVerb.toLowerCase()) ||
+            weakVerb.toLowerCase().includes(verb.toLowerCase())
+        );
         
-        const weakCount = weakVerbs.reduce((count, verb) => {
-            return count + (resumeText.toLowerCase().split(verb).length - 1);
-        }, 0);
-        
-        const strongCount = strongVerbs.reduce((count, verb) => {
-            return count + (resumeText.toLowerCase().split(verb).length - 1);
-        }, 0);
-        
-        if (strongCount > 0 && weakCount === 0) {
-            score = 10;
-        } else if (strongCount > weakCount) {
-            score = 7;
-        } else if (strongCount === weakCount && strongCount > 0) {
-            score = 5;
-        } else if (weakCount > strongCount && strongCount > 0) {
-            score = 3;
-        } else if (weakCount > 0 && strongCount === 0) {
-            score = 1;
+        if (isWeak) {
+            weakVerbCount++;
         } else {
-            score = 4;
+            // Check if verb is in any strong category
+            const isInStrongCategory = strongVerbCategories.some(category => {
+                const categoryVerbs = window.ActionVerbs.getVerbsForCategory(category);
+                return categoryVerbs.some(strongVerb => 
+                    strongVerb.toLowerCase() === verb.toLowerCase() ||
+                    strongVerb.toLowerCase().includes(verb.toLowerCase())
+                );
+            });
+            
+            if (!isInStrongCategory) {
+                unknownVerbCount++;
+            }
         }
+    }
+    
+    // Apply penalties for weak and unknown verbs
+    score -= (weakVerbCount + unknownVerbCount); // -1 per weak/unknown verb
+    
+    return Math.max(Math.min(score, 10), 0);
+}
+
+/**
+ * Extract action verbs from resume text
+ */
+function extractActionVerbsFromText(resumeText) {
+    const verbs = [];
+    const text = resumeText.toLowerCase();
+    
+    // Common action verb patterns in resumes
+    const verbPatterns = [
+        // Past tense verbs (most common in experience)
+        /\b(managed|led|developed|created|implemented|achieved|increased|reduced|improved|delivered|executed|coordinated|supervised|administered|analyzed|designed|established|facilitated|generated|initiated|launched|optimized|organized|planned|produced|provided|supported|trained|collaborated|communicated|negotiated|presented|resolved|streamlined|transformed|upgraded|built|maintained|monitored|oversaw|recruited|directed|guided|mentored|coached|evaluated|assessed|identified|researched|tested|reviewed|audited|calculated|forecasted|interviewed|investigated|traced|classified|collected|compiled|processed|recorded|scheduled|arranged|prepared|operated|handled|assisted|helped|contributed|participated|worked|responsible)\b/g,
+        
+        // Present tense verbs (for current roles)
+        /\b(manage|lead|develop|create|implement|achieve|increase|reduce|improve|deliver|execute|coordinate|supervise|administer|analyze|design|establish|facilitate|generate|initiate|launch|optimize|organize|plan|produce|provide|support|train|collaborate|communicate|negotiate|present|resolve|streamline|transform|upgrade|build|maintain|monitor|oversee|recruit|direct|guide|mentor|coach|evaluate|assess|identify|research|test|review|audit|calculate|forecast|interview|investigate|trace|classify|collect|compile|process|record|schedule|arrange|prepare|operate|handle|assist|help|contribute|participate|work)\b/g
+    ];
+    
+    for (const pattern of verbPatterns) {
+        const matches = text.match(pattern);
+        if (matches) {
+            verbs.push(...matches);
+        }
+    }
+    
+    // Remove duplicates and return unique verbs
+    return [...new Set(verbs)];
+}
+
+/**
+ * Categorize found verbs into strong verb categories
+ */
+function categorizeFoundVerbs(foundVerbs, categories) {
+    const categorizedVerbs = {};
+    
+    for (const category of categories) {
+        const categoryVerbs = window.ActionVerbs.getVerbsForCategory(category);
+        const matchingVerbs = [];
+        
+        for (const verb of foundVerbs) {
+            const isMatch = categoryVerbs.some(categoryVerb => 
+                categoryVerb.toLowerCase() === verb.toLowerCase() ||
+                categoryVerb.toLowerCase().includes(verb.toLowerCase()) ||
+                verb.toLowerCase().includes(categoryVerb.toLowerCase())
+            );
+            
+            if (isMatch) {
+                matchingVerbs.push(verb);
+            }
+        }
+        
+        if (matchingVerbs.length > 0) {
+            categorizedVerbs[category] = matchingVerbs;
+        }
+    }
+    
+    return categorizedVerbs;
+}
+
+/**
+ * Fallback action verb analysis when ActionVerbs config not available
+ */
+function analyzeActionVerbsFallback(resumeText) {
+    let score = 0; // Start from 0 for fallback
+    
+    const weakVerbs = ['responsible for', 'duties included', 'helped with', 'assisted in', 'involved in', 'worked on'];
+    const strongVerbs = ['led', 'managed', 'developed', 'created', 'implemented', 'achieved', 'increased', 'improved'];
+    
+    const weakCount = weakVerbs.reduce((count, verb) => {
+        return count + (resumeText.toLowerCase().split(verb).length - 1);
+    }, 0);
+    
+    const strongCount = strongVerbs.reduce((count, verb) => {
+        return count + (resumeText.toLowerCase().split(verb).length - 1);
+    }, 0);
+    
+    if (strongCount > 0 && weakCount === 0) {
+        score = 10;
+    } else if (strongCount > weakCount) {
+        score = 7;
+    } else if (strongCount === weakCount && strongCount > 0) {
+        score = 5;
+    } else if (weakCount > strongCount && strongCount > 0) {
+        score = 3;
+    } else if (weakCount > 0 && strongCount === 0) {
+        score = 1;
+    } else {
+        score = 4;
     }
     
     return Math.max(Math.min(score, 10), 0);
@@ -726,28 +1224,182 @@ function analyzeActiveVoice(resumeText) {
 }
 
 /**
- * Analyze summary section quality
+ * Analyze summary section quality with equal weightage for 5 components
  */
 function analyzeSummarySection(resumeText) {
-    const text = resumeText.toLowerCase();
-    let score = 0; // Start from 0 - purely content-based
+    let score = 0; // Start from 0, add 2 points for each component
     
-    // Check for summary/objective section
-    if (text.includes('summary') || text.includes('objective') || text.includes('profile')) {
+    // Extract summary section
+    const summarySection = extractSummarySection(resumeText);
+    
+    if (!summarySection || summarySection.length < 20) {
+        return 1; // Minimal score if no summary found
+    }
+    
+    // 1. Years of Experience (2 points)
+    if (hasYearsOfExperience(summarySection)) {
         score += 2;
     }
     
-    // Check for years of experience mention
-    if (text.match(/\d+\+?\s*years?\s*(of\s*)?(experience|exp)/)) {
+    // 2. Key Skills (2 points) 
+    if (hasKeySkills(summarySection)) {
         score += 2;
     }
     
-    // Check for specific industry/role mention
-    if (text.includes('engineer') || text.includes('manager') || text.includes('developer') || text.includes('analyst')) {
+    // 3. Buzz Words (2 points)
+    if (hasBuzzWords(summarySection)) {
+        score += 2;
+    }
+    
+    // 4. Quantification (2 points)
+    if (hasQuantification(summarySection)) {
+        score += 2;
+    }
+    
+    // 5. Brevity (2 points)
+    if (checkBrevity(summarySection)) {
         score += 2;
     }
     
     return Math.min(score, 10);
+}
+
+/**
+ * Extract summary/objective section from resume
+ */
+function extractSummarySection(resumeText) {
+    const text = resumeText.toLowerCase();
+    
+    // Look for summary section markers
+    const summaryMarkers = [
+        'professional summary', 'executive summary', 'career summary',
+        'summary', 'objective', 'profile', 'overview', 'about'
+    ];
+    
+    let summaryStart = -1;
+    let usedMarker = '';
+    
+    for (const marker of summaryMarkers) {
+        const index = text.indexOf(marker);
+        if (index !== -1 && (summaryStart === -1 || index < summaryStart)) {
+            summaryStart = index;
+            usedMarker = marker;
+        }
+    }
+    
+    if (summaryStart === -1) {
+        // If no explicit summary, try to extract first paragraph
+        const paragraphs = resumeText.split('\n\n').filter(p => p.trim().length > 50);
+        return paragraphs[0] || '';
+    }
+    
+    // Find end of summary section
+    const remainingText = resumeText.substring(summaryStart);
+    const endMarkers = ['experience', 'work history', 'employment', 'education', 'skills'];
+    let summaryEnd = remainingText.length;
+    
+    for (const endMarker of endMarkers) {
+        const endIndex = remainingText.toLowerCase().indexOf(endMarker);
+        if (endIndex !== -1 && endIndex < summaryEnd && endIndex > usedMarker.length + 10) {
+            summaryEnd = endIndex;
+        }
+    }
+    
+    return remainingText.substring(0, summaryEnd).trim();
+}
+
+/**
+ * Check for years of experience mention in summary
+ */
+function hasYearsOfExperience(summaryText) {
+    const experiencePatterns = [
+        /(\d+)\+?\s*years?\s*(of\s*)?(experience|exp)/gi,
+        /over\s*(\d+)\s*years?\s*(of\s*)?(experience|exp)/gi,
+        /more than\s*(\d+)\s*years?\s*(of\s*)?(experience|exp)/gi,
+        /(\d+)\+?\s*year\s*(experienced|professional)/gi,
+        /(experienced|seasoned|veteran)\s*(professional|expert)/gi
+    ];
+    
+    return experiencePatterns.some(pattern => pattern.test(summaryText));
+}
+
+/**
+ * Check for key skills mention in summary
+ */
+function hasKeySkills(summaryText) {
+    const text = summaryText.toLowerCase();
+    
+    // Technical skills
+    const technicalSkills = [
+        'python', 'java', 'javascript', 'react', 'node', 'sql', 'aws', 'azure', 
+        'docker', 'kubernetes', 'git', 'api', 'microservices', 'database',
+        'machine learning', 'data science', 'analytics', 'cloud'
+    ];
+    
+    // Professional skills  
+    const professionalSkills = [
+        'project management', 'leadership', 'team management', 'strategic planning',
+        'business analysis', 'process improvement', 'stakeholder management',
+        'cross-functional', 'agile', 'scrum', 'devops'
+    ];
+    
+    const allSkills = [...technicalSkills, ...professionalSkills];
+    const foundSkills = allSkills.filter(skill => text.includes(skill));
+    
+    return foundSkills.length >= 2; // At least 2 key skills mentioned
+}
+
+/**
+ * Check for industry buzz words in summary
+ */
+function hasBuzzWords(summaryText) {
+    const text = summaryText.toLowerCase();
+    
+    const buzzWords = [
+        // Action/Impact words
+        'drive', 'deliver', 'optimize', 'transform', 'innovate', 'scale', 'streamline',
+        'accelerate', 'enhance', 'maximize', 'leverage', 'spearhead', 'pioneer',
+        
+        // Business terms
+        'roi', 'revenue', 'growth', 'efficiency', 'performance', 'productivity',
+        'competitive advantage', 'market leader', 'best practices', 'solutions',
+        'strategy', 'vision', 'mission', 'goals', 'objectives',
+        
+        // Industry terms
+        'digital transformation', 'automation', 'integration', 'scalability',
+        'user experience', 'customer satisfaction', 'quality assurance',
+        'compliance', 'security', 'innovation', 'emerging technologies'
+    ];
+    
+    const foundBuzzWords = buzzWords.filter(word => text.includes(word));
+    return foundBuzzWords.length >= 2; // At least 2 buzz words
+}
+
+/**
+ * Check for quantification in summary
+ */
+function hasQuantification(summaryText) {
+    const quantificationPatterns = [
+        /\b\d+\.?\d*\s*%/g,                    // Percentages
+        /\$[\d,]+\.?\d*[kmb]?/gi,             // Dollar amounts
+        /\b\d{2,}[,\d]*\s*(users?|customers?|clients?|people|projects?|systems?|applications?)\b/gi, // Numbers with context
+        /\b(\d+x|doubled?|tripled?)\b/gi,      // Multipliers
+        /\b(over|more than|up to|above|exceeding?)\s*\d{2,}/gi, // Large numbers
+        /\b\d+\s*(years?|months?)\s*(of\s*)?(experience|exp)/gi  // Experience numbers
+    ];
+    
+    return quantificationPatterns.some(pattern => pattern.test(summaryText));
+}
+
+/**
+ * Check brevity (2-4 sentences, 50-150 words)
+ */
+function checkBrevity(summaryText) {
+    const wordCount = summaryText.trim().split(/\s+/).length;
+    const sentenceCount = summaryText.split(/[.!?]+/).filter(s => s.trim().length > 5).length;
+    
+    // Optimal: 2-4 sentences, 50-150 words
+    return (sentenceCount >= 2 && sentenceCount <= 4 && wordCount >= 50 && wordCount <= 150);
 }
 
 /**
@@ -833,6 +1485,307 @@ function analyzeGrowthSignals(resumeText) {
     score += Math.min(foundWords * 1.4, 10);
     
     return Math.min(score, 10);
+}
+
+/**
+ * Analyze page density based on formatting, word count, and experience-appropriate page count
+ */
+function analyzePageDensity(resumeText) {
+    let score = 10; // Start with perfect score, deduct for issues
+    
+    // Calculate basic metrics
+    const wordCount = resumeText.trim().split(/\s+/).length;
+    const charCount = resumeText.length;
+    const lineCount = resumeText.split('\n').length;
+    
+    // Estimate page count (roughly 500-600 words per page)
+    const estimatedPages = Math.ceil(wordCount / 550);
+    
+    // Extract years of experience
+    const yearsOfExperience = extractYearsOfExperience(resumeText);
+    
+    // Page count penalties based on experience
+    if (yearsOfExperience < 6) {
+        // For <6 years experience: should be 1 page
+        if (estimatedPages > 1) {
+            if (estimatedPages === 2) {
+                score -= 4; // Heavy penalty for 2 pages when should be 1
+            } else if (estimatedPages >= 3) {
+                score -= 7; // Very heavy penalty for 3+ pages
+            }
+        }
+    } else {
+        // For 6+ years experience: can be 1-2 pages
+        if (estimatedPages > 2) {
+            score -= 5; // Heavy penalty for >2 pages regardless of experience
+        }
+    }
+    
+    // Word density analysis per estimated page
+    const wordsPerPage = wordCount / estimatedPages;
+    
+    if (wordsPerPage < 300) {
+        score -= 2; // Too sparse - wasting space
+    } else if (wordsPerPage > 700) {
+        score -= 3; // Too dense - hard to read
+    }
+    // Optimal range: 300-700 words per page (no penalty)
+    
+    // Character density analysis
+    const avgWordsPerLine = wordCount / lineCount;
+    if (avgWordsPerLine < 3) {
+        score -= 1; // Too many short lines
+    } else if (avgWordsPerLine > 15) {
+        score -= 2; // Lines too long/dense
+    }
+    
+    // Formatting quality analysis
+    const formattingScore = analyzeFormattingQuality(resumeText);
+    score += formattingScore; // Can add up to 2 points for excellent formatting
+    
+    // White space analysis
+    const whitespaceRatio = (resumeText.match(/\s/g) || []).length / charCount;
+    if (whitespaceRatio < 0.15) {
+        score -= 2; // Too little white space - cramped
+    } else if (whitespaceRatio > 0.25) {
+        score -= 1; // Too much white space - wasteful
+    }
+    // Optimal whitespace ratio: 15-25%
+    
+    return Math.max(Math.min(score, 10), 0);
+}
+
+/**
+ * Extract years of experience from resume text
+ */
+function extractYearsOfExperience(resumeText) {
+    const text = resumeText.toLowerCase();
+    
+    // Look for explicit experience statements
+    const experiencePatterns = [
+        /(\d+)\+?\s*years?\s*(of\s*)?(experience|exp)/gi,
+        /over\s*(\d+)\s*years?\s*(of\s*)?(experience|exp)/gi,
+        /more than\s*(\d+)\s*years?\s*(of\s*)?(experience|exp)/gi
+    ];
+    
+    for (const pattern of experiencePatterns) {
+        const matches = text.match(pattern);
+        if (matches) {
+            const years = matches[0].match(/\d+/);
+            if (years) {
+                return parseInt(years[0]);
+            }
+        }
+    }
+    
+    // Fallback: estimate from date ranges in experience section
+    const currentYear = new Date().getFullYear();
+    const yearMatches = resumeText.match(/\b(19|20)\d{2}\b/g);
+    
+    if (yearMatches && yearMatches.length >= 2) {
+        const years = yearMatches.map(year => parseInt(year)).sort();
+        const oldestYear = years[0];
+        const newestYear = years[years.length - 1];
+        
+        // If newest year is current or recent, calculate experience
+        if (newestYear >= currentYear - 1) {
+            return Math.min(currentYear - oldestYear, 20); // Cap at 20 years
+        }
+    }
+    
+    // Default fallback based on resume length/complexity
+    if (resumeText.length > 2000) return 8; // Assume experienced
+    if (resumeText.length > 1500) return 5; // Assume mid-level
+    return 3; // Assume junior
+}
+
+/**
+ * Analyze formatting quality (sections, structure, consistency)
+ */
+function analyzeFormattingQuality(resumeText) {
+    let formattingBonus = 0;
+    
+    // Check for proper section headers
+    const sectionHeaders = [
+        /\b(professional\s+)?(summary|objective|profile)\b/gi,
+        /\b(professional\s+|work\s+)?experience\b/gi,
+        /\beducation\b/gi,
+        /\bskills\b/gi,
+        /\b(contact|contact\s+information)\b/gi
+    ];
+    
+    const sectionsFound = sectionHeaders.filter(pattern => pattern.test(resumeText)).length;
+    if (sectionsFound >= 4) formattingBonus += 1; // Good section structure
+    
+    // Check for consistent bullet point usage
+    const bulletCount = (resumeText.match(/[•▪▫■□◦‣⁃-]/g) || []).length;
+    if (bulletCount >= 5) formattingBonus += 0.5; // Good use of bullets
+    
+    // Check for proper date formatting consistency
+    const dateFormats = [
+        (resumeText.match(/\d{4}\s*[-–]\s*\d{4}/g) || []).length, // 2020-2024
+        (resumeText.match(/\d{1,2}\/\d{4}/g) || []).length,       // 01/2024
+        (resumeText.match(/[A-Za-z]+\s+\d{4}/g) || []).length     // January 2024
+    ];
+    
+    const maxDateFormat = Math.max(...dateFormats);
+    const totalDates = dateFormats.reduce((sum, count) => sum + count, 0);
+    
+    if (totalDates > 0 && maxDateFormat / totalDates >= 0.8) {
+        formattingBonus += 0.5; // Consistent date formatting
+    }
+    
+    return Math.min(formattingBonus, 2); // Max 2 points bonus
+}
+
+/**
+ * Analyze quantity impact based on quantified achievements in Professional Experience section
+ */
+function analyzeQuantityImpact(resumeText) {
+    // Extract Professional Experience section
+    const experienceSection = extractProfessionalExperience(resumeText);
+    
+    if (!experienceSection || experienceSection.length < 50) {
+        return 0; // No experience section found
+    }
+    
+    // Extract all bullet points/achievements from experience section
+    const bulletPoints = extractBulletPoints(experienceSection);
+    
+    if (bulletPoints.length === 0) {
+        return 0; // No bullet points found
+    }
+    
+    // Count quantified vs total bullet points
+    const quantifiedPoints = bulletPoints.filter(point => isQuantified(point));
+    const totalPoints = bulletPoints.length;
+    const quantificationPercentage = (quantifiedPoints.length / totalPoints) * 100;
+    
+    // Apply your exact scoring logic
+    if (quantificationPercentage > 80) return 10;
+    if (quantificationPercentage >= 70) return 9;
+    if (quantificationPercentage >= 60) return 8;
+    if (quantificationPercentage >= 50) return 7;
+    if (quantificationPercentage >= 40) return 5;
+    if (quantificationPercentage >= 30) return 4;
+    if (quantificationPercentage >= 20) return 3;
+    if (quantificationPercentage >= 10) return 2;
+    if (quantificationPercentage > 0) return 1;
+    return 0;
+}
+
+/**
+ * Extract Professional Experience section from resume text
+ */
+function extractProfessionalExperience(resumeText) {
+    const text = resumeText.toLowerCase();
+    
+    // Look for experience section markers
+    const experienceMarkers = [
+        'professional experience', 'work experience', 'employment history', 
+        'career history', 'experience', 'employment', 'work history'
+    ];
+    
+    // Find the start of experience section
+    let experienceStart = -1;
+    let usedMarker = '';
+    
+    for (const marker of experienceMarkers) {
+        const index = text.indexOf(marker);
+        if (index !== -1 && (experienceStart === -1 || index < experienceStart)) {
+            experienceStart = index;
+            usedMarker = marker;
+        }
+    }
+    
+    if (experienceStart === -1) {
+        // Fallback: look for job titles or company patterns
+        return resumeText; // Analyze entire resume if no clear section found
+    }
+    
+    // Find the end of experience section (before next major section)
+    const endMarkers = ['education', 'skills', 'certifications', 'projects', 'awards'];
+    let experienceEnd = resumeText.length;
+    
+    const remainingText = text.substring(experienceStart + usedMarker.length);
+    for (const endMarker of endMarkers) {
+        const endIndex = remainingText.indexOf(endMarker);
+        if (endIndex !== -1 && endIndex < (experienceEnd - experienceStart - usedMarker.length)) {
+            experienceEnd = experienceStart + usedMarker.length + endIndex;
+        }
+    }
+    
+    return resumeText.substring(experienceStart, experienceEnd);
+}
+
+/**
+ * Extract bullet points from text
+ */
+function extractBulletPoints(text) {
+    // Look for bullet points with various markers
+    const bulletPatterns = [
+        /^[\s]*[•▪▫■□◦‣⁃]\s*(.+)$/gm,  // Unicode bullets
+        /^[\s]*[-*]\s*(.+)$/gm,         // Dash/asterisk bullets  
+        /^[\s]*\d+\.\s*(.+)$/gm,        // Numbered lists
+        /^[\s]*[→‣►]\s*(.+)$/gm         // Arrow bullets
+    ];
+    
+    const bulletPoints = [];
+    
+    for (const pattern of bulletPatterns) {
+        const matches = text.matchAll(pattern);
+        for (const match of matches) {
+            if (match[1] && match[1].trim().length > 10) { // Only substantial bullet points
+                bulletPoints.push(match[1].trim());
+            }
+        }
+    }
+    
+    // If no formal bullets found, try to extract achievement-like sentences
+    if (bulletPoints.length === 0) {
+        const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20);
+        // Look for sentences that seem like achievements (contain action verbs)
+        const achievementSentences = sentences.filter(sentence => {
+            const lowerSentence = sentence.toLowerCase();
+            return /\b(led|managed|developed|created|implemented|achieved|increased|reduced|improved|delivered|executed|coordinated|supervised)\b/.test(lowerSentence);
+        });
+        bulletPoints.push(...achievementSentences.map(s => s.trim()));
+    }
+    
+    return bulletPoints;
+}
+
+/**
+ * Check if a bullet point contains quantification
+ */
+function isQuantified(bulletPoint) {
+    const text = bulletPoint.toLowerCase();
+    
+    // Pattern 1: Percentages (10%, 25%, etc.)
+    if (/\b\d+\.?\d*\s*%/.test(text)) return true;
+    
+    // Pattern 2: Dollar amounts ($50K, $1.2M, $500,000, etc.)
+    if (/\$[\d,]+\.?\d*[kmb]?/i.test(text)) return true;
+    
+    // Pattern 3: Large numbers with context (500 users, 10,000 customers, etc.)
+    if (/\b\d{3,}[,\d]*\s*(users?|customers?|clients?|employees?|people|projects?|systems?|applications?|processes?|hours?|days?|months?|years?)\b/i.test(text)) return true;
+    
+    // Pattern 4: Time savings (2 hours, 30 minutes, 5 days, etc.)
+    if (/\b\d+\.?\d*\s*(hours?|minutes?|days?|weeks?|months?|years?)\b.*\b(saved?|reduced?|faster|quicker)\b/i.test(text)) return true;
+    
+    // Pattern 5: Multipliers (2x, 3x faster, doubled, tripled, etc.)
+    if (/\b(\d+x|doubled?|tripled?|quadrupled?)\b/i.test(text)) return true;
+    
+    // Pattern 6: Ranges (10-20, 5 to 15, between 100-200, etc.)
+    if (/\b\d+[-–to]\d+\b/i.test(text)) return true;
+    
+    // Pattern 7: Team size (team of 5, managed 10 people, etc.)
+    if (/\b(team of|managed?|led|supervised?)\s*\d+/i.test(text)) return true;
+    
+    // Pattern 8: Project scope (over 1000, more than 500, up to 2000, etc.)
+    if (/\b(over|more than|up to|above|exceeding?)\s*\d{2,}/i.test(text)) return true;
+    
+    return false;
 }
 
 /**
