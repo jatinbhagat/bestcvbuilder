@@ -358,10 +358,14 @@ function hasMobileNumber(resumeText) {
         /\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/g,           // US format: 123-456-7890
         /\b\(\d{3}\)\s?\d{3}[-.\s]?\d{4}\b/g,          // US format: (123) 456-7890
         /\b\+\d{1,3}[-.\s]?\d{1,14}[-.\s]?\d{1,14}\b/g, // International: +1-234-567-8900
+        /\b\+91[-.\s]?\d{10}\b/g,                      // Indian format: +91-9876543210
+        /\b91[-.\s]?\d{10}\b/g,                        // Indian format: 91-9876543210
+        /\b[6-9]\d{9}\b/g,                             // Indian mobile: 9876543210
         /\b\d{10,15}\b/g,                              // Simple 10+ digit number
-        /\bphone\s*:?\s*\d/gi,                         // "Phone: 123..."
-        /\bmobile\s*:?\s*\d/gi,                        // "Mobile: 123..."
-        /\bcell\s*:?\s*\d/gi                           // "Cell: 123..."
+        /\bphone\s*:?\s*[+]?\d/gi,                      // "Phone: 123..."
+        /\bmobile\s*:?\s*[+]?\d/gi,                     // "Mobile: 123..."
+        /\bcell\s*:?\s*[+]?\d/gi,                       // "Cell: 123..."
+        /\bcontact\s*:?\s*[+]?\d/gi                     // "Contact: 123..."
     ];
     
     return phonePatterns.some(pattern => pattern.test(resumeText));
@@ -405,41 +409,100 @@ function hasLinkedInProfile(resumeText) {
 function hasLocationInfo(resumeText) {
     const text = resumeText.toLowerCase();
     
-    // US States (abbreviated and full names)
-    const usStates = [
-        'al', 'ak', 'az', 'ar', 'ca', 'co', 'ct', 'de', 'fl', 'ga', 'hi', 'id', 
-        'il', 'in', 'ia', 'ks', 'ky', 'la', 'me', 'md', 'ma', 'mi', 'mn', 'ms', 
-        'mo', 'mt', 'ne', 'nv', 'nh', 'nj', 'nm', 'ny', 'nc', 'nd', 'oh', 'ok', 
-        'or', 'pa', 'ri', 'sc', 'sd', 'tn', 'tx', 'ut', 'vt', 'va', 'wa', 'wv', 
-        'wi', 'wy', 'alabama', 'alaska', 'arizona', 'arkansas', 'california', 
-        'colorado', 'connecticut', 'delaware', 'florida', 'georgia', 'hawaii', 
-        'idaho', 'illinois', 'indiana', 'iowa', 'kansas', 'kentucky', 'louisiana', 
-        'maine', 'maryland', 'massachusetts', 'michigan', 'minnesota', 'mississippi', 
-        'missouri', 'montana', 'nebraska', 'nevada', 'new hampshire', 'new jersey', 
-        'new mexico', 'new york', 'north carolina', 'north dakota', 'ohio', 
-        'oklahoma', 'oregon', 'pennsylvania', 'rhode island', 'south carolina', 
-        'south dakota', 'tennessee', 'texas', 'utah', 'vermont', 'virginia', 
-        'washington', 'west virginia', 'wisconsin', 'wyoming'
-    ];
+    // Global cities and regions including India
+    const globalLocations = [
+    // India - Major Cities & States
+    'mumbai', 'delhi', 'new delhi', 'bangalore', 'bengaluru', 'hyderabad', 'chennai', 
+    'kolkata', 'calcutta', 'pune', 'gurugram', 'gurgaon', 'noida', 'ahmedabad', 'surat', 
+    'jaipur', 'lucknow', 'kanpur', 'nagpur', 'indore', 'thane', 'bhopal', 'visakhapatnam', 
+    'vishakhapatnam', 'pimpri', 'patna', 'vadodara', 'coimbatore', 'ludhiana', 'agra', 
+    'nashik', 'faridabad', 'meerut', 'rajkot', 'varanasi', 'banaras', 'srinagar', 'aurangabad', 
+    'dhanbad', 'amritsar', 'navi mumbai', 'allahabad', 'prayagraj', 'ranchi', 'howrah', 'jabalpur', 
+    'gwalior', 'vijayawada', 'mysore', 'hubli', 'mangalore', 'solapur', 'kota', 'trivandrum', 'thiruvananthapuram', 
+    'kochi', 'ernakulam', 'madurai', 'salem', 'tiruchirappalli', 'trichy', 'bhubaneswar', 'cuttack', 
+    'guwahati', 'shimla', 'dehradun', 'gangtok', 'itanagar', 'aizawl', 'kohima', 'imphal', 'agartala',
+    'panaji', 'porvorim', 'silchar', 'dibrugarh', 'tezpur', 'durgapur', 'asansol', 'siliguri',
+    'india', 'haryana', 'uttar pradesh', 'maharashtra', 'karnataka', 'tamil nadu', 'telangana', 
+    'andhra pradesh', 'gujarat', 'west bengal', 'punjab', 'rajasthan', 'bihar', 'jharkhand', 
+    'kerala', 'odisha', 'uttarakhand', 'chhattisgarh', 'assam', 'goa', 'sikkim', 'mizoram', 
+    'tripura', 'nagaland', 'manipur', 'arunachal pradesh', 'meghalaya', 'himachal pradesh',
+
+    // US States
+    'california', 'new york', 'texas', 'florida', 'illinois', 'pennsylvania', 'ohio', 'georgia', 
+    'north carolina', 'michigan', 'new jersey', 'virginia', 'washington', 'arizona', 'massachusetts', 
+    'tennessee', 'indiana', 'missouri', 'maryland', 'wisconsin', 'colorado', 'minnesota', 'south carolina', 
+    'alabama', 'louisiana', 'kentucky', 'oregon', 'oklahoma', 'connecticut', 'utah', 'iowa', 'nevada', 
+    'arkansas', 'mississippi', 'kansas', 'new mexico', 'nebraska', 'west virginia', 'montana', 'idaho', 
+    'hawaii', 'alaska', 'maine', 'new hampshire', 'vermont', 'rhode island', 'delaware', 'district of columbia',
+
+    // Major US Cities
+    'los angeles', 'san francisco', 'san diego', 'san jose', 'sacramento', 'fresno', 'oakland', 
+    'new york city', 'nyc', 'buffalo', 'rochester', 'houston', 'dallas', 'austin', 'san antonio', 'fort worth', 
+    'miami', 'orlando', 'tampa', 'jacksonville', 'atlanta', 'charlotte', 'raleigh', 'detroit', 'grand rapids',
+    'chicago', 'philadelphia', 'pittsburgh', 'cleveland', 'columbus', 'cincinnati', 'phoenix', 'boston', 
+    'nashville', 'memphis', 'indianapolis', 'st louis', 'baltimore', 'milwaukee', 'denver', 'minneapolis', 
+    'seattle', 'portland', 'las vegas', 'salt lake city', 'honolulu',
+
+    // Canada - Provinces & Major Cities
+    'ontario', 'quebec', 'british columbia', 'alberta', 'manitoba', 'saskatchewan', 'nova scotia', 
+    'new brunswick', 'newfoundland and labrador', 'prince edward island', 'toronto', 'vancouver', 
+    'montreal', 'ottawa', 'calgary', 'edmonton', 'winnipeg', 'halifax', 'victoria',
+
+    // UK - Major Cities
+    'london', 'manchester', 'birmingham', 'liverpool', 'glasgow', 'edinburgh', 'leeds', 'sheffield', 'bristol', 'cardiff', 'belfast',
+
+    // Australia - States & Major Cities
+    'new south wales', 'victoria', 'queensland', 'south australia', 'western australia', 'tasmania', 'northern territory', 'australian capital territory',
+    'sydney', 'melbourne', 'brisbane', 'perth', 'adelaide', 'canberra', 'hobart', 'darwin', 'gold coast',
+
+    // Middle East
+    'dubai', 'abu dhabi', 'doha', 'riyadh', 'jeddah', 'amman', 'muscat', 'kuwait city', 'manama',
+
+    // Europe - Major Cities
+    'berlin', 'munich', 'hamburg', 'frankfurt', 'stuttgart',
+    'paris', 'lyon', 'marseille', 'nice', 'toulouse',
+    'amsterdam', 'rotterdam', 'the hague', 'utrecht',
+    'zurich', 'geneva', 'basel',
+    'vienna', 'budapest', 'helsinki', 'stockholm', 'copenhagen',
+    'madrid', 'barcelona', 'valencia', 'seville', 'lisbon', 'porto',
+    'rome', 'milan', 'florence', 'naples', 'turin', 'venice',
+
+    // Asia - Major Cities
+    'tokyo', 'osaka', 'kyoto', 'yokohama', 'nagoya',
+    'hong kong', 'shanghai', 'beijing', 'guangzhou', 'shenzhen',
+    'singapore', 'kuala lumpur', 'bangkok', 'jakarta', 'manila',
+    'seoul', 'busan', 'incheon',
+
+    // Latin America & Africa
+    'mexico city', 'guadalajara', 'monterrey', 'bogota', 'lima',
+    'santiago', 'buenos aires', 'cape town', 'johannesburg', 'nairobi',
+    'lagos', 'cairo', 'casablanca', 'accra', 'addis ababa'
+];
     
     // Common location patterns
     const locationPatterns = [
-        /\b\w+,\s*[A-Z]{2}\b/g,                         // City, ST format
-        /\b\w+,\s*\w+\s*\d{5}\b/g,                      // City, State ZIP
-        /\b\d{5}(-\d{4})?\b/g,                          // ZIP code
+        /\b\w+,\s*[A-Z]{2,3}\b/g,                       // City, ST format
+        /\b\w+,\s*\w+\s*\d{5,6}\b/g,                    // City, State ZIP/PIN
+        /\b\d{5,6}(-\d{4})?\b/g,                        // ZIP/PIN code
         /location\s*:?\s*\w+/gi,                        // "Location: City"
         /address\s*:?\s*\w+/gi,                         // "Address: ..."
         /based\s+in\s+\w+/gi,                           // "Based in City"
-        /located\s+in\s+\w+/gi                          // "Located in City"
+        /located\s+in\s+\w+/gi,                         // "Located in City"
+        /\bcity\s*:?\s*\w+/gi,                          // "City: Name"
+        /\bstate\s*:?\s*\w+/gi,                         // "State: Name"
+        /\bcurrent\s+location\s*:?\s*\w+/gi             // "Current Location: City"
     ];
     
-    // Check for US states
-    const hasUSState = usStates.some(state => text.includes(` ${state} `) || text.includes(`,${state}`) || text.includes(` ${state},`));
+    // Check for known global locations
+    const hasKnownLocation = globalLocations.some(location => {
+        const locationPattern = new RegExp(`\\b${location}\\b`, 'i');
+        return locationPattern.test(text);
+    });
     
     // Check for location patterns
     const hasLocationPattern = locationPatterns.some(pattern => pattern.test(resumeText));
     
-    return hasUSState || hasLocationPattern;
+    return hasKnownLocation || hasLocationPattern;
 }
 
 /**
@@ -1434,21 +1497,60 @@ function analyzeTeamworkSkills(resumeText) {
 function analyzeRepetition(resumeText) {
     let score = 10; // Start at max, deduct for repetition issues
     
-    // Check for repeated phrases (simple analysis)
-    const words = resumeText.toLowerCase().split(/\s+/);
-    const wordCount = {};
+    // 1. Check for repeated action verbs (most important for resumes)
+    const actionVerbs = [];
+    if (window.ActionVerbs) {
+        const allVerbs = window.ActionVerbs.getAllStrongVerbs();
+        actionVerbs.push(...allVerbs);
+    }
     
-    words.forEach(word => {
-        if (word.length > 4) { // Only check substantial words
-            wordCount[word] = (wordCount[word] || 0) + 1;
+    const verbCounts = {};
+    const text = resumeText.toLowerCase();
+    
+    // Count verb occurrences
+    actionVerbs.forEach(verb => {
+        const verbLower = verb.toLowerCase();
+        const regex = new RegExp(`\\b${verbLower}\\b`, 'gi');
+        const matches = text.match(regex);
+        if (matches && matches.length > 1) {
+            verbCounts[verbLower] = matches.length;
         }
     });
     
-    // Count words that appear more than 5 times
-    const overusedWords = Object.values(wordCount).filter(count => count > 5).length;
-    score -= Math.min(overusedWords, 5);
+    // Deduct 1 point for each verb that's repeated more than once
+    const repeatedVerbs = Object.values(verbCounts).filter(count => count > 1);
+    score -= repeatedVerbs.length;
     
-    return Math.max(score, 3);
+    // 2. Check for repeated substantial words (>4 chars)
+    const words = resumeText.toLowerCase().split(/\s+/);
+    const wordCount = {};
+    const excludeWords = ['that', 'this', 'with', 'from', 'have', 'been', 'were', 'will', 'they', 'them', 'their', 'there', 'where', 'when', 'what', 'which', 'work', 'team', 'project', 'company', 'business', 'experience', 'years'];
+    
+    words.forEach(word => {
+        const cleanWord = word.replace(/[^\w]/g, '');
+        if (cleanWord.length > 4 && !excludeWords.includes(cleanWord)) {
+            wordCount[cleanWord] = (wordCount[cleanWord] || 0) + 1;
+        }
+    });
+    
+    // Count words that appear more than 3 times (stricter than before)
+    const overusedWords = Object.values(wordCount).filter(count => count > 3).length;
+    score -= Math.min(overusedWords * 0.5, 3); // Half point deduction per overused word
+    
+    // 3. Check for repeated phrases (2+ words)
+    const phrases = resumeText.toLowerCase().match(/\b\w+\s+\w+\b/g) || [];
+    const phraseCount = {};
+    
+    phrases.forEach(phrase => {
+        if (!excludeWords.includes(phrase.split(' ')[0]) && !excludeWords.includes(phrase.split(' ')[1])) {
+            phraseCount[phrase] = (phraseCount[phrase] || 0) + 1;
+        }
+    });
+    
+    const repeatedPhrases = Object.values(phraseCount).filter(count => count > 1).length;
+    score -= Math.min(repeatedPhrases * 0.5, 2);
+    
+    return Math.max(score, 0);
 }
 
 /**
@@ -1916,8 +2018,12 @@ function displayStrengths(data) {
         return;
     }
     
-    // Show up to 3 completed categories with their specific achievements
-    completedCategories.slice(0, 3).forEach(category => {
+    // Show first 3 completed categories
+    const initialCategories = completedCategories.slice(0, 3);
+    const additionalCategories = completedCategories.slice(3);
+    
+    // Display initial categories
+    initialCategories.forEach(category => {
         const item = document.createElement('div');
         item.className = 'strength-item';
         item.innerHTML = `
@@ -1933,7 +2039,78 @@ function displayStrengths(data) {
         `;
         strengthsList.appendChild(item);
     });
+    
+    // Add expandable section if there are more categories
+    if (additionalCategories.length > 0) {
+        const expandableSection = document.createElement('div');
+        expandableSection.className = 'mt-4';
+        expandableSection.innerHTML = `
+            <button class="expand-toggle w-full flex items-center justify-between py-3 px-4 bg-gray-50 hover:bg-gray-100 rounded-lg border transition-colors" 
+                    onclick="toggleAdditionalStrengths(this)">
+                <span class="text-sm font-medium text-gray-700">
+                    Show ${additionalCategories.length} more completed categories
+                </span>
+                <svg class="w-5 h-5 text-gray-500 transition-transform chevron-down" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+            <div class="additional-strengths hidden mt-3">
+                ${additionalCategories.map(category => `
+                    <div class="strength-item">
+                        <div class="check-icon">
+                            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-gray-900">${category.name} (${category.score}/10):</h4>
+                            <p class="text-gray-600 mt-1">${getStrengthDescription(category.name, category.score)}</p>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        strengthsList.appendChild(expandableSection);
+    }
 }
+
+/**
+ * Toggle additional strengths display
+ */
+function toggleAdditionalStrengths(button) {
+    const additionalStrengths = button.nextElementSibling;
+    const chevron = button.querySelector('svg');
+    const buttonText = button.querySelector('span');
+    
+    if (additionalStrengths.classList.contains('hidden')) {
+        // Show additional strengths
+        additionalStrengths.classList.remove('hidden');
+        chevron.style.transform = 'rotate(180deg)';
+        
+        // Update button text
+        const count = additionalStrengths.querySelectorAll('.strength-item').length;
+        buttonText.textContent = `Hide ${count} additional categories`;
+        
+        // Scroll to ensure "Fix My Resume" button is visible
+        setTimeout(() => {
+            const fixButton = document.getElementById('upgradeBtn');
+            if (fixButton) {
+                fixButton.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }
+        }, 300);
+    } else {
+        // Hide additional strengths  
+        additionalStrengths.classList.add('hidden');
+        chevron.style.transform = 'rotate(0deg)';
+        
+        // Update button text
+        const count = additionalStrengths.querySelectorAll('.strength-item').length;
+        buttonText.textContent = `Show ${count} more completed categories`;
+    }
+}
+
+// Make function global for onclick access
+window.toggleAdditionalStrengths = toggleAdditionalStrengths;
 
 /**
  * Get specific strength description based on category name and score
