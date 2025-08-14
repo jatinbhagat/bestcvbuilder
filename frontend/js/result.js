@@ -494,97 +494,205 @@ window.handleFixIssue = function(issueTitle, issueIndex) {
 };
 
 /**
- * Generate specific examples of issues in CV text
+ * Generate specific examples from user's actual resume content
  */
 function generateSpecificExamples(issueTitle, data) {
     const insights = data.insights || {};
-    const resumeText = data.resume_text || data.text || "Sample resume content here...";
+    const resumeText = data.resume_text || data.text || "";
     
-    // Create realistic examples based on issue type
+    // Extract actual problematic content from the analysis insights
+    const examples = extractRealIssuesFromInsights(issueTitle, insights, resumeText);
+    
+    return examples;
+}
+
+/**
+ * Extract real issues directly from ATS analysis insights
+ */
+function extractRealIssuesFromInsights(issueTitle, insights, resumeText) {
     const examples = [];
     
-    switch (issueTitle.toLowerCase()) {
-        case 'summary':
+    // Get specific issues from the actual ATS analysis
+    const quickWins = insights.quick_wins || [];
+    const criticalIssues = insights.critical_issues || [];
+    const improvementSuggestions = insights.improvement_suggestions || [];
+    
+    // Combine all analysis data
+    const allAnalysisIssues = [...quickWins, ...criticalIssues, ...improvementSuggestions];
+    
+    // Find issues related to the current category
+    const relatedIssues = findRelatedIssues(issueTitle, allAnalysisIssues, resumeText);
+    
+    // If we found specific issues from analysis, use them
+    if (relatedIssues.length > 0) {
+        relatedIssues.forEach(analysisIssue => {
             examples.push({
-                line: "Experienced professional seeking opportunities in technology.",
-                issue: "Too generic - lacks specific value proposition",
-                fix: "Results-driven Software Engineer with 5+ years developing scalable web applications, seeking to leverage expertise in React and Node.js to drive innovation at tech-forward companies."
+                line: extractRelevantLineFromResume(analysisIssue, resumeText),
+                issue: analysisIssue.title || analysisIssue.issue || analysisIssue.suggestion || 'Issue needs attention',
+                fix: analysisIssue.recommendation || analysisIssue.solution || `Improved version addressing: ${analysisIssue.issue || analysisIssue.suggestion}`,
+                fromAnalysis: true
             });
-            break;
-            
-        case 'quantity impact':
-            examples.push({
-                line: "Improved website performance significantly.",
-                issue: "Vague impact - needs specific metrics",
-                fix: "Improved website performance by 40%, reducing page load time from 3.2s to 1.9s."
-            });
-            break;
-            
-        case 'weak verbs':
-            examples.push({
-                line: "Responsible for managing team projects.",
-                issue: "Weak verb 'responsible for' - use action verbs",
-                fix: "Led cross-functional team of 8 engineers to deliver 12 projects on schedule."
-            });
-            break;
-            
-        case 'verbosity':
-            examples.push({
-                line: "Collaborated extensively with multiple cross-functional teams in order to successfully implement and deploy various software solutions.",
-                issue: "Too wordy - can be more concise",
-                fix: "Collaborated with cross-functional teams to implement and deploy software solutions."
-            });
-            break;
-            
-        case 'spelling & consistency':
-            examples.push({
-                line: "Recieved recognition for excelent customer service.",
-                issue: "Spelling errors: 'Received' and 'excellent'",
-                fix: "Received recognition for excellent customer service."
-            });
-            break;
-            
-        case 'grammar':
-            examples.push({
-                line: "Developing applications and managing databases is my expertise.",
-                issue: "Grammar - subject-verb disagreement",
-                fix: "Developing applications and managing databases are my areas of expertise."
-            });
-            break;
-            
-        case 'active voice':
-            examples.push({
-                line: "The project was completed by me ahead of schedule.",
-                issue: "Passive voice - convert to active",
-                fix: "I completed the project ahead of schedule."
-            });
-            break;
-            
-        case 'verb tenses':
-            examples.push({
-                line: "Currently manage team (2019-2021) and was responsible for training.",
-                issue: "Inconsistent tenses for past role",
-                fix: "Managed team (2019-2021) and trained new employees."
-            });
-            break;
-            
-        case 'use of bullets':
-            examples.push({
-                line: "Experience includes: project management, team leadership, and software development.",
-                issue: "Should use bullet points instead of paragraph",
-                fix: "• Managed complex projects with $2M+ budgets\n• Led teams of 5-12 professionals\n• Developed software applications using modern frameworks"
-            });
-            break;
-            
-        default:
-            examples.push({
-                line: "Generic example of resume content that needs improvement.",
-                issue: `This area needs attention based on ATS analysis for ${issueTitle}`,
-                fix: "More specific, quantified, and impactful version of the content."
-            });
+        });
+    } else {
+        // If no specific analysis available, analyze the resume text directly
+        const directAnalysis = analyzeResumeDirectly(issueTitle, resumeText);
+        examples.push(...directAnalysis);
+    }
+    
+    return examples.slice(0, 3); // Limit to 3 examples
+}
+
+/**
+ * Find issues related to a specific category from analysis data
+ */
+function findRelatedIssues(issueTitle, analysisIssues, resumeText) {
+    const categoryKeywords = getCategoryKeywords(issueTitle);
+    
+    return analysisIssues.filter(analysisIssue => {
+        const issueText = (analysisIssue.title || analysisIssue.issue || analysisIssue.suggestion || '').toLowerCase();
+        return categoryKeywords.some(keyword => issueText.includes(keyword));
+    });
+}
+
+/**
+ * Get keywords that relate to each ATS category
+ */
+function getCategoryKeywords(issueTitle) {
+    const keywordMap = {
+        'summary': ['summary', 'objective', 'profile', 'overview'],
+        'quantity impact': ['quantify', 'metric', 'number', 'percentage', 'result', 'achievement'],
+        'weak verbs': ['verb', 'action', 'responsible', 'duties', 'passive'],
+        'verbosity': ['concise', 'wordy', 'lengthy', 'verbose', 'brief'],
+        'spelling & consistency': ['spelling', 'typo', 'error', 'consistent', 'mistake'],
+        'grammar': ['grammar', 'tense', 'sentence', 'structure'],
+        'active voice': ['active', 'passive', 'voice'],
+        'verb tenses': ['tense', 'past', 'present', 'consistent'],
+        'education section': ['education', 'degree', 'university', 'school'],
+        'skills section': ['skills', 'technical', 'competencies'],
+        'contact details': ['contact', 'phone', 'email', 'address'],
+        'use of bullets': ['bullet', 'format', 'list', 'structure']
+    };
+    
+    return keywordMap[issueTitle.toLowerCase()] || [issueTitle.toLowerCase()];
+}
+
+/**
+ * Extract relevant line from resume text based on analysis issue
+ */
+function extractRelevantLineFromResume(analysisIssue, resumeText) {
+    if (!resumeText) return 'Content from your resume that needs attention';
+    
+    const lines = resumeText.split('\n').filter(line => line.trim().length > 10);
+    
+    // Try to find a line that relates to the issue
+    const issueKeywords = (analysisIssue.title || analysisIssue.issue || '').toLowerCase().split(' ');
+    
+    for (let line of lines) {
+        const lineWords = line.toLowerCase().split(' ');
+        const matchCount = issueKeywords.filter(keyword => 
+            lineWords.some(word => word.includes(keyword) && keyword.length > 3)
+        ).length;
+        
+        if (matchCount > 0) {
+            return line.trim();
+        }
+    }
+    
+    // If no specific match, return a relevant line based on category
+    return findCategoryRelevantLine(analysisIssue, lines);
+}
+
+/**
+ * Find a line relevant to the issue category
+ */
+function findCategoryRelevantLine(analysisIssue, lines) {
+    const issueText = (analysisIssue.title || analysisIssue.issue || '').toLowerCase();
+    
+    // Look for lines that might contain the issue type
+    for (let line of lines) {
+        if (issueText.includes('verb') && (line.includes('responsible for') || line.includes('duties include'))) {
+            return line.trim();
+        }
+        if (issueText.includes('quantify') && (line.includes('improved') || line.includes('increased')) && !line.match(/\d+/)) {
+            return line.trim();
+        }
+        if (issueText.includes('summary') && (line.includes('seeking') || line.includes('professional'))) {
+            return line.trim();
+        }
+    }
+    
+    // Return first substantial line as fallback
+    return lines.find(line => line.length > 30)?.trim() || 'Sample content from your resume';
+}
+
+/**
+ * Analyze resume directly when no specific insights available
+ */
+function analyzeResumeDirectly(issueTitle, resumeText) {
+    if (!resumeText || resumeText.length < 50) {
+        return [{
+            line: 'Analysis requires resume content',
+            issue: `${issueTitle} category needs review based on ATS standards`,
+            fix: 'Upload your resume for detailed line-by-line analysis'
+        }];
+    }
+    
+    const lines = resumeText.split('\n').filter(line => line.trim().length > 15);
+    const examples = [];
+    
+    // Basic pattern matching for common issues
+    lines.forEach(line => {
+        if (examples.length >= 2) return;
+        
+        const lineAnalysis = analyzeLineForCategory(line, issueTitle);
+        if (lineAnalysis) {
+            examples.push(lineAnalysis);
+        }
+    });
+    
+    if (examples.length === 0) {
+        examples.push({
+            line: lines[0] || 'Resume content',
+            issue: `${issueTitle} optimization needed for better ATS performance`,
+            fix: 'Professional optimization will improve this section for ATS systems'
+        });
     }
     
     return examples;
+}
+
+/**
+ * Analyze individual line for specific category issues
+ */
+function analyzeLineForCategory(line, issueTitle) {
+    const category = issueTitle.toLowerCase();
+    
+    if (category.includes('verb') && (line.toLowerCase().includes('responsible for') || line.toLowerCase().includes('duties include'))) {
+        return {
+            line: line.trim(),
+            issue: 'Uses weak passive language instead of strong action verbs',
+            fix: 'Replace with specific action verbs showing leadership and results'
+        };
+    }
+    
+    if (category.includes('quantify') && (line.includes('improved') || line.includes('increased')) && !line.match(/\d+/)) {
+        return {
+            line: line.trim(),
+            issue: 'Claims improvement without specific metrics or numbers',
+            fix: 'Add quantified results with percentages, dollar amounts, or specific numbers'
+        };
+    }
+    
+    if (category.includes('spelling') && line.length > 50) {
+        // Basic check for common patterns that might indicate issues
+        return {
+            line: line.trim(),
+            issue: 'May contain spelling or consistency issues requiring review',
+            fix: 'Professional review will identify and correct any errors'
+        };
+    }
+    
+    return null;
 }
 
 /**
