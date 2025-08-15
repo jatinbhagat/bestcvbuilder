@@ -128,7 +128,7 @@ async function loadConfigs() {
 /**
  * Generate exactly 21 ATS categories based on real analysis data
  */
-function generateAll21Categories(data) {
+function generateAll20Categories(data) {
     const resumeText = data.content || data.text || "";
     const categories = [];
     
@@ -402,12 +402,12 @@ function analyzeWhiteSpace(resumeText) {
 function displayOverallScore(data) {
     if (!atsScore) return;
     
-    // Calculate overall score from our 21 categories (sum / 210 * 100)
-    const categories = generateComprehensiveATSScores(data);
+    // Calculate overall score from our 20 categories (sum / 200 * 100) 
+    const categories = generateAll20Categories(data); // This now generates 20 categories
     const categorySum = categories.reduce((sum, cat) => sum + cat.score, 0);
-    const calculatedScore = Math.round((categorySum / 210) * 100); // 21 categories * 10 max each = 210, scale to 100
+    const calculatedScore = Math.round((categorySum / 200) * 100); // 20 categories * 10 max each = 200, scale to 100
     let score = calculatedScore;
-    console.log(`Calculated overall score from 21 categories: ${calculatedScore} (sum: ${categorySum}/210)`);
+    console.log(`Calculated overall score from 20 categories: ${calculatedScore} (sum: ${categorySum}/200)`);
     
     console.log(`Using ATS score: ${score}`);
     
@@ -437,12 +437,12 @@ function displaySidebarCategories(data) {
     topFixesList.innerHTML = '';
     completedList.innerHTML = '';
     
-    // Generate ALL 21 ATS categories based on actual analysis data
-    const allCategories = generateAll21Categories(data);
+    // Generate ALL 20 ATS categories based on actual analysis data
+    const allCategories = generateAll20Categories(data);
     
     // Divide into High Priority (<6), Need Fixes (6-8), Completed (9-10)
     const topFixes = allCategories.filter(cat => cat.score < 6); // High Priority
-    const needFixes = allCategories.filter(cat => cat.score >= 6 && cat.score < 9); // Need Fixes  
+    const needFixes = allCategories.filter(cat => cat.score >= 6 && cat.score < 9); // Need Fixes
     const completed = allCategories.filter(cat => cat.score >= 9); // Completed
     
     console.log('🔍 High Priority (<6):', topFixes.length, topFixes);
@@ -471,7 +471,7 @@ function displaySidebarCategories(data) {
         });
     });
     
-    // Display NEED FIXES (score 6-8)
+    // Display NEED FIXES (score 6-8) - also go to TOP FIXES section
     needFixes.forEach(category => {
         const item = document.createElement('div');
         item.className = 'sidebar-item';
@@ -594,12 +594,6 @@ function generateComprehensiveATSScores(data) {
         name: 'Spelling & Consistency',
         score: analyzeSpellingConsistency(resumeText),
         issue: 'Fix spelling errors and maintain consistency',
-        impact: 'BREVITY'
-    });
-    categories.push({
-        name: 'Grammar',
-        score: analyzeGrammar(resumeText),
-        issue: 'Correct grammatical errors throughout resume',
         impact: 'BREVITY'
     });
     categories.push({
