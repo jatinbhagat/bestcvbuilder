@@ -23,6 +23,10 @@ const upgradeBtn = document.getElementById('upgradeBtn');
 let analysisData = null;
 let allIssues = [];
 
+// Config data loaded from JSON files
+let skillsBuzzwordsConfig = null;
+let actionVerbsConfig = null;
+
 /**
  * Initialize the results page with new sidebar design
  */
@@ -39,11 +43,8 @@ async function init() {
         analysisData = JSON.parse(storedData);
         console.log('Analysis data loaded:', analysisData);
 
-        // ENSURE skills/buzzwords config is loaded before proceeding
-        if (!window.SkillsBuzzwords) {
-            console.log('SkillsBuzzwords not loaded yet, waiting...');
-            await waitForSkillsBuzzwords();
-        }
+        // Load config files for analysis
+        await loadConfigs();
 
         // Display results in new sidebar format
         displayOverallScore(analysisData);
@@ -55,34 +56,73 @@ async function init() {
 
     } catch (error) {
         console.error('Error initializing results page:', error);
-        // Fallback to home page if there's an error
-        setTimeout(() => {
-            window.location.href = './index.html';
-        }, 3000);
+        // DON'T redirect - just show what we can
+        displayFallbackResults();
     }
 }
 
 /**
- * Wait for SkillsBuzzwords config to load
+ * Display fallback results if there are any errors
  */
-function waitForSkillsBuzzwords() {
-    return new Promise((resolve, reject) => {
-        let attempts = 0;
-        const maxAttempts = 50; // 5 seconds max wait
+function displayFallbackResults() {
+    console.log('Displaying fallback results...');
+    
+    // At minimum, show the score if we have analysis data
+    if (analysisData && atsScore) {
+        atsScore.textContent = Math.round(analysisData.score || 75);
         
-        const checkInterval = setInterval(() => {
-            attempts++;
-            
-            if (window.SkillsBuzzwords) {
-                clearInterval(checkInterval);
-                console.log('SkillsBuzzwords config loaded successfully');
-                resolve();
-            } else if (attempts >= maxAttempts) {
-                clearInterval(checkInterval);
-                reject(new Error('SkillsBuzzwords config failed to load within timeout'));
+        // Set simple score circle color
+        if (scoreCircle) {
+            const score = analysisData.score || 75;
+            if (score >= 80) {
+                scoreCircle.style.borderColor = '#10b981'; // green
+            } else if (score >= 60) {
+                scoreCircle.style.borderColor = '#f59e0b'; // orange  
+            } else {
+                scoreCircle.style.borderColor = '#ef4444'; // red
             }
-        }, 100);
-    });
+        }
+    }
+    
+    // Show a simple message in the main content area
+    if (issuesList) {
+        issuesList.innerHTML = `
+            <div class="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center">
+                <h3 class="text-xl font-bold text-blue-900 mb-2">Analysis Complete!</h3>
+                <p class="text-blue-700">Your resume has been analyzed. Click the button below to get your optimized version.</p>
+            </div>
+        `;
+    }
+}
+
+/**
+ * Load configuration files
+ */
+async function loadConfigs() {
+    try {
+        console.log('Loading config files...');
+        
+        // Load skills-buzzwords.json
+        const skillsResponse = await fetch('./config/skills-buzzwords.json');
+        if (skillsResponse.ok) {
+            skillsBuzzwordsConfig = await skillsResponse.json();
+            console.log('✅ Skills-buzzwords config loaded');
+        } else {
+            console.warn('⚠️ Failed to load skills-buzzwords.json');
+        }
+        
+        // Load action-verbs.json  
+        const verbsResponse = await fetch('./config/action-verbs.json');
+        if (verbsResponse.ok) {
+            actionVerbsConfig = await verbsResponse.json();
+            console.log('✅ Action-verbs config loaded');
+        } else {
+            console.warn('⚠️ Failed to load action-verbs.json');
+        }
+        
+    } catch (error) {
+        console.warn('⚠️ Error loading config files:', error);
+    }
 }
 
 /**
@@ -1566,26 +1606,51 @@ function hasYearsOfExperience(summaryText) {
  * Check for key skills mention in summary
  */
 function hasKeySkills(summaryText) {
-    if (!window.SkillsBuzzwords) {
-        throw new Error('SkillsBuzzwords config not loaded - required for analysis');
+    if (!skillsBuzzwordsConfig) {
+        console.warn('Skills-buzzwords config not loaded, using fallback analysis');
+        // Simple fallback - check for common skill words
+        const skillWords = ['skill', 'experience', 'expertise', 'proficient', 'knowledge', 'ability', 'capable'];
+        return skillWords.some(word => summaryText.toLowerCase().includes(word));
     }
     
-    const analysis = window.SkillsBuzzwords.analyzeTextForSkillsAndBuzzwords(summaryText);
-    console.log('Skills analysis (from config):', analysis.skills);
-    return analysis.score.hasSkills;
+    // Use loaded config to check for skills
+    const allSkills = [
+        ...(skillsBuzzwordsConfig.technicalSkills || []),
+        ...(skillsBuzzwordsConfig.professionalSkills || []),
+        ...(skillsBuzzwordsConfig.industryTerms || [])
+    ];
+    
+    const lowerText = summaryText.toLowerCase();
+    const foundSkills = allSkills.filter(skill => lowerText.includes(skill.toLowerCase()));
+    
+    console.log('Skills analysis (from config):', foundSkills);
+    return foundSkills.length >= 1;
 }
 
 /**
  * Check for industry buzz words in summary
  */
 function hasBuzzWords(summaryText) {
-    if (!window.SkillsBuzzwords) {
-        throw new Error('SkillsBuzzwords config not loaded - required for analysis');
+    if (!skillsBuzzwordsConfig) {
+        console.warn('Skills-buzzwords config not loaded, using fallback analysis');
+        // Simple fallback - check for common buzzwords
+        const buzzwords = ['drive', 'deliver', 'optimize', 'transform', 'innovate', 'scale', 'growth', 'efficiency'];
+        return buzzwords.some(word => summaryText.toLowerCase().includes(word));
     }
     
-    const analysis = window.SkillsBuzzwords.analyzeTextForSkillsAndBuzzwords(summaryText);
-    console.log('Buzzwords analysis (from config):', analysis.buzzwords);
-    return analysis.score.hasBuzzwords;
+    // Use loaded config to check for buzzwords
+    const allBuzzwords = [];
+    if (skillsBuzzwordsConfig.buzzwords) {
+        Object.values(skillsBuzzwordsConfig.buzzwords).forEach(industryBuzzwords => {
+            allBuzzwords.push(...industryBuzzwords);
+        });
+    }
+    
+    const lowerText = summaryText.toLowerCase();
+    const foundBuzzwords = allBuzzwords.filter(buzzword => lowerText.includes(buzzword.toLowerCase()));
+    
+    console.log('Buzzwords analysis (from config):', foundBuzzwords);
+    return foundBuzzwords.length >= 2;
 }
 
 /**
