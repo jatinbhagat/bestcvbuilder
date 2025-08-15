@@ -659,8 +659,50 @@ function analyzeFormatting(resumeText) {
 }
 
 function analyzeResumeLength(resumeText) {
-    const wordCount = resumeText.split(' ').length;
-    return wordCount >= 200 && wordCount <= 800 ? 10 : wordCount > 100 ? 7 : 4;
+    // Count words
+    const wordCount = resumeText.split(' ').filter(word => word.trim().length > 0).length;
+    
+    // Count bullet points (various bullet styles)
+    const bulletPoints = (resumeText.match(/[•·\*\-]\s+|^\s*\d+\.\s+/gm) || []).length;
+    
+    // Optimal ranges
+    const optimalWordRange = [420, 875];
+    const optimalBulletRange = [12, 32];
+    
+    // Calculate word score (0-5 scale)
+    let wordScore = 0;
+    if (wordCount >= optimalWordRange[0] && wordCount <= optimalWordRange[1]) {
+        wordScore = 5; // Perfect word count
+    } else if (wordCount > 0) {
+        // Calculate distance from optimal range
+        const distanceFromOptimal = wordCount < optimalWordRange[0] 
+            ? optimalWordRange[0] - wordCount
+            : wordCount - optimalWordRange[1];
+        
+        // Reduce score based on distance (max penalty of 5 points)
+        const penalty = Math.min(distanceFromOptimal / 100, 5);
+        wordScore = Math.max(0, 5 - penalty);
+    }
+    
+    // Calculate bullet score (0-5 scale)
+    let bulletScore = 0;
+    if (bulletPoints >= optimalBulletRange[0] && bulletPoints <= optimalBulletRange[1]) {
+        bulletScore = 5; // Perfect bullet count
+    } else if (bulletPoints > 0) {
+        // Calculate distance from optimal range
+        const distanceFromOptimal = bulletPoints < optimalBulletRange[0]
+            ? optimalBulletRange[0] - bulletPoints
+            : bulletPoints - optimalBulletRange[1];
+        
+        // Reduce score based on distance (max penalty of 5 points)
+        const penalty = Math.min(distanceFromOptimal / 5, 5);
+        bulletScore = Math.max(0, 5 - penalty);
+    }
+    
+    // Combine scores (total out of 10)
+    const totalScore = Math.round(wordScore + bulletScore);
+    
+    return Math.max(0, Math.min(10, totalScore));
 }
 
 function analyzeSectionHeaders(resumeText) {
