@@ -292,12 +292,12 @@ function generateAll21Categories(data) {
         impact: 'READABILITY'
     });
     
-    // 21. File Format
+    // 21. Personal Pronouns
     categories.push({
-        name: 'File Format',
-        score: 10, // Assume PDF is good
-        issue: 'Use ATS-friendly file format',
-        impact: 'TECHNICAL'
+        name: 'Personal Pronouns',
+        score: analyzePersonalPronouns(resumeText),
+        issue: 'Remove personal pronouns (I, me, we)',
+        impact: 'LANGUAGE'
     });
     
     return categories;
@@ -656,6 +656,29 @@ function isHeaderLine(line) {
 function analyzeFormatting(resumeText) {
     const hasStructure = resumeText.includes('\n') && resumeText.length > 100;
     return hasStructure ? 9 : 5;
+}
+
+function analyzePersonalPronouns(resumeText) {
+    // Start with maximum score of 10
+    let score = 10;
+    
+    // Define personal pronouns to detect (case insensitive)
+    const pronouns = ['\\bi\\b', '\\bme\\b', '\\bwe\\b', '\\bmy\\b', '\\bour\\b', '\\bus\\b'];
+    
+    // Count total pronoun usage
+    let totalPronounCount = 0;
+    
+    pronouns.forEach(pronounPattern => {
+        const regex = new RegExp(pronounPattern, 'gi');
+        const matches = resumeText.match(regex) || [];
+        totalPronounCount += matches.length;
+    });
+    
+    // Deduct 1 point for each pronoun usage
+    score -= totalPronounCount;
+    
+    // Ensure score doesn't go below 0
+    return Math.max(score, 0);
 }
 
 function analyzeResumeLength(resumeText) {
@@ -1507,11 +1530,11 @@ function countSkillsMentioned(resumeText) {
  */
 function getExpectedSkillsCount(yearsOfExperience) {
     if (yearsOfExperience < 3) {
-        return { minimum: 8, ideal: 12 }; // Junior: 8-12 skills
+        return { minimum: 4, ideal: 8 }; // Junior: 4-8 skills
     } else if (yearsOfExperience < 6) {
-        return { minimum: 12, ideal: 18 }; // Mid-level: 12-18 skills
+        return { minimum: 9, ideal: 14 }; // Mid-level: 9-14 skills
     } else {
-        return { minimum: 18, ideal: 25 }; // Senior: 18+ skills
+        return { minimum: 15, ideal: 20 }; // Senior: 15-20 skills
     }
 }
 
@@ -1807,31 +1830,246 @@ async function analyzeLLMGrammar(resumeText) {
 }
 
 /**
- * Analyze verb tense consistency
+ * Analyze verb tense consistency with chronological awareness
  */
 function analyzeVerbTenses(resumeText) {
-    let score = 0; // Start from 0 - purely content-based
+    let score = 8; // Start with base score for substantial content
     
-    // Base score based on content quality
-    if (resumeText.length > 100) score = 7;
-    else if (resumeText.length > 50) score = 5;
-    else score = 3;
+    if (resumeText.length <= 100) {
+        score = resumeText.length > 50 ? 5 : 3;
+    }
     
-    // Count present vs past tense in experience descriptions
-    const pastTenseMarkers = resumeText.match(/\b\w+ed\b/g) || [];
-    const presentTenseMarkers = resumeText.match(/\b(manage|lead|develop|create|implement)\b/gi) || [];
-    
-    // Mixed tenses in same role indicate problems
-    if (pastTenseMarkers.length > 0 && presentTenseMarkers.length > 0) {
-        const ratio = Math.min(pastTenseMarkers.length, presentTenseMarkers.length) / 
-                     Math.max(pastTenseMarkers.length, presentTenseMarkers.length);
+    try {
+        // Parse experience sections
+        const experienceEntries = parseExperienceEntries(resumeText);
         
-        if (ratio > 0.3) { // Significant mixing
-            score -= 3;
+        if (experienceEntries.length === 0) {
+            // No clear job structure detected
+            return Math.max(score - 2, 0);
+        }
+        
+        // Analyze current job status
+        const hasCurrentJob = detectCurrentJob(experienceEntries[0]);
+        const allJobsEnded = experienceEntries.every(entry => hasEndDate(entry.text));
+        
+        // Analyze each experience entry
+        for (let i = 0; i < experienceEntries.length; i++) {
+            const entry = experienceEntries[i];
+            const isCurrentJob = (i === 0 && hasCurrentJob);
+            const isCompletedJob = !isCurrentJob;
+            
+            // Count tense usage in this entry
+            const presentTenseCount = countPresentTenseVerbs(entry.text);
+            const pastTenseCount = countPastTenseVerbs(entry.text);
+            
+            if (isCurrentJob && !allJobsEnded) {
+                // Current job should use present tense
+                score -= Math.min(pastTenseCount * 1, 3); // -1 per past tense verb, max -3
+            } else if (isCompletedJob) {
+                // Previous jobs should use past tense
+                score -= Math.min(presentTenseCount * 2, 4); // -2 per present tense verb, max -4
+            }
+        }
+        
+        // Special penalty: All jobs ended but using present tense
+        if (allJobsEnded) {
+            const totalPresentTense = experienceEntries.reduce((total, entry) => 
+                total + countPresentTenseVerbs(entry.text), 0);
+            score -= Math.min(totalPresentTense * 3, 6); // -3 per present tense verb, max -6
+        }
+        
+        // Check chronological order
+        if (!isReverseChronological(experienceEntries)) {
+            score -= 1;
+        }
+        
+        // Check formatting consistency
+        if (!hasConsistentJobFormatting(experienceEntries)) {
+            score -= 1;
+        }
+        
+    } catch (error) {
+        console.warn('Error in verb tense analysis, using fallback:', error);
+        return Math.max(score - 2, 0);
+    }
+    
+    return Math.max(score, 0);
+}
+
+/**
+ * Parse experience entries from resume text
+ */
+function parseExperienceEntries(resumeText) {
+    const entries = [];
+    
+    // Find experience section
+    const experienceSection = extractExperienceSection(resumeText);
+    if (!experienceSection) return entries;
+    
+    // Split by job entries using common patterns
+    const jobSeparators = [
+        /\n\s*[A-Z][^\n]*\s+(?:at|@|\||\-)\s+[A-Z][^\n]*\n/g, // Job Title at Company
+        /\n\s*\d{4}\s*[\-–]\s*(?:\d{4}|Present|Current|Ongoing)/g, // Date ranges
+        /\n\s*[A-Z][A-Za-z\s,&]+(?:Inc\.|Corp\.|LLC|Ltd\.|Company)\s*\n/g, // Company names
+    ];
+    
+    let jobTexts = [experienceSection];
+    
+    // Try each separator pattern
+    for (const separator of jobSeparators) {
+        const newSplit = [];
+        for (const text of jobTexts) {
+            const parts = text.split(separator);
+            newSplit.push(...parts.filter(part => part.trim().length > 50));
+        }
+        if (newSplit.length > jobTexts.length) {
+            jobTexts = newSplit;
+            break;
         }
     }
     
-    return Math.max(score, 3);
+    // Create entry objects
+    jobTexts.forEach((text, index) => {
+        if (text.trim().length > 30) {
+            entries.push({
+                index,
+                text: text.trim(),
+                hasEndDate: hasEndDate(text)
+            });
+        }
+    });
+    
+    return entries;
+}
+
+/**
+ * Detect if the first entry represents a current job
+ */
+function detectCurrentJob(firstEntry) {
+    if (!firstEntry) return false;
+    
+    const text = firstEntry.text.toLowerCase();
+    
+    // Check for current job indicators
+    const currentIndicators = ['present', 'current', 'ongoing', 'now'];
+    const hasCurrentKeyword = currentIndicators.some(indicator => text.includes(indicator));
+    
+    // Check if no end date
+    const hasNoEndDate = !hasEndDate(firstEntry.text);
+    
+    // Check for recent end date (within 3 months)
+    const recentEndDate = hasRecentEndDate(firstEntry.text);
+    
+    return hasCurrentKeyword || hasNoEndDate || recentEndDate;
+}
+
+/**
+ * Check if entry has an end date
+ */
+function hasEndDate(entryText) {
+    const endDatePatterns = [
+        /\d{4}\s*[\-–]\s*\d{4}/g, // 2020 - 2023
+        /\d{1,2}\/\d{4}\s*[\-–]\s*\d{1,2}\/\d{4}/g, // 01/2020 - 12/2023
+        /(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}\s*[\-–]\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}/gi
+    ];
+    
+    return endDatePatterns.some(pattern => pattern.test(entryText));
+}
+
+/**
+ * Check if entry has recent end date (within 3 months)
+ */
+function hasRecentEndDate(entryText) {
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1;
+    
+    // Look for end dates in current year
+    const yearPattern = new RegExp(`\\b${currentYear}\\b`);
+    if (!yearPattern.test(entryText)) return false;
+    
+    // Check for recent months
+    const recentMonths = [];
+    for (let i = 0; i < 3; i++) {
+        const month = currentMonth - i;
+        if (month > 0) {
+            recentMonths.push(month.toString().padStart(2, '0'));
+        }
+    }
+    
+    const monthPattern = new RegExp(`\\b(${recentMonths.join('|')})\\/${currentYear}\\b`);
+    return monthPattern.test(entryText);
+}
+
+/**
+ * Count present tense verbs in text
+ */
+function countPresentTenseVerbs(text) {
+    const presentTenseVerbs = [
+        'manage', 'lead', 'develop', 'create', 'implement', 'design', 'build',
+        'coordinate', 'oversee', 'direct', 'supervise', 'execute', 'deliver',
+        'analyze', 'optimize', 'maintain', 'support', 'collaborate', 'work',
+        'handle', 'process', 'review', 'monitor', 'track', 'report'
+    ];
+    
+    const regex = new RegExp(`\\b(${presentTenseVerbs.join('|')})\\b`, 'gi');
+    return (text.match(regex) || []).length;
+}
+
+/**
+ * Count past tense verbs in text
+ */
+function countPastTenseVerbs(text) {
+    const pastTenseVerbs = [
+        'managed', 'led', 'developed', 'created', 'implemented', 'designed', 'built',
+        'coordinated', 'oversaw', 'directed', 'supervised', 'executed', 'delivered',
+        'analyzed', 'optimized', 'maintained', 'supported', 'collaborated', 'worked',
+        'handled', 'processed', 'reviewed', 'monitored', 'tracked', 'reported'
+    ];
+    
+    // Also count general -ed endings
+    const edPattern = /\b\w+ed\b/g;
+    const edMatches = (text.match(edPattern) || []).length;
+    
+    const specificRegex = new RegExp(`\\b(${pastTenseVerbs.join('|')})\\b`, 'gi');
+    const specificMatches = (text.match(specificRegex) || []).length;
+    
+    // Return the higher count (specific verbs or general -ed pattern)
+    return Math.max(edMatches, specificMatches);
+}
+
+/**
+ * Check if experiences are in reverse chronological order
+ */
+function isReverseChronological(entries) {
+    if (entries.length < 2) return true;
+    
+    // Simple heuristic: first entry should be most recent (no end date or recent date)
+    const firstEntry = entries[0];
+    const secondEntry = entries[1];
+    
+    const firstHasEndDate = hasEndDate(firstEntry.text);
+    const secondHasEndDate = hasEndDate(secondEntry.text);
+    
+    // If first has no end date but second does, likely in correct order
+    if (!firstHasEndDate && secondHasEndDate) return true;
+    
+    // If both have end dates, we can't easily determine order without parsing dates
+    // Assume correct order for now
+    return true;
+}
+
+/**
+ * Check formatting consistency of job entries
+ */
+function hasConsistentJobFormatting(entries) {
+    if (entries.length < 2) return true;
+    
+    // Check if most entries have date patterns
+    const entriesWithDates = entries.filter(entry => 
+        /\d{4}/.test(entry.text) || /(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i.test(entry.text)
+    );
+    
+    return entriesWithDates.length >= entries.length * 0.7; // 70% should have dates
 }
 
 /**
