@@ -327,8 +327,162 @@ function analyzeActionVerbs(resumeText) {
 }
 
 function analyzeQuantifiableAchievements(resumeText) {
-    const hasNumbers = /\d+%|\$\d+|\d+\s*(years?|months?|people|team|projects?)/i.test(resumeText);
-    return hasNumbers ? 8 : 3;
+    // Extract Professional Experience section
+    const experienceSection = extractExperienceSection(resumeText);
+    if (!experienceSection) {
+        return 1; // No experience section found
+    }
+    
+    // Extract all bullet points/responsibilities from experience section
+    const allPoints = extractExperiencePoints(experienceSection);
+    if (allPoints.length === 0) {
+        return 1; // No points found in experience section
+    }
+    
+    // Count quantified points
+    const quantifiedPoints = allPoints.filter(point => hasQuantifiableData(point));
+    
+    // Calculate percentage: y = (100 * Quantified Points / Total Points)%
+    const y = (quantifiedPoints.length / allPoints.length) * 100;
+    
+    // Score based on percentage
+    if (y > 90) return 10;
+    else if (y > 80) return 9;
+    else if (y > 70) return 8;
+    else if (y > 60) return 7;
+    else if (y > 50) return 6;
+    else if (y > 40) return 5;
+    else if (y > 30) return 4;
+    else if (y > 20) return 3;
+    else if (y > 10) return 2;
+    else return 1;
+}
+
+// Extract Professional Experience section from resume
+function extractExperienceSection(resumeText) {
+    const text = resumeText.toLowerCase();
+    
+    // Experience section headers
+    const experienceHeaders = [
+        'experience', 'work experience', 'professional experience', 
+        'employment history', 'career history', 'work history'
+    ];
+    
+    // Other section headers that mark end of experience
+    const otherHeaders = [
+        'education', 'academic background', 'qualifications',
+        'skills', 'technical skills', 'core skills', 'key skills',
+        'projects', 'personal projects', 'key projects',
+        'certifications', 'certificates', 'licenses',
+        'awards', 'achievements', 'honors',
+        'references', 'contact', 'additional information'
+    ];
+    
+    // Find experience section start
+    let experienceStart = -1;
+    for (let header of experienceHeaders) {
+        const index = text.indexOf(header);
+        if (index !== -1) {
+            experienceStart = index;
+            break;
+        }
+    }
+    
+    if (experienceStart === -1) {
+        // No clear experience header, try to find job-like content
+        const jobIndicators = ['developer', 'manager', 'analyst', 'engineer', 'coordinator', 'specialist', 'consultant', 'director', 'associate'];
+        for (let indicator of jobIndicators) {
+            const index = text.indexOf(indicator);
+            if (index !== -1) {
+                experienceStart = Math.max(0, index - 50); // Start a bit before the job title
+                break;
+            }
+        }
+    }
+    
+    if (experienceStart === -1) return null;
+    
+    // Find experience section end
+    let experienceEnd = resumeText.length;
+    for (let header of otherHeaders) {
+        const index = text.indexOf(header, experienceStart);
+        if (index !== -1 && index > experienceStart) {
+            experienceEnd = Math.min(experienceEnd, index);
+        }
+    }
+    
+    return resumeText.substring(experienceStart, experienceEnd);
+}
+
+// Extract individual points from experience section
+function extractExperiencePoints(experienceText) {
+    const lines = experienceText.split('\n');
+    const points = [];
+    
+    for (let line of lines) {
+        line = line.trim();
+        if (!line) continue;
+        
+        // Skip job titles, company names, dates
+        if (isJobTitleOrCompany(line)) continue;
+        
+        // Check if this is a bullet point or responsibility description
+        if (isBulletPoint(line) || isResponsibilityPoint(line)) {
+            points.push(line);
+        }
+    }
+    
+    return points;
+}
+
+// Check if line is a job title or company name (should be excluded)
+function isJobTitleOrCompany(line) {
+    const jobTitlePatterns = [
+        /^[A-Z][a-z\s]+(?:Developer|Manager|Analyst|Engineer|Coordinator|Specialist|Consultant|Director|Associate)$/i,
+        /\b(Inc\.|Corp\.|Ltd\.|LLC|Company|Corporation)\b/i,
+        /^\d{4}\s*[-–]\s*\d{4}|\d{4}\s*[-–]\s*Present/i, // Date ranges
+        /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i // Dates
+    ];
+    
+    return jobTitlePatterns.some(pattern => pattern.test(line));
+}
+
+// Check if line is a bullet point
+function isBulletPoint(line) {
+    return /^[\s]*[•·\*\-\+]\s/.test(line);
+}
+
+// Check if line is a responsibility point (sentence describing work)
+function isResponsibilityPoint(line) {
+    // Must be a substantial sentence (not just keywords)
+    if (line.length < 20) return false;
+    
+    // Should contain action words or responsibility indicators
+    const actionWords = ['developed', 'managed', 'led', 'created', 'implemented', 'designed', 'coordinated', 'analyzed', 'improved', 'optimized'];
+    const hasActionWord = actionWords.some(word => line.toLowerCase().includes(word));
+    
+    // Or should look like a complete sentence
+    const looksLikeSentence = /[a-z].*[.!?]?$/i.test(line) && line.split(' ').length >= 4;
+    
+    return hasActionWord || looksLikeSentence;
+}
+
+// Check if a point contains quantifiable data
+function hasQuantifiableData(point) {
+    const quantifiablePatterns = [
+        /\d+%/,                                           // Percentages (25%, 100%)
+        /[\$₹]\s*\d+/,                                   // Dollar/Rupee amounts ($50K, ₹1L)
+        /\d+\s*(million|thousand|lakhs?|crores?|k|m)\b/i, // Large numbers (5M, 10K, 2 lakhs)
+        /\d+\s*(years?|months?|weeks?|days?)\b/i,        // Time periods
+        /\d+\s*(people|members?|employees?|users?|customers?)\b/i, // People counts
+        /\d+\s*(projects?|tasks?|features?|products?)\b/i, // Project counts
+        /\d+\s*(clients?|accounts?|companies?)\b/i,       // Business metrics
+        /\d+x\b|\bx\d+/i,                                // Multipliers (5x, x3)
+        /\d+\+/,                                         // Plus indicators (10+)
+        /\b\d{1,3}(,\d{3})*\b/                          // Large formatted numbers (1,000)
+    ];
+    
+    return quantifiablePatterns.some(pattern => pattern.test(point));
 }
 
 function analyzeFormatting(resumeText) {
