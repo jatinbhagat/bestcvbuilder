@@ -202,11 +202,20 @@ function analyzeTextForSkillsAndBuzzwords(text) {
     };
 }
 
-// Initialize skills/buzzwords on module load
+// Initialize skills/buzzwords on module load - MUST SUCCEED
 loadSkillsBuzzwords().then(() => {
     console.log('Skills and buzzwords configuration loaded successfully');
 }).catch(error => {
-    console.warn('Failed to load skills/buzzwords configuration:', error);
+    console.error('CRITICAL: Failed to load skills/buzzwords configuration:', error);
+    // Retry loading once more
+    setTimeout(() => {
+        loadSkillsBuzzwords().then(() => {
+            console.log('Skills and buzzwords configuration loaded successfully on retry');
+        }).catch(retryError => {
+            console.error('CRITICAL: Failed to load skills/buzzwords configuration on retry:', retryError);
+            // Still export the functions but they will log errors
+        });
+    }, 1000);
 });
 
 // Export functions for use in other modules

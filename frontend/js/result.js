@@ -26,7 +26,7 @@ let allIssues = [];
 /**
  * Initialize the results page with new sidebar design
  */
-function init() {
+async function init() {
     try {
         // Load analysis data from session storage
         const storedData = sessionStorage.getItem('atsAnalysis');
@@ -38,6 +38,12 @@ function init() {
 
         analysisData = JSON.parse(storedData);
         console.log('Analysis data loaded:', analysisData);
+
+        // ENSURE skills/buzzwords config is loaded before proceeding
+        if (!window.SkillsBuzzwords) {
+            console.log('SkillsBuzzwords not loaded yet, waiting...');
+            await waitForSkillsBuzzwords();
+        }
 
         // Display results in new sidebar format
         displayOverallScore(analysisData);
@@ -54,6 +60,29 @@ function init() {
             window.location.href = './index.html';
         }, 3000);
     }
+}
+
+/**
+ * Wait for SkillsBuzzwords config to load
+ */
+function waitForSkillsBuzzwords() {
+    return new Promise((resolve, reject) => {
+        let attempts = 0;
+        const maxAttempts = 50; // 5 seconds max wait
+        
+        const checkInterval = setInterval(() => {
+            attempts++;
+            
+            if (window.SkillsBuzzwords) {
+                clearInterval(checkInterval);
+                console.log('SkillsBuzzwords config loaded successfully');
+                resolve();
+            } else if (attempts >= maxAttempts) {
+                clearInterval(checkInterval);
+                reject(new Error('SkillsBuzzwords config failed to load within timeout'));
+            }
+        }, 100);
+    });
 }
 
 /**
