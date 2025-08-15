@@ -128,7 +128,7 @@ async function loadConfigs() {
 /**
  * Generate exactly 21 ATS categories based on real analysis data
  */
-function generateAll20Categories(data) {
+function generateAll21Categories(data) {
     const resumeText = data.content || data.text || "";
     const categories = [];
     
@@ -143,7 +143,7 @@ function generateAll20Categories(data) {
     // 2. Professional Summary
     categories.push({
         name: 'Professional Summary',
-        score: analyzeSummarySection(resumeText).totalScore,
+        score: analyzeSummarySection(resumeText),
         issue: 'Add compelling professional summary section',
         impact: 'SECTIONS'
     });
@@ -556,12 +556,12 @@ function analyzeWhiteSpace(resumeText) {
 function displayOverallScore(data) {
     if (!atsScore) return;
     
-    // Calculate overall score from our 20 categories (sum / 200 * 100) 
-    const categories = generateAll20Categories(data); // This now generates 20 categories
+    // Calculate overall score from our 21 categories (sum / 210 * 100) 
+    const categories = generateAll21Categories(data); // This generates 21 categories
     const categorySum = categories.reduce((sum, cat) => sum + cat.score, 0);
-    const calculatedScore = Math.round((categorySum / 200) * 100); // 20 categories * 10 max each = 200, scale to 100
+    const calculatedScore = Math.round((categorySum / 210) * 100); // 21 categories * 10 max each = 210, scale to 100
     let score = calculatedScore;
-    console.log(`Calculated overall score from 20 categories: ${calculatedScore} (sum: ${categorySum}/200)`);
+    console.log(`Calculated overall score from 21 categories: ${calculatedScore} (sum: ${categorySum}/210)`);
     
     console.log(`Using ATS score: ${score}`);
     
@@ -591,8 +591,8 @@ function displaySidebarCategories(data) {
     topFixesList.innerHTML = '';
     completedList.innerHTML = '';
     
-    // Generate ALL 20 ATS categories based on actual analysis data
-    const allCategories = generateAll20Categories(data);
+    // Generate ALL 21 ATS categories based on actual analysis data
+    const allCategories = generateAll21Categories(data);
     
     // Divide into High Priority (<6), Need Fixes (6-8), Completed (9-10)
     const topFixes = allCategories.filter(cat => cat.score < 6); // High Priority
