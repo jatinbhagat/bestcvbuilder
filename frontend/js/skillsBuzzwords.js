@@ -13,19 +13,13 @@ async function loadSkillsBuzzwords() {
         return skillsBuzzwordsConfig;
     }
     
-    try {
-        const response = await fetch('./config/skills-buzzwords.json');
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        skillsBuzzwordsConfig = await response.json();
-        return skillsBuzzwordsConfig;
-    } catch (error) {
-        console.warn('Failed to load skills/buzzwords config, using fallback:', error);
-        // Fallback configuration in case file loading fails
-        skillsBuzzwordsConfig = getFallbackSkillsBuzzwords();
-        return skillsBuzzwordsConfig;
+    const response = await fetch('./config/skills-buzzwords.json');
+    if (!response.ok) {
+        throw new Error(`Failed to load skills-buzzwords.json: HTTP ${response.status}`);
     }
+    
+    skillsBuzzwordsConfig = await response.json();
+    return skillsBuzzwordsConfig;
 }
 
 /**
@@ -64,8 +58,7 @@ function getFallbackSkillsBuzzwords() {
  */
 function getTechnicalSkills() {
     if (!skillsBuzzwordsConfig) {
-        console.warn('Skills/buzzwords config not loaded, using fallback');
-        return getFallbackSkillsBuzzwords().technicalSkills;
+        throw new Error('Skills/buzzwords config not loaded - call loadSkillsBuzzwords() first');
     }
     return skillsBuzzwordsConfig.technicalSkills || [];
 }

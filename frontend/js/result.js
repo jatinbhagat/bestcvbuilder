@@ -1295,7 +1295,8 @@ function analyzeSummarySection(resumeText) {
     console.log('Summary Section Analysis:', {
         summaryLength: summaryContent.length,
         hasHeading: hasHeading,
-        summaryPreview: summaryContent.substring(0, 200) + '...'
+        summaryPreview: summaryContent.substring(0, 300) + '...',
+        originalPreview: summaryData.content ? summaryData.content.substring(0, 100) : 'No original content'
     });
     
     if (!summaryContent || summaryContent.length < 20) {
@@ -1380,7 +1381,11 @@ function extractSummarySection(resumeText) {
             }
         }
         
-        const extractedSummary = remainingText.substring(usedMarker.length, summaryEnd).trim();
+        let extractedSummary = remainingText.substring(usedMarker.length, summaryEnd).trim();
+        
+        // Clean up text that may have missing spaces (common in PDF extraction)
+        extractedSummary = cleanupExtractedText(extractedSummary);
+        
         return { content: extractedSummary, hasHeading: true };
     }
     
@@ -1432,12 +1437,68 @@ function extractSummarySection(resumeText) {
     
     // Return the intro summary (2-8 lines without heading)
     if (summaryContent.length > 50) {
-        return { content: summaryContent, hasHeading: false };
+        return { content: cleanupExtractedText(summaryContent), hasHeading: false };
     }
     
     // Last resort - use first substantial paragraph
     const paragraphs = resumeText.split('\n\n').filter(p => p.trim().length > 50);
-    return { content: paragraphs[0] || '', hasHeading: false };
+    const fallbackContent = paragraphs[0] || '';
+    return { content: cleanupExtractedText(fallbackContent), hasHeading: false };
+}
+
+/**
+ * Clean up extracted text that may have missing spaces (common in PDF extraction)
+ * Generic approach that works for any resume content
+ */
+function cleanupExtractedText(text) {
+    if (!text) return '';
+    
+    let cleaned = text;
+    
+    // 1. Add spaces before capital letters that follow lowercase letters (camelCase/word boundaries)
+    cleaned = cleaned.replace(/([a-z])([A-Z])/g, '$1 $2');
+    
+    // 2. Add spaces before numbers that follow letters (but preserve common patterns)
+    cleaned = cleaned.replace(/([a-zA-Z])(\d)/g, '$1 $2');
+    
+    // 3. Add spaces after numbers that are followed by letters (but preserve years+ patterns)
+    cleaned = cleaned.replace(/(\d)([a-zA-Z])/g, (match, num, letter) => {
+        // Keep patterns like "15+" intact
+        if (text.includes(num + '+')) {
+            return match;
+        }
+        return num + ' ' + letter;
+    });
+    
+    // 4. Add spaces around common conjunctions and prepositions that got concatenated
+    const commonWords = ['and', 'of', 'in', 'to', 'with', 'for', 'the', 'as', 'at', 'by', 'on', 'or'];
+    commonWords.forEach(word => {
+        // Add space before the word if it's concatenated at the end
+        const beforePattern = new RegExp(`([a-z])${word}\\b`, 'gi');
+        cleaned = cleaned.replace(beforePattern, `$1 ${word}`);
+        
+        // Add space after the word if it's concatenated at the beginning
+        const afterPattern = new RegExp(`\\b${word}([a-z])`, 'gi');
+        cleaned = cleaned.replace(afterPattern, `${word} $1`);
+    });
+    
+    // 5. Add spaces around punctuation if missing
+    cleaned = cleaned.replace(/([a-z])([,.;:])/gi, '$1$2 ');
+    cleaned = cleaned.replace(/([,.;:])([a-zA-Z])/g, '$1 $2');
+    
+    // 6. Clean up multiple spaces and trim
+    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+    
+    // 7. Fix common abbreviations that might have been split incorrectly
+    cleaned = cleaned.replace(/\be - commerce\b/gi, 'e-commerce');
+    cleaned = cleaned.replace(/\bed - tech\b/gi, 'ed-tech');
+    cleaned = cleaned.replace(/\bA R R\b/gi, 'ARR');
+    cleaned = cleaned.replace(/\bR O I\b/gi, 'ROI');
+    cleaned = cleaned.replace(/\bA I\b/gi, 'AI');
+    cleaned = cleaned.replace(/\bM L\b/gi, 'ML');
+    cleaned = cleaned.replace(/\bC P O\b/gi, 'CPO');
+    
+    return cleaned;
 }
 
 /**
@@ -1449,7 +1510,10 @@ function hasYearsOfExperience(summaryText) {
         /over\s*(\d+)\s*years?\s*(of\s*)?(experience|exp)/gi,
         /more than\s*(\d+)\s*years?\s*(of\s*)?(experience|exp)/gi,
         /(\d+)\+?\s*year\s*(experienced|professional)/gi,
-        /(experienced|seasoned|veteran)\s*(professional|expert)/gi
+        /(experienced|seasoned|veteran)\s*(professional|expert|leader)/gi,
+        /\b(\d+)\+?\s*years?\b/gi, // Just years mentioned
+        /(senior|lead|principal|staff)\s*(engineer|developer|manager|leader)/gi,
+        /(accomplished|proven|established)\s*(professional|leader|expert)/gi
     ];
     
     return experiencePatterns.some(pattern => pattern.test(summaryText));
@@ -1459,42 +1523,26 @@ function hasYearsOfExperience(summaryText) {
  * Check for key skills mention in summary
  */
 function hasKeySkills(summaryText) {
-    // Use the new SkillsBuzzwords module if available
-    if (window.SkillsBuzzwords) {
-        const analysis = window.SkillsBuzzwords.analyzeTextForSkillsAndBuzzwords(summaryText);
-        return analysis.score.hasSkills;
+    if (!window.SkillsBuzzwords) {
+        throw new Error('SkillsBuzzwords config not loaded - required for analysis');
     }
     
-    // Fallback to basic analysis if module not loaded
-    const text = summaryText.toLowerCase();
-    const basicSkills = ['python', 'java', 'javascript', 'leadership', 'management', 'agile'];
-    const foundSkills = basicSkills.filter(skill => text.includes(skill));
-    
-    const basicPatterns = [/skilled\s+in/gi, /experienced\s+with/gi];
-    const hasPatterns = basicPatterns.some(pattern => pattern.test(text));
-    
-    return foundSkills.length >= 1 || hasPatterns;
+    const analysis = window.SkillsBuzzwords.analyzeTextForSkillsAndBuzzwords(summaryText);
+    console.log('Skills analysis (from config):', analysis.skills);
+    return analysis.score.hasSkills;
 }
 
 /**
  * Check for industry buzz words in summary
  */
 function hasBuzzWords(summaryText) {
-    // Use the new SkillsBuzzwords module if available
-    if (window.SkillsBuzzwords) {
-        const analysis = window.SkillsBuzzwords.analyzeTextForSkillsAndBuzzwords(summaryText);
-        return analysis.score.hasBuzzwords;
+    if (!window.SkillsBuzzwords) {
+        throw new Error('SkillsBuzzwords config not loaded - required for analysis');
     }
     
-    // Fallback to basic analysis if module not loaded
-    const text = summaryText.toLowerCase();
-    const basicBuzzWords = [
-        'drive', 'deliver', 'optimize', 'transform', 'innovate', 'scale',
-        'roi', 'revenue', 'growth', 'efficiency', 'performance', 'strategy'
-    ];
-    
-    const foundBuzzWords = basicBuzzWords.filter(word => text.includes(word));
-    return foundBuzzWords.length >= 2;
+    const analysis = window.SkillsBuzzwords.analyzeTextForSkillsAndBuzzwords(summaryText);
+    console.log('Buzzwords analysis (from config):', analysis.buzzwords);
+    return analysis.score.hasBuzzwords;
 }
 
 /**

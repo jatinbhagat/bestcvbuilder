@@ -309,14 +309,9 @@ class ATSLoadingScreen {
     constructor() {
         this.currentStep = 0;
         this.steps = [
-            'upload',
-            'structure', 
-            'contact',
-            'keywords',
-            'experience',
-            'education',
-            'ats',
-            'recommendations'
+            'step-1',
+            'step-2', 
+            'step-3'
         ];
         this.isActive = false;
     }
@@ -344,26 +339,32 @@ class ATSLoadingScreen {
     resetProgress() {
         this.currentStep = 0;
         this.updateProgress(0);
-        this.updateTimeRemaining(30);
+        this.updateTimeRemaining("few seconds");
         
-        // Reset all checks with defensive null checks
-        this.steps.forEach((step, index) => {
-            const checkElement = document.getElementById(`check-${step}`);
-            if (checkElement) {
-                const spinner = checkElement.querySelector('.loading-spinner');
-                const icon = checkElement.querySelector('.check-icon');
+        // Reset all steps with new minimal design
+        this.steps.forEach((stepId, index) => {
+            const stepElement = document.getElementById(stepId);
+            if (stepElement) {
+                const loadingDot = stepElement.querySelector('.loading-dot');
                 
                 if (index === 0) {
                     // First step starts active
-                    checkElement.style.opacity = '1';
-                    if (spinner) spinner.classList.remove('hidden');
-                    if (icon) icon.classList.add('hidden');
+                    stepElement.style.opacity = '1';
+                    if (loadingDot) {
+                        loadingDot.classList.add('bg-blue-500');
+                        loadingDot.classList.remove('bg-gray-500');
+                        loadingDot.classList.add('animate-pulse');
+                    }
                 } else {
                     // Other steps start inactive
-                    checkElement.style.opacity = '0.5';
-                    if (spinner) spinner.classList.add('hidden');
-                    if (icon) icon.classList.add('hidden');
+                    stepElement.style.opacity = '0.4';
+                    if (loadingDot) {
+                        loadingDot.classList.add('bg-gray-500');
+                        loadingDot.classList.remove('bg-blue-500');
+                        loadingDot.classList.remove('animate-pulse');
+                    }
                 }
+                stepElement.classList.remove('step-complete');
             }
         });
     }
@@ -372,25 +373,30 @@ class ATSLoadingScreen {
         const stepIndex = this.steps.indexOf(stepName);
         if (stepIndex === -1) return;
 
-        const checkElement = document.getElementById(`check-${stepName}`);
-        if (checkElement) {
-            const spinner = checkElement.querySelector('.loading-spinner');
-            const icon = checkElement.querySelector('.check-icon');
+        const stepElement = document.getElementById(stepName);
+        if (stepElement) {
+            const loadingDot = stepElement.querySelector('.loading-dot');
             
-            // Mark current step as completed with null checks
-            if (spinner) spinner.classList.add('hidden');
-            if (icon) icon.classList.remove('hidden');
-            checkElement.style.opacity = '1';
+            // Mark current step as completed
+            stepElement.classList.add('step-complete');
+            stepElement.style.opacity = '1';
+            if (loadingDot) {
+                loadingDot.classList.remove('animate-pulse', 'bg-blue-500', 'bg-gray-500');
+                loadingDot.classList.add('bg-green-500');
+            }
             
             // Start next step if available
             const nextStepIndex = stepIndex + 1;
             if (nextStepIndex < this.steps.length) {
                 const nextStep = this.steps[nextStepIndex];
-                const nextCheckElement = document.getElementById(`check-${nextStep}`);
-                if (nextCheckElement) {
-                    const nextSpinner = nextCheckElement.querySelector('.loading-spinner');
-                    nextCheckElement.style.opacity = '1';
-                    if (nextSpinner) nextSpinner.classList.remove('hidden');
+                const nextStepElement = document.getElementById(nextStep);
+                if (nextStepElement) {
+                    const nextLoadingDot = nextStepElement.querySelector('.loading-dot');
+                    nextStepElement.style.opacity = '1';
+                    if (nextLoadingDot) {
+                        nextLoadingDot.classList.add('bg-blue-500', 'animate-pulse');
+                        nextLoadingDot.classList.remove('bg-gray-500');
+                    }
                 }
             }
         }
@@ -399,8 +405,8 @@ class ATSLoadingScreen {
         const progress = Math.round(((stepIndex + 1) / this.steps.length) * 100);
         this.updateProgress(progress);
         
-        // Update time remaining (decreasing from 30 to 2 seconds)
-        const timeRemaining = Math.max(2, 30 - (stepIndex + 1) * 4);
+        // Update time remaining
+        const timeRemaining = stepIndex === this.steps.length - 1 ? "ready!" : "few seconds";
         this.updateTimeRemaining(timeRemaining);
     }
 
@@ -416,60 +422,35 @@ class ATSLoadingScreen {
         }
     }
 
-    updateTimeRemaining(seconds) {
+    updateTimeRemaining(timeText) {
         const timeElement = document.getElementById('timeRemaining');
         if (timeElement) {
-            timeElement.textContent = `${seconds} seconds`;
+            timeElement.textContent = timeText;
         }
     }
 
-    // Simulate realistic timing for each step
+    // Fast 3-step analysis sequence
     async startAnalysisSequence() {
         if (!this.isActive) return;
 
-        // Step 1: File Upload (already shown immediately)
+        // Step 1: Processing (1.5 seconds)
+        await this.delay(1500);
+        this.completeStep('step-1');
+
+        if (!this.isActive) return;
+        // Step 2: ATS Analysis (2 seconds)
         await this.delay(2000);
-        this.completeStep('upload');
+        this.completeStep('step-2');
 
         if (!this.isActive) return;
-        // Step 2: Document Structure 
-        await this.delay(3000);
-        this.completeStep('structure');
-
-        if (!this.isActive) return;
-        // Step 3: Contact Information
-        await this.delay(2500);
-        this.completeStep('contact');
-
-        if (!this.isActive) return;
-        // Step 4: Keywords Analysis
-        await this.delay(4000);
-        this.completeStep('keywords');
-
-        if (!this.isActive) return;
-        // Step 5: Experience Evaluation
-        await this.delay(3500);
-        this.completeStep('experience');
-
-        if (!this.isActive) return;
-        // Step 6: Education Check
-        await this.delay(2000);
-        this.completeStep('education');
-
-        if (!this.isActive) return;
-        // Step 7: ATS Compatibility
-        await this.delay(3000);
-        this.completeStep('ats');
-
-        if (!this.isActive) return;
-        // Step 8: Recommendations
-        await this.delay(2500);
-        this.completeStep('recommendations');
+        // Step 3: Results Ready (1 second)
+        await this.delay(1000);
+        this.completeStep('step-3');
 
         // Final completion
         if (this.isActive) {
             this.updateProgress(100);
-            this.updateTimeRemaining(0);
+            this.updateTimeRemaining("ready!");
         }
     }
 
