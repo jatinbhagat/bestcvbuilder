@@ -8,7 +8,9 @@ import json
 import os
 import sys
 import logging
-from typing import Dict, Any
+import hashlib
+import time
+from typing import Dict, Any, Optional
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -24,6 +26,13 @@ try:
 except ImportError as e:
     logger.error(f"Failed to import LLM utilities: {e}")
     GEMINI_AVAILABLE = False
+
+try:
+    from supabase import create_client, Client
+    SUPABASE_AVAILABLE = True
+except ImportError as e:
+    logger.error(f"Failed to import Supabase client: {e}")
+    SUPABASE_AVAILABLE = False
 
 # CORS headers
 def get_cors_headers():
@@ -79,8 +88,13 @@ def handler(request):
         text = data['text']
         check_type = data['check_type']
         
-        # Perform LLM analysis
-        result = perform_llm_check(text, check_type)
+        # Extract user info for logging
+        user_id = data.get('user_id')  # Optional
+        email = data.get('email')  # Optional
+        session_uuid = data.get('session_uuid')  # Optional
+        
+        # Perform LLM analysis with logging
+        result = perform_llm_check(text, check_type, user_id, email, session_uuid)
         
         logger.info(f"✅ {check_type} check completed successfully")
         return {
@@ -93,24 +107,30 @@ def handler(request):
         logger.error(f"❌ Grammar/Spelling check failed: {str(e)}")
         return error_response(f"Internal server error: {str(e)}", 500)
 
-def perform_llm_check(text: str, check_type: str) -> Dict[str, Any]:
+def perform_llm_check(text: str, check_type: str, user_id: Optional[str] = None, email: Optional[str] = None, session_uuid: Optional[str] = None) -> Dict[str, Any]:
     """
-    Perform LLM-powered grammar or spelling check
+    Perform LLM-powered grammar or spelling check with database logging
     """
     if not GEMINI_AVAILABLE:
-        return fallback_analysis(text, check_type)
+        result = fallback_analysis(text, check_type)
+        log_llm_call(text, check_type, user_id, email, session_uuid, None, None, result, 'fallback_no_gemini', 0.0, 0, None)
+        return result
     
     gemini_api_key = os.getenv('GEMINI_API_KEY')
     if not gemini_api_key:
         logger.warning("Gemini API key not available, using fallback analysis")
-        return fallback_analysis(text, check_type)
+        result = fallback_analysis(text, check_type)
+        log_llm_call(text, check_type, user_id, email, session_uuid, None, None, result, 'fallback_no_api_key', 0.0, 0, None)
+        return result
     
     try:
         optimizer = SimpleGeminiOptimizer(api_key=gemini_api_key)
         
         if not optimizer.available:
             logger.warning("Gemini optimizer not available, using fallback analysis")
-            return fallback_analysis(text, check_type)
+            result = fallback_analysis(text, check_type)
+            log_llm_call(text, check_type, user_id, email, session_uuid, None, None, result, 'fallback_optimizer_unavailable', 0.0, 0, None)
+            return result
         
         # Create prompt based on check type
         if check_type == 'grammar':
@@ -118,18 +138,27 @@ def perform_llm_check(text: str, check_type: str) -> Dict[str, Any]:
         else:  # spelling
             prompt = create_spelling_check_prompt(text)
         
+        start_time = time.time()
+        
         # Make Gemini request
         response_text, cost_info = optimizer._make_gemini_request(prompt, max_tokens=500)
         
+        processing_time = int((time.time() - start_time) * 1000)
+        
         # Parse response
         result = parse_llm_response(response_text, check_type)
+        
+        # Log successful LLM call
+        log_llm_call(text, check_type, user_id, email, session_uuid, prompt, response_text, result, 'completed', cost_info.estimated_cost_usd, cost_info.total_tokens, processing_time)
         
         logger.info(f"💰 Gemini cost: ${cost_info.estimated_cost_usd:.4f}")
         return result
         
     except Exception as e:
         logger.error(f"LLM check failed: {e}")
-        return fallback_analysis(text, check_type)
+        result = fallback_analysis(text, check_type)
+        log_llm_call(text, check_type, user_id, email, session_uuid, None, None, result, 'failed', 0.0, 0, None, str(e))
+        return result
 
 def create_grammar_check_prompt(text: str) -> str:
     """Create prompt for grammar analysis"""
@@ -262,6 +291,61 @@ def fallback_analysis(text: str, check_type: str) -> Dict[str, Any]:
             'details': ['Fallback analysis - consider upgrading for detailed spell check'],
             'consistency_issues': []
         }
+
+def log_llm_call(text: str, check_type: str, user_id: Optional[str], email: Optional[str], session_uuid: Optional[str], 
+                 prompt: Optional[str], llm_response: Optional[str], parsed_result: Dict[str, Any], 
+                 status: str, cost: float, tokens: int, processing_time: Optional[int], error_message: Optional[str] = None):
+    """Log LLM call to Supabase database"""
+    if not SUPABASE_AVAILABLE:
+        logger.warning("Supabase not available, skipping LLM call logging")
+        return
+    
+    try:
+        # Get Supabase credentials
+        supabase_url = os.getenv('SUPABASE_URL')
+        supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')  # Use service role key for API calls
+        
+        if not supabase_url or not supabase_key:
+            logger.warning("Supabase credentials not available, skipping logging")
+            return
+        
+        # Create Supabase client
+        supabase: Client = create_client(supabase_url, supabase_key)
+        
+        # Create text hash for deduplication
+        text_hash = hashlib.sha256(text.encode('utf-8')).hexdigest()
+        
+        # Prepare log data
+        log_data = {
+            'user_id': user_id,
+            'email': email,
+            'session_uuid': session_uuid,
+            'call_type': f'{check_type}_check',
+            'model_used': 'gemini-flash',
+            'input_text_length': len(text),
+            'input_text_hash': text_hash,
+            'prompt_template': prompt or '',
+            'llm_response_raw': llm_response,
+            'llm_response_parsed': parsed_result,
+            'estimated_cost_usd': cost,
+            'tokens_used': tokens,
+            'status': status,
+            'error_message': error_message,
+            'processing_time_ms': processing_time
+        }
+        
+        # Add score-specific fields
+        if check_type == 'grammar' and 'grammar_score' in parsed_result:
+            log_data['grammar_score'] = parsed_result['grammar_score']
+        elif check_type == 'spelling' and 'spelling_score' in parsed_result:
+            log_data['spelling_score'] = parsed_result['spelling_score']
+        
+        # Insert into database
+        response = supabase.table('llm_calls').insert(log_data).execute()
+        logger.info(f"📊 LLM call logged to database: {check_type}_check")
+        
+    except Exception as e:
+        logger.error(f"Failed to log LLM call: {e}")
 
 def error_response(message: str, status_code: int) -> Dict[str, Any]:
     """Create standardized error response"""

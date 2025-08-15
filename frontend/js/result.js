@@ -228,12 +228,12 @@ function generateAll21Categories(data) {
         impact: 'STRUCTURE'
     });
     
-    // 13. Bullet Points
+    // 13. Use of Bullets
     categories.push({
-        name: 'Bullet Points',
-        score: analyzeBulletPoints(resumeText),
-        issue: 'Improve bullet point structure',
-        impact: 'FORMAT'
+        name: 'Use of Bullets',
+        score: analyzeBulletUsage(resumeText),
+        issue: 'Use bullet points instead of paragraphs',
+        impact: 'READABILITY'
     });
     
     // 14. Job Titles
@@ -321,9 +321,79 @@ function analyzeKeywords(resumeText) {
 }
 
 function analyzeActionVerbs(resumeText) {
-    const actionVerbs = ['achieved', 'managed', 'led', 'developed', 'created', 'improved'];
-    const foundVerbs = actionVerbs.filter(verb => resumeText.toLowerCase().includes(verb));
-    return Math.min(foundVerbs.length * 2, 10);
+    let score = 10; // Start with perfect score
+    
+    // Get all strong verb categories (excluding WEAK_VERBS)
+    const strongVerbCategories = [
+        'STRONG_ACCOMPLISHMENT_DRIVEN_VERBS',
+        'ENTREPRENEURIAL_SKILLS', 
+        'MANAGEMENT_SKILLS',
+        'LEADERSHIP_MENTORSHIP_AND_TEACHING_SKILLS',
+        'PROBLEM_SOLVING_SKILLS',
+        'COMMUNICATION_SKILLS',
+        'RESEARCH_AND_ANALYSIS_SKILLS',
+        'PROCESS_IMPROVEMENT_CONSULTING_AND_OPERATIONS',
+        'FINANCIAL_SKILLS',
+        'DESIGN_AND_CREATIVE_SKILLS',
+        'ENGINEERING_TECHNICAL_ROLES',
+        'TEAMWORK_COLLABORATION_SKILLS'
+    ];
+    
+    // Find all action verbs used in resume
+    const foundVerbs = extractActionVerbsFromText(resumeText);
+    
+    if (foundVerbs.length === 0) {
+        return 3; // No action verbs found - poor score
+    }
+    
+    // Categorize found verbs
+    const categorizedVerbs = categorizeFoundVerbs(foundVerbs, strongVerbCategories);
+    const weakVerbs = window.ActionVerbs.getVerbsForCategory('WEAK_VERBS');
+    
+    // Count categories represented
+    const categoriesUsed = Object.keys(categorizedVerbs).length;
+    
+    // Apply category diversity penalty
+    if (categoriesUsed < 5) {
+        if (categoriesUsed === 4) score -= 1;
+        else if (categoriesUsed === 3) score -= 2;
+        else if (categoriesUsed === 2) score -= 3;
+        else if (categoriesUsed === 1) score -= 4;
+        else score -= 5; // 0 categories
+    }
+    
+    // Count weak verbs and unknown verbs
+    let weakVerbCount = 0;
+    let unknownVerbCount = 0;
+    
+    for (const verb of foundVerbs) {
+        const isWeak = weakVerbs.some(weakVerb => 
+            verb.toLowerCase().includes(weakVerb.toLowerCase()) ||
+            weakVerb.toLowerCase().includes(verb.toLowerCase())
+        );
+        
+        if (isWeak) {
+            weakVerbCount++;
+        } else {
+            // Check if verb is in any strong category
+            const isInStrongCategory = strongVerbCategories.some(category => {
+                const categoryVerbs = window.ActionVerbs.getVerbsForCategory(category);
+                return categoryVerbs.some(strongVerb => 
+                    strongVerb.toLowerCase() === verb.toLowerCase() ||
+                    strongVerb.toLowerCase().includes(verb.toLowerCase())
+                );
+            });
+            
+            if (!isInStrongCategory) {
+                unknownVerbCount++;
+            }
+        }
+    }
+    
+    // Apply penalties for weak and unknown verbs
+    score -= (weakVerbCount + unknownVerbCount); // -1 per weak/unknown verb
+    
+    return Math.max(Math.min(score, 10), 0);
 }
 
 function analyzeQuantifiableAchievements(resumeText) {
@@ -483,6 +553,104 @@ function hasQuantifiableData(point) {
     ];
     
     return quantifiablePatterns.some(pattern => pattern.test(point));
+}
+
+// Analyze bullet point usage vs paragraphs
+function analyzeBulletUsage(resumeText) {
+    let score = 10; // Start with perfect score
+    const lines = resumeText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+    
+    let longParagraphCount = 0;
+    let currentParagraph = '';
+    let currentLineCount = 0;
+    
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        
+        // Skip headers/section titles (typically short and uppercase or title case)
+        if (isHeaderLine(line)) {
+            // End current paragraph if any
+            if (currentLineCount > 2) {
+                longParagraphCount++;
+            }
+            currentParagraph = '';
+            currentLineCount = 0;
+            continue;
+        }
+        
+        // Check if this line starts a new bullet point
+        const isBulletPoint = /^[\s]*[•·\*\-\+\>]\s/.test(line) || /^\s*\d+[\.\)]\s/.test(line);
+        
+        if (isBulletPoint) {
+            // End current paragraph if any
+            if (currentLineCount > 2) {
+                longParagraphCount++;
+            }
+            // Start new bullet tracking
+            currentParagraph = line;
+            currentLineCount = 1;
+        } else if (currentParagraph) {
+            // Continuation of current paragraph/bullet
+            currentLineCount++;
+            currentParagraph += ' ' + line;
+        } else {
+            // Start of new paragraph
+            currentParagraph = line;
+            currentLineCount = 1;
+        }
+        
+        // Check if we're at end of a paragraph (empty line follows or end of content)
+        const isEndOfParagraph = (i === lines.length - 1) || 
+                                 (i + 1 < lines.length && lines[i + 1].trim() === '') ||
+                                 (i + 1 < lines.length && isHeaderLine(lines[i + 1]));
+        
+        if (isEndOfParagraph && currentLineCount > 2) {
+            longParagraphCount++;
+            currentParagraph = '';
+            currentLineCount = 0;
+        }
+    }
+    
+    // Deduct 2 points for each long paragraph (>2 lines)
+    score -= (longParagraphCount * 2);
+    
+    console.log(`Bullet Usage Analysis: Found ${longParagraphCount} long paragraphs (>2 lines). Score: ${Math.max(score, 0)}/10`);
+    
+    return Math.max(score, 0); // Minimum score is 0
+}
+
+// Helper function to identify header lines
+function isHeaderLine(line) {
+    const trimmedLine = line.trim();
+    
+    // Too short to be a paragraph
+    if (trimmedLine.length < 10) return true;
+    
+    // Common section headers
+    const headerKeywords = [
+        'experience', 'education', 'skills', 'summary', 'objective', 
+        'projects', 'certifications', 'awards', 'achievements', 'contact',
+        'work history', 'employment', 'qualifications', 'professional summary',
+        'technical skills', 'core competencies'
+    ];
+    
+    const lowerLine = trimmedLine.toLowerCase();
+    if (headerKeywords.some(keyword => lowerLine.includes(keyword) && trimmedLine.length < 50)) {
+        return true;
+    }
+    
+    // All caps (likely a header)
+    if (trimmedLine === trimmedLine.toUpperCase() && trimmedLine.length < 30) {
+        return true;
+    }
+    
+    // Title case with limited length (likely a header)
+    const words = trimmedLine.split(' ');
+    if (words.length <= 4 && words.every(word => /^[A-Z][a-z]*$/.test(word))) {
+        return true;
+    }
+    
+    return false;
 }
 
 function analyzeFormatting(resumeText) {
@@ -1039,8 +1207,9 @@ function analyzeEducationSection(resumeText, structureData) {
     let score = 0; // Start from 0, add points for each element
     const text = resumeText.toLowerCase();
     
-    // Extract years of experience for GPA requirement logic
+    // Extract years of experience for experience-based scoring
     const yearsOfExperience = extractYearsOfExperience(resumeText);
+    const isSenior = yearsOfExperience >= 5; // 5+ years = senior
     
     // 1. Has Education Section (3 points)
     const hasEducationSection = text.includes('education') || 
@@ -1050,40 +1219,98 @@ function analyzeEducationSection(resumeText, structureData) {
         score += 3;
     }
     
-    // 2. Degree/Qualification (3 points)
-    const degreeWords = [
-        'bachelor', 'master', 'phd', 'doctorate', 'associate', 
-        'diploma', 'certificate', 'degree', 'b.s.', 'b.a.', 
-        'm.s.', 'm.a.', 'mba', 'ph.d.'
-    ];
-    const hasDegree = degreeWords.some(degree => text.includes(degree));
+    // 2. Degree/Qualification (4 points for juniors, 6 points for seniors)
+    const hasDegree = hasEducationDegree(resumeText);
     if (hasDegree) {
-        score += 3;
+        score += isSenior ? 6 : 4; // More weight for seniors since other elements matter less
     }
     
-    // 3. Institution Name (2 points)
+    // 3. Institution Name (2 points for juniors, 1 point for seniors)
     const hasInstitution = hasEducationInstitution(resumeText);
     if (hasInstitution) {
-        score += 2;
+        score += isSenior ? 1 : 2; // Less important for seniors
     }
     
-    // 4. Graduation Dates with proper formatting (2 points)
-    const hasProperDates = hasEducationDates(resumeText);
-    if (hasProperDates) {
-        score += 2;
+    // 4. Graduation Dates - only required for juniors
+    if (!isSenior) {
+        const hasProperDates = hasEducationDates(resumeText);
+        if (hasProperDates) {
+            score += 2;
+        }
     }
+    // For seniors: dates don't matter (no penalty for missing dates)
     
-    // Special logic for GPA/Honors based on experience
+    // 5. GPA/Honors logic based on experience
     if (yearsOfExperience < 3) {
         // For <3 years experience: GPA/honors are important
         const hasGPAOrHonors = hasGPAOrHonorsInfo(resumeText);
         if (!hasGPAOrHonors) {
-            score -= 2; // Deduct for missing GPA/honors for junior professionals
+            score -= 1; // Reduced penalty for missing GPA/honors
         }
     }
     // For 3+ years experience: GPA/honors don't matter (no bonus/penalty)
     
     return Math.max(Math.min(score, 10), 0);
+}
+
+// Enhanced degree detection function
+function hasEducationDegree(resumeText) {
+    // Extract education section first for more accurate detection
+    const educationSection = extractEducationSection(resumeText);
+    const searchText = educationSection || resumeText.toLowerCase();
+    
+    const degreePatterns = [
+        // Full degree names
+        'bachelor', 'master', 'phd', 'doctorate', 'associate', 'diploma', 'certificate',
+        
+        // Common abbreviations
+        'b\\.?e\\.?', 'b\\.?tech', 'b\\.?s\\.?', 'b\\.?a\\.?', 'b\\.?sc\\.?', 'b\\.?com\\.?',
+        'm\\.?tech', 'm\\.?s\\.?', 'm\\.?a\\.?', 'm\\.?sc\\.?', 'm\\.?com\\.?', 'mba', 'm\\.?phil',
+        'ph\\.?d\\.?', 'doctorate', 'post\\s*graduate', 'graduate\\s*degree',
+        
+        // International degrees
+        'btech', 'mtech', 'beng', 'meng', 'bsc', 'msc', 'bcom', 'mcom',
+        
+        // Professional degrees
+        'llb', 'llm', 'md', 'mbbs', 'bds', 'mds', 'ca', 'cs', 'cma'
+    ];
+    
+    const degreeRegex = new RegExp(`\\b(${degreePatterns.join('|')})\\b`, 'i');
+    return degreeRegex.test(searchText);
+}
+
+// Extract education section for more accurate analysis
+function extractEducationSection(resumeText) {
+    const text = resumeText.toLowerCase();
+    const lines = resumeText.split('\n');
+    
+    // Find education section start
+    let educationStart = -1;
+    const educationHeaders = ['education', 'academic', 'qualification', 'educational background'];
+    
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].toLowerCase().trim();
+        if (educationHeaders.some(header => line.includes(header)) && line.length < 50) {
+            educationStart = i;
+            break;
+        }
+    }
+    
+    if (educationStart === -1) return null;
+    
+    // Find education section end
+    let educationEnd = lines.length;
+    const otherSections = ['experience', 'work', 'employment', 'skills', 'projects', 'certifications'];
+    
+    for (let i = educationStart + 1; i < lines.length; i++) {
+        const line = lines[i].toLowerCase().trim();
+        if (otherSections.some(section => line.includes(section)) && line.length < 50) {
+            educationEnd = i;
+            break;
+        }
+    }
+    
+    return lines.slice(educationStart, educationEnd).join('\n').toLowerCase();
 }
 
 /**
@@ -1404,35 +1631,6 @@ function analyzeLeadershipSkills(resumeText, keywordsData) {
     return Math.min(score, 10);
 }
 
-/**
- * Analyze bullet point usage and formatting
- */
-function analyzeBulletUsage(resumeText, formattingData) {
-    const bulletCount = (resumeText.match(/[•▪▫■□◦‣⁃]/g) || []).length;
-    const dashCount = (resumeText.match(/^\s*[-*]\s/gm) || []).length;
-    
-    let score = 0; // Start from 0 - purely content-based
-    
-    if (bulletCount + dashCount > 10) {
-        score += 6; // Excellent use of bullets
-    } else if (bulletCount + dashCount > 5) {
-        score += 4; // Good use of bullets
-    } else if (bulletCount + dashCount > 0) {
-        score += 2; // Some bullets
-    }
-    
-    // Check for consistent bullet usage (2 points)
-    if (bulletCount > dashCount || dashCount > bulletCount) {
-        score += 2; // Consistent style
-    }
-    
-    // Bonus for proper formatting (2 points)
-    if ((bulletCount + dashCount) >= 3) {
-        score += 2;
-    }
-    
-    return Math.min(score, 10);
-}
 
 /**
  * Analyze spelling and consistency issues
@@ -1598,92 +1796,12 @@ function analyzeVerbTenses(resumeText) {
  * Analyze weak verbs usage
  */
 function analyzeWeakVerbs(resumeText) {
-    if (window.ActionVerbs) {
-        return analyzeActionVerbsComprehensive(resumeText);
-    } else {
-        // Fallback method if ActionVerbs not available
-        return analyzeActionVerbsFallback(resumeText);
-    }
+    return analyzeActionVerbs(resumeText);
 }
 
 /**
  * Comprehensive action verb analysis using the config system
  */
-function analyzeActionVerbsComprehensive(resumeText) {
-    let score = 10; // Start with perfect score
-    
-    // Get all strong verb categories (excluding WEAK_VERBS)
-    const strongVerbCategories = [
-        'STRONG_ACCOMPLISHMENT_DRIVEN_VERBS',
-        'ENTREPRENEURIAL_SKILLS', 
-        'MANAGEMENT_SKILLS',
-        'LEADERSHIP_MENTORSHIP_AND_TEACHING_SKILLS',
-        'PROBLEM_SOLVING_SKILLS',
-        'COMMUNICATION_SKILLS',
-        'RESEARCH_AND_ANALYSIS_SKILLS',
-        'PROCESS_IMPROVEMENT_CONSULTING_AND_OPERATIONS',
-        'FINANCIAL_SKILLS',
-        'DESIGN_AND_CREATIVE_SKILLS',
-        'ENGINEERING_TECHNICAL_ROLES',
-        'TEAMWORK_COLLABORATION_SKILLS'
-    ];
-    
-    // Find all action verbs used in resume
-    const foundVerbs = extractActionVerbsFromText(resumeText);
-    
-    if (foundVerbs.length === 0) {
-        return 3; // No action verbs found - poor score
-    }
-    
-    // Categorize found verbs
-    const categorizedVerbs = categorizeFoundVerbs(foundVerbs, strongVerbCategories);
-    const weakVerbs = window.ActionVerbs.getVerbsForCategory('WEAK_VERBS');
-    
-    // Count categories represented
-    const categoriesUsed = Object.keys(categorizedVerbs).length;
-    
-    // Apply category diversity penalty
-    if (categoriesUsed < 5) {
-        if (categoriesUsed === 4) score -= 1;
-        else if (categoriesUsed === 3) score -= 2;
-        else if (categoriesUsed === 2) score -= 3;
-        else if (categoriesUsed === 1) score -= 4;
-        else score -= 5; // 0 categories
-    }
-    
-    // Count weak verbs and unknown verbs
-    let weakVerbCount = 0;
-    let unknownVerbCount = 0;
-    
-    for (const verb of foundVerbs) {
-        const isWeak = weakVerbs.some(weakVerb => 
-            verb.toLowerCase().includes(weakVerb.toLowerCase()) ||
-            weakVerb.toLowerCase().includes(verb.toLowerCase())
-        );
-        
-        if (isWeak) {
-            weakVerbCount++;
-        } else {
-            // Check if verb is in any strong category
-            const isInStrongCategory = strongVerbCategories.some(category => {
-                const categoryVerbs = window.ActionVerbs.getVerbsForCategory(category);
-                return categoryVerbs.some(strongVerb => 
-                    strongVerb.toLowerCase() === verb.toLowerCase() ||
-                    strongVerb.toLowerCase().includes(verb.toLowerCase())
-                );
-            });
-            
-            if (!isInStrongCategory) {
-                unknownVerbCount++;
-            }
-        }
-    }
-    
-    // Apply penalties for weak and unknown verbs
-    score -= (weakVerbCount + unknownVerbCount); // -1 per weak/unknown verb
-    
-    return Math.max(Math.min(score, 10), 0);
-}
 
 /**
  * Extract action verbs from resume text
@@ -1745,36 +1863,6 @@ function categorizeFoundVerbs(foundVerbs, categories) {
 /**
  * Fallback action verb analysis when ActionVerbs config not available
  */
-function analyzeActionVerbsFallback(resumeText) {
-    let score = 0; // Start from 0 for fallback
-    
-    const weakVerbs = ['responsible for', 'duties included', 'helped with', 'assisted in', 'involved in', 'worked on'];
-    const strongVerbs = ['led', 'managed', 'developed', 'created', 'implemented', 'achieved', 'increased', 'improved'];
-    
-    const weakCount = weakVerbs.reduce((count, verb) => {
-        return count + (resumeText.toLowerCase().split(verb).length - 1);
-    }, 0);
-    
-    const strongCount = strongVerbs.reduce((count, verb) => {
-        return count + (resumeText.toLowerCase().split(verb).length - 1);
-    }, 0);
-    
-    if (strongCount > 0 && weakCount === 0) {
-        score = 10;
-    } else if (strongCount > weakCount) {
-        score = 7;
-    } else if (strongCount === weakCount && strongCount > 0) {
-        score = 5;
-    } else if (weakCount > strongCount && strongCount > 0) {
-        score = 3;
-    } else if (weakCount > 0 && strongCount === 0) {
-        score = 1;
-    } else {
-        score = 4;
-    }
-    
-    return Math.max(Math.min(score, 10), 0);
-}
 
 /**
  * Analyze active vs passive voice usage
