@@ -143,7 +143,7 @@ function generateAll21Categories(data) {
     // 2. Professional Summary
     categories.push({
         name: 'Professional Summary',
-        score: analyzeSummary(resumeText).totalScore,
+        score: analyzeSummarySection(resumeText).totalScore,
         issue: 'Add compelling professional summary section',
         impact: 'SECTIONS'
     });
@@ -167,7 +167,7 @@ function generateAll21Categories(data) {
     // 5. Skills Section
     categories.push({
         name: 'Skills Section',
-        score: analyzeSkillsSection(resumeText),
+        score: analyzeSkillsSectionSimple(resumeText),
         issue: 'Add relevant technical skills',
         impact: 'KEYWORDS'
     });
@@ -301,6 +301,99 @@ function generateAll21Categories(data) {
     });
     
     return categories;
+}
+
+// Simple analyzer functions for missing categories
+function analyzeWorkExperience(resumeText) {
+    const hasExperience = /experience|work|job|position|role/i.test(resumeText);
+    const hasAchievements = /achieved|accomplished|increased|improved|led|managed/i.test(resumeText);
+    return hasExperience && hasAchievements ? 8 : hasExperience ? 6 : 3;
+}
+
+function analyzeSkillsSectionSimple(resumeText) {
+    const hasSkillsSection = /skills|technical|technologies|tools/i.test(resumeText);
+    return hasSkillsSection ? 8 : 4;
+}
+
+function analyzeKeywords(resumeText) {
+    const wordCount = resumeText.split(' ').length;
+    return wordCount > 200 ? 7 : wordCount > 100 ? 5 : 3;
+}
+
+function analyzeActionVerbs(resumeText) {
+    const actionVerbs = ['achieved', 'managed', 'led', 'developed', 'created', 'improved'];
+    const foundVerbs = actionVerbs.filter(verb => resumeText.toLowerCase().includes(verb));
+    return Math.min(foundVerbs.length * 2, 10);
+}
+
+function analyzeQuantifiableAchievements(resumeText) {
+    const hasNumbers = /\d+%|\$\d+|\d+\s*(years?|months?|people|team|projects?)/i.test(resumeText);
+    return hasNumbers ? 8 : 3;
+}
+
+function analyzeFormatting(resumeText) {
+    const hasStructure = resumeText.includes('\n') && resumeText.length > 100;
+    return hasStructure ? 9 : 5;
+}
+
+function analyzeResumeLength(resumeText) {
+    const wordCount = resumeText.split(' ').length;
+    return wordCount >= 200 && wordCount <= 800 ? 10 : wordCount > 100 ? 7 : 4;
+}
+
+function analyzeSectionHeaders(resumeText) {
+    const headers = ['experience', 'education', 'skills', 'summary'];
+    const foundHeaders = headers.filter(h => resumeText.toLowerCase().includes(h));
+    return Math.min(foundHeaders.length * 2.5, 10);
+}
+
+function analyzeBulletPoints(resumeText) {
+    const hasBullets = /•|·|\*|-/.test(resumeText);
+    return hasBullets ? 8 : 4;
+}
+
+function analyzeJobTitles(resumeText) {
+    const titles = ['developer', 'manager', 'analyst', 'engineer', 'coordinator', 'specialist'];
+    const foundTitles = titles.filter(t => resumeText.toLowerCase().includes(t));
+    return foundTitles.length > 0 ? 8 : 5;
+}
+
+function analyzeCompanyNames(resumeText) {
+    const hasCompanies = /inc\.|corp\.|ltd\.|llc|company|corporation/i.test(resumeText);
+    return hasCompanies ? 9 : 6;
+}
+
+function analyzeDates(resumeText) {
+    const hasDates = /\d{4}|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec/i.test(resumeText);
+    return hasDates ? 9 : 4;
+}
+
+function analyzeCertifications(resumeText) {
+    const certs = ['certified', 'certification', 'license', 'credential'];
+    const foundCerts = certs.filter(c => resumeText.toLowerCase().includes(c));
+    return foundCerts.length > 0 ? 8 : 5;
+}
+
+function analyzeIndustryBuzzwords(resumeText) {
+    if (!skillsBuzzwordsConfig) return 5;
+    const allBuzzwords = [];
+    if (skillsBuzzwordsConfig.buzzwords) {
+        Object.values(skillsBuzzwordsConfig.buzzwords).forEach(industryBuzzwords => {
+            allBuzzwords.push(...industryBuzzwords);
+        });
+    }
+    const foundBuzzwords = allBuzzwords.filter(word => resumeText.toLowerCase().includes(word.toLowerCase()));
+    return Math.min(foundBuzzwords.length, 10);
+}
+
+function analyzeATSCompatibility(resumeText) {
+    const hasGoodStructure = resumeText.length > 200 && /\n/.test(resumeText);
+    return hasGoodStructure ? 8 : 5;
+}
+
+function analyzeWhiteSpace(resumeText) {
+    const hasProperSpacing = resumeText.includes('\n\n') || resumeText.includes('\n');
+    return hasProperSpacing ? 9 : 6;
 }
 
 /**
