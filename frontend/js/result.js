@@ -1285,41 +1285,62 @@ function analyzeActiveVoice(resumeText) {
  * Analyze summary section quality with equal weightage for 5 components
  */
 function analyzeSummarySection(resumeText) {
-    let score = 0; // Start from 0, add 2 points for each component
+    let score = 0; // Start from 0, add points for each component
     
-    // Extract summary section
-    const summarySection = extractSummarySection(resumeText);
+    // Extract summary section (returns {content, hasHeading})
+    const summaryData = extractSummarySection(resumeText);
+    const summaryContent = summaryData.content || '';
+    const hasHeading = summaryData.hasHeading || false;
     
-    if (!summarySection || summarySection.length < 20) {
-        return 1; // Minimal score if no summary found
+    console.log('Summary Section Analysis:', {
+        summaryLength: summaryContent.length,
+        hasHeading: hasHeading,
+        summaryPreview: summaryContent.substring(0, 200) + '...'
+    });
+    
+    if (!summaryContent || summaryContent.length < 20) {
+        return 1; // Minimal score if no summary content found
     }
     
-    // 1. Years of Experience (2 points)
-    if (hasYearsOfExperience(summarySection)) {
-        score += 2;
+    // Start with 10 points and deduct for missing elements (new approach for better scoring)
+    score = 10;
+    
+    // 1. Years of Experience (-2 points if missing)
+    const hasExp = hasYearsOfExperience(summaryContent) || hasYearsOfExperience(resumeText);
+    if (!hasExp) score -= 2;
+    
+    // 2. Key Skills (-2 points if missing) 
+    const hasSkills = hasKeySkills(summaryContent);
+    if (!hasSkills) score -= 2;
+    
+    // 3. Buzz Words (-2 points if missing)
+    const hasBuzz = hasBuzzWords(summaryContent);
+    if (!hasBuzz) score -= 2;
+    
+    // 4. Quantification (-2 points if missing)
+    const hasQuant = hasQuantification(summaryContent);
+    if (!hasQuant) score -= 2;
+    
+    // 5. Brevity (-2 points if not appropriate length)
+    const isBrief = checkBrevity(summaryContent) || checkBrevityRelaxed(summaryContent);
+    if (!isBrief) score -= 2;
+    
+    // 6. Heading present (-1 point if missing heading)
+    if (!hasHeading) {
+        score -= 1;
     }
     
-    // 2. Key Skills (2 points) 
-    if (hasKeySkills(summarySection)) {
-        score += 2;
-    }
+    console.log('Summary scoring breakdown:', {
+        hasExperience: hasExp,
+        hasSkills: hasSkills,
+        hasBuzzWords: hasBuzz,
+        hasQuantification: hasQuant,
+        isBrief: isBrief,
+        hasHeading: hasHeading,
+        totalScore: Math.max(score, 0)
+    });
     
-    // 3. Buzz Words (2 points)
-    if (hasBuzzWords(summarySection)) {
-        score += 2;
-    }
-    
-    // 4. Quantification (2 points)
-    if (hasQuantification(summarySection)) {
-        score += 2;
-    }
-    
-    // 5. Brevity (2 points)
-    if (checkBrevity(summarySection)) {
-        score += 2;
-    }
-    
-    return Math.min(score, 10);
+    return Math.max(score, 0); // Ensure minimum 0
 }
 
 /**
@@ -1327,11 +1348,12 @@ function analyzeSummarySection(resumeText) {
  */
 function extractSummarySection(resumeText) {
     const text = resumeText.toLowerCase();
+    const lines = resumeText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     
-    // Look for summary section markers
+    // Look for explicit summary section markers
     const summaryMarkers = [
         'professional summary', 'executive summary', 'career summary',
-        'summary', 'objective', 'profile', 'overview', 'about'
+        'summary', 'objective', 'profile', 'overview', 'about', 'introduction'
     ];
     
     let summaryStart = -1;
@@ -1345,25 +1367,77 @@ function extractSummarySection(resumeText) {
         }
     }
     
-    if (summaryStart === -1) {
-        // If no explicit summary, try to extract first paragraph
-        const paragraphs = resumeText.split('\n\n').filter(p => p.trim().length > 50);
-        return paragraphs[0] || '';
+    if (summaryStart !== -1) {
+        // Found explicit summary section
+        const remainingText = resumeText.substring(summaryStart);
+        const endMarkers = ['experience', 'work history', 'employment', 'education', 'skills', 'technical skills', 'core competencies'];
+        let summaryEnd = remainingText.length;
+        
+        for (const endMarker of endMarkers) {
+            const endIndex = remainingText.toLowerCase().indexOf(endMarker);
+            if (endIndex !== -1 && endIndex < summaryEnd && endIndex > usedMarker.length + 10) {
+                summaryEnd = endIndex;
+            }
+        }
+        
+        const extractedSummary = remainingText.substring(usedMarker.length, summaryEnd).trim();
+        return { content: extractedSummary, hasHeading: true };
     }
     
-    // Find end of summary section
-    const remainingText = resumeText.substring(summaryStart);
-    const endMarkers = ['experience', 'work history', 'employment', 'education', 'skills'];
-    let summaryEnd = remainingText.length;
+    // No explicit heading - look for intro lines at the start (after contact info)
+    let startLine = 0;
     
-    for (const endMarker of endMarkers) {
-        const endIndex = remainingText.toLowerCase().indexOf(endMarker);
-        if (endIndex !== -1 && endIndex < summaryEnd && endIndex > usedMarker.length + 10) {
-            summaryEnd = endIndex;
+    // Skip contact information lines (name, email, phone, address)
+    const contactPatterns = [
+        /^[A-Z][a-z]+ [A-Z][a-z]+/, // Name pattern
+        /@/, // Email
+        /\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/, // Phone
+        /\b[A-Z]{2}\b|\bcity\b|\bstate\b/, // Address indicators
+        /linkedin/i,
+        /github/i
+    ];
+    
+    for (let i = 0; i < Math.min(lines.length, 10); i++) {
+        const line = lines[i];
+        const isContactInfo = contactPatterns.some(pattern => pattern.test(line));
+        if (!isContactInfo && line.length > 30) {
+            startLine = i;
+            break;
         }
     }
     
-    return remainingText.substring(0, summaryEnd).trim();
+    // Extract 2-8 lines that could be an intro summary
+    const potentialSummaryLines = [];
+    for (let i = startLine; i < Math.min(startLine + 8, lines.length); i++) {
+        const line = lines[i];
+        
+        // Stop if we hit a section header
+        const sectionHeaders = ['experience', 'work history', 'employment', 'education', 'skills', 'projects', 'certifications'];
+        if (sectionHeaders.some(header => line.toLowerCase().includes(header)) && line.length < 50) {
+            break;
+        }
+        
+        // Include lines that look like summary content
+        if (line.length > 20 && !line.match(/^[A-Z\s]{2,}$/)) { // Not all caps headers
+            potentialSummaryLines.push(line);
+        }
+        
+        // Stop if we have enough lines and hit a clear break
+        if (potentialSummaryLines.length >= 2 && (line.length < 10 || line.match(/^[A-Z\s]{2,}$/))) {
+            break;
+        }
+    }
+    
+    const summaryContent = potentialSummaryLines.join(' ').trim();
+    
+    // Return the intro summary (2-8 lines without heading)
+    if (summaryContent.length > 50) {
+        return { content: summaryContent, hasHeading: false };
+    }
+    
+    // Last resort - use first substantial paragraph
+    const paragraphs = resumeText.split('\n\n').filter(p => p.trim().length > 50);
+    return { content: paragraphs[0] || '', hasHeading: false };
 }
 
 /**
@@ -1385,52 +1459,42 @@ function hasYearsOfExperience(summaryText) {
  * Check for key skills mention in summary
  */
 function hasKeySkills(summaryText) {
+    // Use the new SkillsBuzzwords module if available
+    if (window.SkillsBuzzwords) {
+        const analysis = window.SkillsBuzzwords.analyzeTextForSkillsAndBuzzwords(summaryText);
+        return analysis.score.hasSkills;
+    }
+    
+    // Fallback to basic analysis if module not loaded
     const text = summaryText.toLowerCase();
+    const basicSkills = ['python', 'java', 'javascript', 'leadership', 'management', 'agile'];
+    const foundSkills = basicSkills.filter(skill => text.includes(skill));
     
-    // Technical skills
-    const technicalSkills = [
-        'python', 'java', 'javascript', 'react', 'node', 'sql', 'aws', 'azure', 
-        'docker', 'kubernetes', 'git', 'api', 'microservices', 'database',
-        'machine learning', 'data science', 'analytics', 'cloud'
-    ];
+    const basicPatterns = [/skilled\s+in/gi, /experienced\s+with/gi];
+    const hasPatterns = basicPatterns.some(pattern => pattern.test(text));
     
-    // Professional skills  
-    const professionalSkills = [
-        'project management', 'leadership', 'team management', 'strategic planning',
-        'business analysis', 'process improvement', 'stakeholder management',
-        'cross-functional', 'agile', 'scrum', 'devops'
-    ];
-    
-    const allSkills = [...technicalSkills, ...professionalSkills];
-    const foundSkills = allSkills.filter(skill => text.includes(skill));
-    
-    return foundSkills.length >= 2; // At least 2 key skills mentioned
+    return foundSkills.length >= 1 || hasPatterns;
 }
 
 /**
  * Check for industry buzz words in summary
  */
 function hasBuzzWords(summaryText) {
-    const text = summaryText.toLowerCase();
+    // Use the new SkillsBuzzwords module if available
+    if (window.SkillsBuzzwords) {
+        const analysis = window.SkillsBuzzwords.analyzeTextForSkillsAndBuzzwords(summaryText);
+        return analysis.score.hasBuzzwords;
+    }
     
-    const buzzWords = [
-        // Action/Impact words
-        'drive', 'deliver', 'optimize', 'transform', 'innovate', 'scale', 'streamline',
-        'accelerate', 'enhance', 'maximize', 'leverage', 'spearhead', 'pioneer',
-        
-        // Business terms
-        'roi', 'revenue', 'growth', 'efficiency', 'performance', 'productivity',
-        'competitive advantage', 'market leader', 'best practices', 'solutions',
-        'strategy', 'vision', 'mission', 'goals', 'objectives',
-        
-        // Industry terms
-        'digital transformation', 'automation', 'integration', 'scalability',
-        'user experience', 'customer satisfaction', 'quality assurance',
-        'compliance', 'security', 'innovation', 'emerging technologies'
+    // Fallback to basic analysis if module not loaded
+    const text = summaryText.toLowerCase();
+    const basicBuzzWords = [
+        'drive', 'deliver', 'optimize', 'transform', 'innovate', 'scale',
+        'roi', 'revenue', 'growth', 'efficiency', 'performance', 'strategy'
     ];
     
-    const foundBuzzWords = buzzWords.filter(word => text.includes(word));
-    return foundBuzzWords.length >= 2; // At least 2 buzz words
+    const foundBuzzWords = basicBuzzWords.filter(word => text.includes(word));
+    return foundBuzzWords.length >= 2;
 }
 
 /**
@@ -1458,6 +1522,17 @@ function checkBrevity(summaryText) {
     
     // Optimal: 2-4 sentences, 50-150 words
     return (sentenceCount >= 2 && sentenceCount <= 4 && wordCount >= 50 && wordCount <= 150);
+}
+
+/**
+ * Check brevity with relaxed criteria for fallback analysis
+ */
+function checkBrevityRelaxed(summaryText) {
+    const wordCount = summaryText.trim().split(/\s+/).length;
+    const sentenceCount = summaryText.split(/[.!?]+/).filter(s => s.trim().length > 5).length;
+    
+    // More relaxed: 1-6 sentences, 30-300 words
+    return (sentenceCount >= 1 && sentenceCount <= 6 && wordCount >= 30 && wordCount <= 300);
 }
 
 /**
