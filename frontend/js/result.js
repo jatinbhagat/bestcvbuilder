@@ -409,6 +409,10 @@ function analyzeKeywords(resumeText) {
 }
 
 function analyzeActionVerbs(resumeText) {
+    console.log('🔍 ACTION VERBS ANALYSIS START');
+    console.log('🔍 Resume text length:', resumeText.length);
+    console.log('🔍 First 500 chars of resume:', resumeText.substring(0, 500));
+    
     let score = 10; // Start with perfect score
     
     // Get all strong verb categories (excluding WEAK_VERBS)
@@ -427,32 +431,56 @@ function analyzeActionVerbs(resumeText) {
         'TEAMWORK_COLLABORATION_SKILLS'
     ];
     
+    console.log('🔍 ACTION VERBS: Strong verb categories defined:', strongVerbCategories.length);
+    
+    // Check if ActionVerbs module is available
+    console.log('🔍 ACTION VERBS: ActionVerbs module available:', !!window.ActionVerbs);
+    console.log('🔍 ACTION VERBS: getVerbsForCategory function available:', !!(window.ActionVerbs && window.ActionVerbs.getVerbsForCategory));
+    
     // Find all action verbs used in resume
     const foundVerbs = extractActionVerbsFromText(resumeText);
+    console.log('🔍 ACTION VERBS: Found verbs in resume:', foundVerbs);
+    console.log('🔍 ACTION VERBS: Total verbs found:', foundVerbs.length);
     
     if (foundVerbs.length === 0) {
+        console.log('🔍 ACTION VERBS: No action verbs found - returning score 3');
         return 3; // No action verbs found - poor score
     }
     
     // Categorize found verbs
     const categorizedVerbs = categorizeFoundVerbs(foundVerbs, strongVerbCategories);
+    console.log('🔍 ACTION VERBS: Categorized verbs:', categorizedVerbs);
+    
     const weakVerbs = (window.ActionVerbs && window.ActionVerbs.getVerbsForCategory) ? window.ActionVerbs.getVerbsForCategory('WEAK_VERBS') : [];
+    console.log('🔍 ACTION VERBS: Weak verbs loaded:', weakVerbs.length > 0 ? weakVerbs.slice(0, 10) : 'None');
     
     // Count categories represented
     const categoriesUsed = Object.keys(categorizedVerbs).length;
+    console.log('🔍 ACTION VERBS: Categories used:', categoriesUsed);
+    console.log('🔍 ACTION VERBS: Category names used:', Object.keys(categorizedVerbs));
     
     // Apply category diversity penalty
+    console.log('🔍 ACTION VERBS: Starting score before category penalty:', score);
     if (categoriesUsed < 5) {
+        const oldScore = score;
         if (categoriesUsed === 4) score -= 1;
         else if (categoriesUsed === 3) score -= 2;
         else if (categoriesUsed === 2) score -= 3;
         else if (categoriesUsed === 1) score -= 4;
         else score -= 5; // 0 categories
+        console.log('🔍 ACTION VERBS: Category diversity penalty applied. Score changed from', oldScore, 'to', score);
+    } else {
+        console.log('🔍 ACTION VERBS: No category diversity penalty - have', categoriesUsed, 'categories');
     }
     
     // Count weak verbs and unknown verbs
     let weakVerbCount = 0;
     let unknownVerbCount = 0;
+    const weakVerbsFound = [];
+    const unknownVerbsFound = [];
+    const strongVerbsFound = [];
+    
+    console.log('🔍 ACTION VERBS: Analyzing individual verbs for weak/unknown classification...');
     
     for (const verb of foundVerbs) {
         const isWeak = weakVerbs.some(weakVerb => 
@@ -462,6 +490,8 @@ function analyzeActionVerbs(resumeText) {
         
         if (isWeak) {
             weakVerbCount++;
+            weakVerbsFound.push(verb);
+            console.log(`🔍 ACTION VERBS: "${verb}" classified as WEAK`);
         } else {
             // Check if verb is in any strong category
             const isInStrongCategory = strongVerbCategories.some(category => {
@@ -475,14 +505,31 @@ function analyzeActionVerbs(resumeText) {
             
             if (!isInStrongCategory) {
                 unknownVerbCount++;
+                unknownVerbsFound.push(verb);
+                console.log(`🔍 ACTION VERBS: "${verb}" classified as UNKNOWN`);
+            } else {
+                strongVerbsFound.push(verb);
+                console.log(`🔍 ACTION VERBS: "${verb}" classified as STRONG`);
             }
         }
     }
     
-    // Apply penalties for weak and unknown verbs
-    score -= (weakVerbCount + unknownVerbCount); // -1 per weak/unknown verb
+    console.log('🔍 ACTION VERBS: Final classification summary:');
+    console.log('🔍 ACTION VERBS: Strong verbs found:', strongVerbsFound);
+    console.log('🔍 ACTION VERBS: Weak verbs found:', weakVerbsFound);
+    console.log('🔍 ACTION VERBS: Unknown verbs found:', unknownVerbsFound);
+    console.log('🔍 ACTION VERBS: Counts - Strong:', strongVerbsFound.length, 'Weak:', weakVerbCount, 'Unknown:', unknownVerbCount);
     
-    return Math.max(Math.min(score, 10), 0);
+    // Apply penalties for weak and unknown verbs
+    const oldScore = score;
+    score -= (weakVerbCount + unknownVerbCount); // -1 per weak/unknown verb
+    console.log('🔍 ACTION VERBS: Score after weak/unknown penalty - changed from', oldScore, 'to', score);
+    console.log('🔍 ACTION VERBS: Penalty applied:', (weakVerbCount + unknownVerbCount), 'points');
+    
+    const finalScore = Math.max(Math.min(score, 10), 0);
+    console.log('🔍 ACTION VERBS: Final score (clamped 0-10):', finalScore);
+    
+    return finalScore;
 }
 
 function analyzeQuantifiableAchievements(resumeText) {
@@ -2204,38 +2251,72 @@ function analyzeWeakVerbs(resumeText) {
  * Extract action verbs from resume text
  */
 function extractActionVerbsFromText(resumeText) {
+    console.log('🔍 EXTRACT ACTION VERBS: Starting extraction...');
+    console.log('🔍 EXTRACT ACTION VERBS: Resume text length:', resumeText.length);
+    
     const verbs = [];
     const text = resumeText.toLowerCase();
     
+    // Test specific verbs we expect to find
+    const expectedVerbs = ['led', 'spearheaded', 'achieved', 'launched', 'built', 'engineered', 'conceptualized', 'revamped', 'championed', 'guided', 'boosted', 'pioneered', 'managed', 'drove', 'conceived', 'programmed'];
+    console.log('🔍 EXTRACT ACTION VERBS: Testing for expected verbs in resume...');
+    expectedVerbs.forEach(verb => {
+        const found = text.includes(verb);
+        console.log(`🔍 EXTRACT ACTION VERBS: "${verb}" found in text: ${found}`);
+    });
+    
     // Common action verb patterns in resumes
     const verbPatterns = [
-        // Past tense verbs (most common in experience)
-        /\b(managed|led|developed|created|implemented|achieved|increased|reduced|improved|delivered|executed|coordinated|supervised|administered|analyzed|designed|established|facilitated|generated|initiated|launched|optimized|organized|planned|produced|provided|supported|trained|collaborated|communicated|negotiated|presented|resolved|streamlined|transformed|upgraded|built|maintained|monitored|oversaw|recruited|directed|guided|mentored|coached|evaluated|assessed|identified|researched|tested|reviewed|audited|calculated|forecasted|interviewed|investigated|traced|classified|collected|compiled|processed|recorded|scheduled|arranged|prepared|operated|handled|assisted|helped|contributed|participated|worked|responsible)\b/g,
+        // Past tense verbs (most common in experience) - EXPANDED
+        /\b(managed|led|developed|created|implemented|achieved|increased|reduced|improved|delivered|executed|coordinated|supervised|administered|analyzed|designed|established|facilitated|generated|initiated|launched|optimized|organized|planned|produced|provided|supported|trained|collaborated|communicated|negotiated|presented|resolved|streamlined|transformed|upgraded|built|maintained|monitored|oversaw|recruited|directed|guided|mentored|coached|evaluated|assessed|identified|researched|tested|reviewed|audited|calculated|forecasted|interviewed|investigated|traced|classified|collected|compiled|processed|recorded|scheduled|arranged|prepared|operated|handled|assisted|helped|contributed|participated|worked|responsible|spearheaded|championed|pioneered|conceptualized|revamped|boosted|drove|conceived|programmed|scaled|orchestrated|engineered)\b/g,
         
-        // Present tense verbs (for current roles)
-        /\b(manage|lead|develop|create|implement|achieve|increase|reduce|improve|deliver|execute|coordinate|supervise|administer|analyze|design|establish|facilitate|generate|initiate|launch|optimize|organize|plan|produce|provide|support|train|collaborate|communicate|negotiate|present|resolve|streamline|transform|upgrade|build|maintain|monitor|oversee|recruit|direct|guide|mentor|coach|evaluate|assess|identify|research|test|review|audit|calculate|forecast|interview|investigate|trace|classify|collect|compile|process|record|schedule|arrange|prepare|operate|handle|assist|help|contribute|participate|work)\b/g
+        // Present tense verbs (for current roles) - EXPANDED  
+        /\b(manage|lead|develop|create|implement|achieve|increase|reduce|improve|deliver|execute|coordinate|supervise|administer|analyze|design|establish|facilitate|generate|initiate|launch|optimize|organize|plan|produce|provide|support|train|collaborate|communicate|negotiate|present|resolve|streamline|transform|upgrade|build|maintain|monitor|oversee|recruit|direct|guide|mentor|coach|evaluate|assess|identify|research|test|review|audit|calculate|forecast|interview|investigate|trace|classify|collect|compile|process|record|schedule|arrange|prepare|operate|handle|assist|help|contribute|participate|work|spearhead|champion|pioneer|conceptualize|revamp|boost|drive|conceive|program|scale|orchestrate|engineer)\b/g
     ];
     
-    for (const pattern of verbPatterns) {
+    console.log('🔍 EXTRACT ACTION VERBS: Testing regex patterns...');
+    
+    for (let i = 0; i < verbPatterns.length; i++) {
+        const pattern = verbPatterns[i];
+        console.log(`🔍 EXTRACT ACTION VERBS: Testing pattern ${i + 1}:`, pattern);
         const matches = text.match(pattern);
+        console.log(`🔍 EXTRACT ACTION VERBS: Pattern ${i + 1} matches:`, matches);
         if (matches) {
             verbs.push(...matches);
         }
     }
     
+    console.log('🔍 EXTRACT ACTION VERBS: All verbs found (with duplicates):', verbs);
+    
     // Remove duplicates and return unique verbs
-    return [...new Set(verbs)];
+    const uniqueVerbs = [...new Set(verbs)];
+    console.log('🔍 EXTRACT ACTION VERBS: Unique verbs found:', uniqueVerbs);
+    console.log('🔍 EXTRACT ACTION VERBS: Total unique verbs:', uniqueVerbs.length);
+    
+    return uniqueVerbs;
 }
 
 /**
  * Categorize found verbs into strong verb categories
  */
 function categorizeFoundVerbs(foundVerbs, categories) {
+    console.log('🔍 CATEGORIZE VERBS: Starting categorization...');
+    console.log('🔍 CATEGORIZE VERBS: Found verbs to categorize:', foundVerbs);
+    console.log('🔍 CATEGORIZE VERBS: Categories to check:', categories);
+    
     const categorizedVerbs = {};
     
+    if (!window.ActionVerbs || !window.ActionVerbs.getVerbsForCategory) {
+        console.log('🔍 CATEGORIZE VERBS: ActionVerbs module not available - cannot categorize');
+        return categorizedVerbs;
+    }
+    
     for (const category of categories) {
-        if (!window.ActionVerbs || !window.ActionVerbs.getVerbsForCategory) continue;
+        console.log(`🔍 CATEGORIZE VERBS: Processing category: ${category}`);
+        
         const categoryVerbs = window.ActionVerbs.getVerbsForCategory(category);
+        console.log(`🔍 CATEGORIZE VERBS: Category "${category}" has ${categoryVerbs.length} verbs:`, categoryVerbs.slice(0, 10));
+        
         const matchingVerbs = [];
         
         for (const verb of foundVerbs) {
@@ -2247,14 +2328,19 @@ function categorizeFoundVerbs(foundVerbs, categories) {
             
             if (isMatch) {
                 matchingVerbs.push(verb);
+                console.log(`🔍 CATEGORIZE VERBS: "${verb}" matches category "${category}"`);
             }
         }
         
         if (matchingVerbs.length > 0) {
             categorizedVerbs[category] = matchingVerbs;
+            console.log(`🔍 CATEGORIZE VERBS: Category "${category}" final matches:`, matchingVerbs);
+        } else {
+            console.log(`🔍 CATEGORIZE VERBS: No matches found for category "${category}"`);
         }
     }
     
+    console.log('🔍 CATEGORIZE VERBS: Final categorization result:', categorizedVerbs);
     return categorizedVerbs;
 }
 
