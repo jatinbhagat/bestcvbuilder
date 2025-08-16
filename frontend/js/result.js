@@ -163,6 +163,7 @@ async function loadConfigs() {
         
         if (verbsResponse.ok) {
             actionVerbsConfig = await verbsResponse.json();
+            window.actionVerbsConfig = actionVerbsConfig; // Make it globally available
             console.log('✅ DEBUG: Action-verbs config loaded successfully:', {
                 hasConfig: !!actionVerbsConfig,
                 keys: actionVerbsConfig ? Object.keys(actionVerbsConfig) : []
@@ -409,10 +410,6 @@ function analyzeKeywords(resumeText) {
 }
 
 function analyzeActionVerbs(resumeText) {
-    console.log('🔍 ACTION VERBS ANALYSIS START');
-    console.log('🔍 Resume text length:', resumeText.length);
-    console.log('🔍 First 500 chars of resume:', resumeText.substring(0, 500));
-    
     let score = 10; // Start with perfect score
     
     // Get all strong verb categories (excluding WEAK_VERBS)
@@ -431,19 +428,10 @@ function analyzeActionVerbs(resumeText) {
         'TEAMWORK_COLLABORATION_SKILLS'
     ];
     
-    console.log('🔍 ACTION VERBS: Strong verb categories defined:', strongVerbCategories.length);
-    
-    // Check if ActionVerbs module is available
-    console.log('🔍 ACTION VERBS: ActionVerbs module available:', !!window.ActionVerbs);
-    console.log('🔍 ACTION VERBS: getVerbsForCategory function available:', !!(window.ActionVerbs && window.ActionVerbs.getVerbsForCategory));
-    
     // Find all action verbs used in resume
     const foundVerbs = extractActionVerbsFromText(resumeText);
-    console.log('🔍 ACTION VERBS: Found verbs in resume:', foundVerbs);
-    console.log('🔍 ACTION VERBS: Total verbs found:', foundVerbs.length);
     
     if (foundVerbs.length === 0) {
-        console.log('🔍 ACTION VERBS: No action verbs found - returning score 3');
         return 3; // No action verbs found - poor score
     }
     
@@ -451,12 +439,17 @@ function analyzeActionVerbs(resumeText) {
     let categorizedVerbs = {};
     let weakVerbs = [];
     
+    console.log('🔍 ACTION VERBS: Starting categorization...');
+    console.log('🔍 ACTION VERBS: ActionVerbs module available:', !!(window.ActionVerbs && window.ActionVerbs.getVerbsForCategory));
+    console.log('🔍 ACTION VERBS: actionVerbsConfig available:', !!window.actionVerbsConfig);
+    console.log('🔍 ACTION VERBS: actionVerbsConfig content check:', window.actionVerbsConfig ? Object.keys(window.actionVerbsConfig).slice(0, 3) : 'null');
+    
     if (window.ActionVerbs && window.ActionVerbs.getVerbsForCategory) {
-        console.log('🔍 ACTION VERBS: Using ActionVerbs module for categorization');
+        console.log('🔍 ACTION VERBS: Using ActionVerbs module');
         categorizedVerbs = categorizeFoundVerbs(foundVerbs, strongVerbCategories);
         weakVerbs = window.ActionVerbs.getVerbsForCategory('WEAK_VERBS');
     } else if (window.actionVerbsConfig) {
-        console.log('🔍 ACTION VERBS: ActionVerbs module not available, using fallback with config');
+        console.log('🔍 ACTION VERBS: Using actionVerbsConfig from JSON file');
         categorizedVerbs = categorizeFoundVerbsWithConfig(foundVerbs, strongVerbCategories);
         weakVerbs = window.actionVerbsConfig.WEAK_VERBS || [];
     } else {
@@ -466,36 +459,27 @@ function analyzeActionVerbs(resumeText) {
         weakVerbs = ['responsible', 'involved', 'participated', 'helped', 'assisted'];
     }
     
-    console.log('🔍 ACTION VERBS: Categorized verbs:', categorizedVerbs);
-    console.log('🔍 ACTION VERBS: Weak verbs loaded:', weakVerbs.length > 0 ? weakVerbs.slice(0, 10) : 'None');
-    
     // Count categories represented
     const categoriesUsed = Object.keys(categorizedVerbs).length;
     console.log('🔍 ACTION VERBS: Categories used:', categoriesUsed);
-    console.log('🔍 ACTION VERBS: Category names used:', Object.keys(categorizedVerbs));
+    console.log('🔍 ACTION VERBS: Categorized verbs:', categorizedVerbs);
     
     // Apply category diversity penalty
-    console.log('🔍 ACTION VERBS: Starting score before category penalty:', score);
     if (categoriesUsed < 5) {
-        const oldScore = score;
+        const originalScore = score;
         if (categoriesUsed === 4) score -= 1;
         else if (categoriesUsed === 3) score -= 2;
         else if (categoriesUsed === 2) score -= 3;
         else if (categoriesUsed === 1) score -= 4;
         else score -= 5; // 0 categories
-        console.log('🔍 ACTION VERBS: Category diversity penalty applied. Score changed from', oldScore, 'to', score);
+        console.log('🔍 ACTION VERBS: Category diversity penalty applied. Score changed from', originalScore, 'to', score);
     } else {
-        console.log('🔍 ACTION VERBS: No category diversity penalty - have', categoriesUsed, 'categories');
+        console.log('🔍 ACTION VERBS: No category diversity penalty (used', categoriesUsed, 'categories)');
     }
     
     // Count weak verbs and unknown verbs
     let weakVerbCount = 0;
     let unknownVerbCount = 0;
-    const weakVerbsFound = [];
-    const unknownVerbsFound = [];
-    const strongVerbsFound = [];
-    
-    console.log('🔍 ACTION VERBS: Analyzing individual verbs for weak/unknown classification...');
     
     for (const verb of foundVerbs) {
         const isWeak = weakVerbs.some(weakVerb => 
@@ -505,8 +489,6 @@ function analyzeActionVerbs(resumeText) {
         
         if (isWeak) {
             weakVerbCount++;
-            weakVerbsFound.push(verb);
-            console.log(`🔍 ACTION VERBS: "${verb}" classified as WEAK`);
         } else {
             // Check if verb is in any strong category using the same fallback approach
             let isInStrongCategory = false;
@@ -528,7 +510,7 @@ function analyzeActionVerbs(resumeText) {
                     );
                 });
             } else {
-                // Use basic fallback - check against basic strong verbs
+                // Use basic fallback - check against basic strong verbs (comprehensive list)
                 const basicStrongVerbs = [
                     'managed', 'led', 'supervised', 'coordinated', 'directed', 'guided', 'oversaw',
                     'spearheaded', 'championed', 'mentored', 'coached', 'launched', 'pioneered',
@@ -536,33 +518,33 @@ function analyzeActionVerbs(resumeText) {
                     'engineered', 'programmed', 'designed', 'implemented', 'achieved', 'delivered',
                     'executed', 'accomplished', 'completed', 'optimized', 'streamlined', 'improved',
                     'enhanced', 'revamped', 'budgeted', 'forecasted', 'analyzed', 'calculated',
-                    'scaled', 'boosted', 'drove', 'conceived', 'orchestrated'
+                    'scaled', 'boosted', 'drove', 'conceived', 'orchestrated',
+                    // Additional strong verbs from resume
+                    'conceptualized', 'record', 'design', 'increase', 'boost', 'program', 
+                    'develop', 'scale', 'build', 'engineer', 'generated', 'facilitated',
+                    'organized', 'produced', 'supported', 'collaborated', 'negotiated',
+                    'presented', 'resolved', 'transformed', 'upgraded', 'maintained',
+                    'monitored', 'recruited', 'evaluated', 'assessed', 'identified',
+                    'researched', 'tested', 'reviewed', 'processed', 'handled'
                 ];
                 isInStrongCategory = basicStrongVerbs.includes(verb.toLowerCase());
             }
             
             if (!isInStrongCategory) {
                 unknownVerbCount++;
-                unknownVerbsFound.push(verb);
-                console.log(`🔍 ACTION VERBS: "${verb}" classified as UNKNOWN`);
-            } else {
-                strongVerbsFound.push(verb);
-                console.log(`🔍 ACTION VERBS: "${verb}" classified as STRONG`);
             }
         }
     }
     
-    console.log('🔍 ACTION VERBS: Final classification summary:');
-    console.log('🔍 ACTION VERBS: Strong verbs found:', strongVerbsFound);
-    console.log('🔍 ACTION VERBS: Weak verbs found:', weakVerbsFound);
-    console.log('🔍 ACTION VERBS: Unknown verbs found:', unknownVerbsFound);
-    console.log('🔍 ACTION VERBS: Counts - Strong:', strongVerbsFound.length, 'Weak:', weakVerbCount, 'Unknown:', unknownVerbCount);
-    
     // Apply penalties for weak and unknown verbs
-    const oldScore = score;
-    score -= (weakVerbCount + unknownVerbCount); // -1 per weak/unknown verb
-    console.log('🔍 ACTION VERBS: Score after weak/unknown penalty - changed from', oldScore, 'to', score);
-    console.log('🔍 ACTION VERBS: Penalty applied:', (weakVerbCount + unknownVerbCount), 'points');
+    const penaltyScore = weakVerbCount + unknownVerbCount;
+    console.log('🔍 ACTION VERBS: Weak verb count:', weakVerbCount);
+    console.log('🔍 ACTION VERBS: Unknown verb count:', unknownVerbCount);
+    console.log('🔍 ACTION VERBS: Total penalty:', penaltyScore);
+    console.log('🔍 ACTION VERBS: Score before penalty:', score);
+    
+    score -= penaltyScore; // -1 per weak/unknown verb
+    console.log('🔍 ACTION VERBS: Score after penalty:', score);
     
     const finalScore = Math.max(Math.min(score, 10), 0);
     console.log('🔍 ACTION VERBS: Final score (clamped 0-10):', finalScore);
@@ -571,35 +553,52 @@ function analyzeActionVerbs(resumeText) {
 }
 
 function analyzeQuantifiableAchievements(resumeText) {
+    console.log('🔍 QUANTIFIABLE ACHIEVEMENTS: Starting analysis...');
+    
     // Extract Professional Experience section
     const experienceSection = extractExperienceSection(resumeText);
+    console.log('🔍 QUANTIFIABLE ACHIEVEMENTS: Experience section found:', !!experienceSection);
+    console.log('🔍 QUANTIFIABLE ACHIEVEMENTS: Experience section length:', experienceSection ? experienceSection.length : 0);
+    
     if (!experienceSection) {
+        console.log('🔍 QUANTIFIABLE ACHIEVEMENTS: No experience section found, returning score 1');
         return 1; // No experience section found
     }
     
     // Extract all bullet points/responsibilities from experience section
     const allPoints = extractExperiencePoints(experienceSection);
+    console.log('🔍 QUANTIFIABLE ACHIEVEMENTS: Total points extracted:', allPoints.length);
+    console.log('🔍 QUANTIFIABLE ACHIEVEMENTS: All points:', allPoints);
+    
     if (allPoints.length === 0) {
+        console.log('🔍 QUANTIFIABLE ACHIEVEMENTS: No points found in experience section, returning score 1');
         return 1; // No points found in experience section
     }
     
     // Count quantified points
     const quantifiedPoints = allPoints.filter(point => hasQuantifiableData(point));
+    console.log('🔍 QUANTIFIABLE ACHIEVEMENTS: Quantified points found:', quantifiedPoints.length);
+    console.log('🔍 QUANTIFIABLE ACHIEVEMENTS: Quantified points:', quantifiedPoints);
     
     // Calculate percentage: y = (100 * Quantified Points / Total Points)%
     const y = (quantifiedPoints.length / allPoints.length) * 100;
+    console.log('🔍 QUANTIFIABLE ACHIEVEMENTS: Percentage of quantified points:', y.toFixed(1) + '%');
     
     // Score based on percentage
-    if (y > 90) return 10;
-    else if (y > 80) return 9;
-    else if (y > 70) return 8;
-    else if (y > 60) return 7;
-    else if (y > 50) return 6;
-    else if (y > 40) return 5;
-    else if (y > 30) return 4;
-    else if (y > 20) return 3;
-    else if (y > 10) return 2;
-    else return 1;
+    let score;
+    if (y > 90) score = 10;
+    else if (y > 80) score = 9;
+    else if (y > 70) score = 8;
+    else if (y > 60) score = 7;
+    else if (y > 50) score = 6;
+    else if (y > 40) score = 5;
+    else if (y > 30) score = 4;
+    else if (y > 20) score = 3;
+    else if (y > 10) score = 2;
+    else score = 1;
+    
+    console.log('🔍 QUANTIFIABLE ACHIEVEMENTS: Final score:', score);
+    return score;
 }
 
 // Extract Professional Experience section from resume
@@ -731,8 +730,10 @@ function hasQuantifiableData(point) {
 
 // Analyze bullet point usage vs paragraphs
 function analyzeBulletUsage(resumeText) {
+    console.log('🔍 USE OF BULLETS: Starting analysis...');
     let score = 10; // Start with perfect score
     const lines = resumeText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+    console.log('🔍 USE OF BULLETS: Total lines found:', lines.length);
     
     let longParagraphCount = 0;
     let currentParagraph = '';
@@ -786,11 +787,16 @@ function analyzeBulletUsage(resumeText) {
     }
     
     // Deduct 2 points for each long paragraph (>2 lines)
+    console.log('🔍 USE OF BULLETS: Long paragraphs found:', longParagraphCount);
+    console.log('🔍 USE OF BULLETS: Score before penalty:', score);
+    
     score -= (longParagraphCount * 2);
+    console.log('🔍 USE OF BULLETS: Penalty applied (2 points per long paragraph):', longParagraphCount * 2);
     
-    console.log(`Bullet Usage Analysis: Found ${longParagraphCount} long paragraphs (>2 lines). Score: ${Math.max(score, 0)}/10`);
+    const finalScore = Math.max(score, 0);
+    console.log('🔍 USE OF BULLETS: Final score:', finalScore);
     
-    return Math.max(score, 0); // Minimum score is 0
+    return finalScore; // Minimum score is 0
 }
 
 // Helper function to identify header lines
@@ -2289,19 +2295,8 @@ function analyzeWeakVerbs(resumeText) {
  * Extract action verbs from resume text
  */
 function extractActionVerbsFromText(resumeText) {
-    console.log('🔍 EXTRACT ACTION VERBS: Starting extraction...');
-    console.log('🔍 EXTRACT ACTION VERBS: Resume text length:', resumeText.length);
-    
     const verbs = [];
     const text = resumeText.toLowerCase();
-    
-    // Test specific verbs we expect to find
-    const expectedVerbs = ['led', 'spearheaded', 'achieved', 'launched', 'built', 'engineered', 'conceptualized', 'revamped', 'championed', 'guided', 'boosted', 'pioneered', 'managed', 'drove', 'conceived', 'programmed'];
-    console.log('🔍 EXTRACT ACTION VERBS: Testing for expected verbs in resume...');
-    expectedVerbs.forEach(verb => {
-        const found = text.includes(verb);
-        console.log(`🔍 EXTRACT ACTION VERBS: "${verb}" found in text: ${found}`);
-    });
     
     // Common action verb patterns in resumes
     const verbPatterns = [
@@ -2312,49 +2307,29 @@ function extractActionVerbsFromText(resumeText) {
         /\b(manage|lead|develop|create|implement|achieve|increase|reduce|improve|deliver|execute|coordinate|supervise|administer|analyze|design|establish|facilitate|generate|initiate|launch|optimize|organize|plan|produce|provide|support|train|collaborate|communicate|negotiate|present|resolve|streamline|transform|upgrade|build|maintain|monitor|oversee|recruit|direct|guide|mentor|coach|evaluate|assess|identify|research|test|review|audit|calculate|forecast|interview|investigate|trace|classify|collect|compile|process|record|schedule|arrange|prepare|operate|handle|assist|help|contribute|participate|work|spearhead|champion|pioneer|conceptualize|revamp|boost|drive|conceive|program|scale|orchestrate|engineer)\b/g
     ];
     
-    console.log('🔍 EXTRACT ACTION VERBS: Testing regex patterns...');
-    
-    for (let i = 0; i < verbPatterns.length; i++) {
-        const pattern = verbPatterns[i];
-        console.log(`🔍 EXTRACT ACTION VERBS: Testing pattern ${i + 1}:`, pattern);
+    for (const pattern of verbPatterns) {
         const matches = text.match(pattern);
-        console.log(`🔍 EXTRACT ACTION VERBS: Pattern ${i + 1} matches:`, matches);
         if (matches) {
             verbs.push(...matches);
         }
     }
     
-    console.log('🔍 EXTRACT ACTION VERBS: All verbs found (with duplicates):', verbs);
-    
     // Remove duplicates and return unique verbs
-    const uniqueVerbs = [...new Set(verbs)];
-    console.log('🔍 EXTRACT ACTION VERBS: Unique verbs found:', uniqueVerbs);
-    console.log('🔍 EXTRACT ACTION VERBS: Total unique verbs:', uniqueVerbs.length);
-    
-    return uniqueVerbs;
+    return [...new Set(verbs)];
 }
 
 /**
  * Categorize found verbs into strong verb categories
  */
 function categorizeFoundVerbs(foundVerbs, categories) {
-    console.log('🔍 CATEGORIZE VERBS: Starting categorization...');
-    console.log('🔍 CATEGORIZE VERBS: Found verbs to categorize:', foundVerbs);
-    console.log('🔍 CATEGORIZE VERBS: Categories to check:', categories);
-    
     const categorizedVerbs = {};
     
     if (!window.ActionVerbs || !window.ActionVerbs.getVerbsForCategory) {
-        console.log('🔍 CATEGORIZE VERBS: ActionVerbs module not available - cannot categorize');
         return categorizedVerbs;
     }
     
     for (const category of categories) {
-        console.log(`🔍 CATEGORIZE VERBS: Processing category: ${category}`);
-        
         const categoryVerbs = window.ActionVerbs.getVerbsForCategory(category);
-        console.log(`🔍 CATEGORIZE VERBS: Category "${category}" has ${categoryVerbs.length} verbs:`, categoryVerbs.slice(0, 10));
-        
         const matchingVerbs = [];
         
         for (const verb of foundVerbs) {
@@ -2366,19 +2341,14 @@ function categorizeFoundVerbs(foundVerbs, categories) {
             
             if (isMatch) {
                 matchingVerbs.push(verb);
-                console.log(`🔍 CATEGORIZE VERBS: "${verb}" matches category "${category}"`);
             }
         }
         
         if (matchingVerbs.length > 0) {
             categorizedVerbs[category] = matchingVerbs;
-            console.log(`🔍 CATEGORIZE VERBS: Category "${category}" final matches:`, matchingVerbs);
-        } else {
-            console.log(`🔍 CATEGORIZE VERBS: No matches found for category "${category}"`);
         }
     }
     
-    console.log('🔍 CATEGORIZE VERBS: Final categorization result:', categorizedVerbs);
     return categorizedVerbs;
 }
 
@@ -2386,16 +2356,10 @@ function categorizeFoundVerbs(foundVerbs, categories) {
  * Categorize found verbs using the config file directly (fallback)
  */
 function categorizeFoundVerbsWithConfig(foundVerbs, categories) {
-    console.log('🔍 CATEGORIZE VERBS (CONFIG): Starting categorization with config...');
-    
     const categorizedVerbs = {};
     
     for (const category of categories) {
-        console.log(`🔍 CATEGORIZE VERBS (CONFIG): Processing category: ${category}`);
-        
         const categoryVerbs = window.actionVerbsConfig[category] || [];
-        console.log(`🔍 CATEGORIZE VERBS (CONFIG): Category "${category}" has ${categoryVerbs.length} verbs:`, categoryVerbs.slice(0, 10));
-        
         const matchingVerbs = [];
         
         for (const verb of foundVerbs) {
@@ -2407,17 +2371,14 @@ function categorizeFoundVerbsWithConfig(foundVerbs, categories) {
             
             if (isMatch) {
                 matchingVerbs.push(verb);
-                console.log(`🔍 CATEGORIZE VERBS (CONFIG): "${verb}" matches category "${category}"`);
             }
         }
         
         if (matchingVerbs.length > 0) {
             categorizedVerbs[category] = matchingVerbs;
-            console.log(`🔍 CATEGORIZE VERBS (CONFIG): Category "${category}" final matches:`, matchingVerbs);
         }
     }
     
-    console.log('🔍 CATEGORIZE VERBS (CONFIG): Final categorization result:', categorizedVerbs);
     return categorizedVerbs;
 }
 
@@ -2425,8 +2386,6 @@ function categorizeFoundVerbsWithConfig(foundVerbs, categories) {
  * Basic fallback categorization for common strong verbs
  */
 function categorizeFoundVerbsFallback(foundVerbs) {
-    console.log('🔍 CATEGORIZE VERBS (FALLBACK): Starting basic categorization...');
-    
     const basicCategories = {
         'MANAGEMENT_SKILLS': ['managed', 'led', 'supervised', 'coordinated', 'directed', 'guided', 'oversaw'],
         'LEADERSHIP_MENTORSHIP_AND_TEACHING_SKILLS': ['spearheaded', 'championed', 'mentored', 'coached', 'led', 'guided'],
@@ -2449,7 +2408,6 @@ function categorizeFoundVerbsFallback(foundVerbs) {
             
             if (isMatch) {
                 matchingVerbs.push(verb);
-                console.log(`🔍 CATEGORIZE VERBS (FALLBACK): "${verb}" matches category "${category}"`);
             }
         }
         
@@ -2458,7 +2416,6 @@ function categorizeFoundVerbsFallback(foundVerbs) {
         }
     }
     
-    console.log('🔍 CATEGORIZE VERBS (FALLBACK): Final categorization result:', categorizedVerbs);
     return categorizedVerbs;
 }
 
@@ -2526,7 +2483,6 @@ function analyzeSummarySection(resumeText) {
     
     // 4. Quantification (-2 points if missing)
     const hasQuant = hasQuantification(summaryContent);
-    console.log('🔍 PROFESSIONAL SUMMARY: Quantification check:', hasQuant, 'for content:', summaryContent.substring(0, 200));
     if (!hasQuant) score -= 2;
     
     // 5. Brevity (-2 points if not appropriate length)
@@ -2538,26 +2494,6 @@ function analyzeSummarySection(resumeText) {
         score -= 1;
     }
     
-    console.log('🔍 PROFESSIONAL SUMMARY DEBUG - Full Analysis:', {
-        extractedContent: summaryContent,
-        contentLength: summaryContent.length,
-        hasExperience: hasExp,
-        hasSkills: hasSkills,
-        hasBuzzWords: hasBuzz,
-        hasQuantification: hasQuant,
-        isBrief: isBrief,
-        hasHeading: hasHeading,
-        totalScore: Math.max(score, 0)
-    });
-    
-    // Individual function detailed testing
-    console.log('🔍 DETAILED FUNCTION TESTING:');
-    console.log('hasYearsOfExperience result:', hasYearsOfExperience(summaryContent));
-    console.log('hasKeySkills result:', hasKeySkills(summaryContent));
-    console.log('hasBuzzWords result:', hasBuzzWords(summaryContent));
-    console.log('hasQuantification result:', hasQuantification(summaryContent));
-    console.log('checkBrevity result:', checkBrevity(summaryContent));
-    console.log('checkBrevityRelaxed result:', checkBrevityRelaxed(summaryContent));
     
     return Math.max(score, 0); // Ensure minimum 0
 }
@@ -2566,14 +2502,8 @@ function analyzeSummarySection(resumeText) {
  * Extract summary/objective section from resume
  */
 function extractSummarySection(resumeText) {
-    console.log('🔍 EXTRACT SUMMARY: Starting extraction from resume text (length:', resumeText.length, ')');
-    console.log('🔍 EXTRACT SUMMARY: First 500 chars:', resumeText.substring(0, 500));
-    
     const text = resumeText.toLowerCase();
     const lines = resumeText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-    
-    console.log('🔍 EXTRACT SUMMARY: Split into', lines.length, 'lines');
-    console.log('🔍 EXTRACT SUMMARY: First 10 lines:', lines.slice(0, 10));
     
     // Look for explicit summary section markers
     const summaryMarkers = [
@@ -2584,28 +2514,22 @@ function extractSummarySection(resumeText) {
     let summaryStart = -1;
     let usedMarker = '';
     
-    console.log('🔍 EXTRACT SUMMARY: Looking for markers in lowercase text...');
     for (const marker of summaryMarkers) {
         const index = text.indexOf(marker);
-        console.log(`🔍 EXTRACT SUMMARY: Marker "${marker}" found at index:`, index);
         if (index !== -1 && (summaryStart === -1 || index < summaryStart)) {
             summaryStart = index;
             usedMarker = marker;
         }
     }
     
-    console.log('🔍 EXTRACT SUMMARY: Best marker found:', usedMarker, 'at position:', summaryStart);
-    
     if (summaryStart !== -1) {
         // Found explicit summary section
-        console.log('🔍 SUMMARY EXTRACTION: Found summary marker:', usedMarker, 'at position:', summaryStart);
         const remainingText = resumeText.substring(summaryStart);
         const endMarkers = ['experience', 'work history', 'employment', 'education', 'skills', 'technical skills', 'core competencies'];
         let summaryEnd = remainingText.length;
         
         for (const endMarker of endMarkers) {
             const endIndex = remainingText.toLowerCase().indexOf(endMarker);
-            console.log(`🔍 SUMMARY EXTRACTION: Checking end marker "${endMarker}" at position:`, endIndex);
             
             // Only use end marker if it's far enough from the start AND looks like a section header
             if (endIndex !== -1 && endIndex < summaryEnd && endIndex > usedMarker.length + 200) {
@@ -2613,30 +2537,17 @@ function extractSummarySection(resumeText) {
                 const beforeEndMarker = remainingText.substring(Math.max(0, endIndex - 50), endIndex);
                 const afterEndMarker = remainingText.substring(endIndex, endIndex + 50);
                 
-                console.log(`🔍 SUMMARY EXTRACTION: Context around "${endMarker}":`, {
-                    before: beforeEndMarker,
-                    after: afterEndMarker
-                });
-                
                 // Only break if it looks like a section header (has line breaks around it)
                 if (beforeEndMarker.includes('\n') && afterEndMarker.includes('\n')) {
                     summaryEnd = endIndex;
-                    console.log('🔍 SUMMARY EXTRACTION: Using end marker:', endMarker, 'at position:', endIndex);
-                } else {
-                    console.log('🔍 SUMMARY EXTRACTION: Skipping end marker - not a section header');
                 }
-            } else if (endIndex !== -1) {
-                console.log(`🔍 SUMMARY EXTRACTION: Skipping end marker "${endMarker}" - too close to start (${endIndex} <= ${usedMarker.length + 200})`);
             }
         }
         
         let extractedSummary = remainingText.substring(usedMarker.length, summaryEnd).trim();
-        console.log('🔍 SUMMARY EXTRACTION: Raw extracted text (length:', extractedSummary.length, '):', extractedSummary);
         
         // If summary seems too short, try a different approach - look for actual section headers
         if (extractedSummary.length < 100) {
-            console.log('🔍 SUMMARY EXTRACTION: Summary too short, trying section header approach...');
-            
             // Look for line-based section headers instead
             const lines = remainingText.split('\n');
             let summaryLines = [];
@@ -2659,10 +2570,7 @@ function extractSummarySection(resumeText) {
                                  (line === line.toUpperCase() || 
                                   ['EDUCATION', 'EXPERIENCE', 'SKILLS', 'PROFESSIONAL EXPERIENCE', 'WORK HISTORY'].includes(line.toUpperCase())));
                 
-                console.log(`🔍 SUMMARY EXTRACTION: Line "${line}" -> is header: ${isHeader}`);
-                
                 if (isHeader && summaryLines.length > 0) {
-                    console.log('🔍 SUMMARY EXTRACTION: Found section header, stopping extraction');
                     break;
                 }
                 
@@ -2672,17 +2580,14 @@ function extractSummarySection(resumeText) {
             }
             
             const lineBased = summaryLines.join(' ').trim();
-            console.log('🔍 SUMMARY EXTRACTION: Line-based extraction (length:', lineBased.length, '):', lineBased);
             
             if (lineBased.length > extractedSummary.length) {
                 extractedSummary = lineBased;
-                console.log('🔍 SUMMARY EXTRACTION: Using line-based extraction as it\'s longer');
             }
         }
         
         // Clean up text that may have missing spaces (common in PDF extraction)
         extractedSummary = cleanupExtractedText(extractedSummary);
-        console.log('🔍 SUMMARY EXTRACTION: Final cleaned extracted text (length:', extractedSummary.length, '):', extractedSummary);
         
         return { content: extractedSummary, hasHeading: true };
     }
