@@ -433,7 +433,7 @@ function analyzeActionVerbs(resumeText) {
     
     // Categorize found verbs
     const categorizedVerbs = categorizeFoundVerbs(foundVerbs, strongVerbCategories);
-    const weakVerbs = window.ActionVerbs.getVerbsForCategory('WEAK_VERBS');
+    const weakVerbs = (window.ActionVerbs && window.ActionVerbs.getVerbsForCategory) ? window.ActionVerbs.getVerbsForCategory('WEAK_VERBS') : [];
     
     // Count categories represented
     const categoriesUsed = Object.keys(categorizedVerbs).length;
@@ -462,6 +462,7 @@ function analyzeActionVerbs(resumeText) {
         } else {
             // Check if verb is in any strong category
             const isInStrongCategory = strongVerbCategories.some(category => {
+                if (!window.ActionVerbs || !window.ActionVerbs.getVerbsForCategory) return false;
                 const categoryVerbs = window.ActionVerbs.getVerbsForCategory(category);
                 return categoryVerbs.some(strongVerb => 
                     strongVerb.toLowerCase() === verb.toLowerCase() ||
@@ -1745,7 +1746,7 @@ function extractSkillsSection(resumeText) {
 function analyzeAnalyticalSkills(resumeText, keywordsData) {
     let score = 0; // Start from 0 - purely content-based
     
-    if (window.ActionVerbs) {
+    if (window.ActionVerbs && window.ActionVerbs.countVerbsInText) {
         // Count research and analysis action verbs
         const researchVerbCount = window.ActionVerbs.countVerbsInText(resumeText, 'RESEARCH_AND_ANALYSIS_SKILLS');
         const problemSolvingCount = window.ActionVerbs.countVerbsInText(resumeText, 'PROBLEM_SOLVING_SKILLS');
@@ -1776,7 +1777,7 @@ function analyzeAnalyticalSkills(resumeText, keywordsData) {
 function analyzeLeadershipSkills(resumeText, keywordsData) {
     let score = 0; // Start from 0 - purely content-based
     
-    if (window.ActionVerbs) {
+    if (window.ActionVerbs && window.ActionVerbs.countVerbsInText) {
         // Count leadership and management action verbs
         const leadershipVerbCount = window.ActionVerbs.countVerbsInText(resumeText, 'LEADERSHIP_MENTORSHIP_AND_TEACHING_SKILLS');
         const managementVerbCount = window.ActionVerbs.countVerbsInText(resumeText, 'MANAGEMENT_SKILLS');
@@ -2222,6 +2223,7 @@ function categorizeFoundVerbs(foundVerbs, categories) {
     const categorizedVerbs = {};
     
     for (const category of categories) {
+        if (!window.ActionVerbs || !window.ActionVerbs.getVerbsForCategory) continue;
         const categoryVerbs = window.ActionVerbs.getVerbsForCategory(category);
         const matchingVerbs = [];
         
@@ -2603,7 +2605,7 @@ function checkBrevityRelaxed(summaryText) {
 function analyzeTeamworkSkills(resumeText) {
     let score = 0; // Start from 0 - purely content-based
     
-    if (window.ActionVerbs) {
+    if (window.ActionVerbs && window.ActionVerbs.countVerbsInText) {
         // Count teamwork and collaboration action verbs
         const teamworkVerbCount = window.ActionVerbs.countVerbsInText(resumeText, 'TEAMWORK_COLLABORATION_SKILLS');
         const communicationVerbCount = window.ActionVerbs.countVerbsInText(resumeText, 'COMMUNICATION_SKILLS');
@@ -2636,7 +2638,7 @@ function analyzeRepetition(resumeText) {
     
     // 1. Check for repeated action verbs (most important for resumes)
     const actionVerbs = [];
-    if (window.ActionVerbs) {
+    if (window.ActionVerbs && window.ActionVerbs.getAllStrongVerbs) {
         const allVerbs = window.ActionVerbs.getAllStrongVerbs();
         actionVerbs.push(...allVerbs);
     }
@@ -3703,12 +3705,12 @@ async function initializeWithActionVerbs() {
         console.log('🔧 DEBUG: Checking for ActionVerbs module:', !!window.ActionVerbs);
         
         // Ensure ActionVerbs is loaded
-        if (window.ActionVerbs) {
+        if (window.ActionVerbs && window.ActionVerbs.loadActionVerbs) {
             console.log('🔧 DEBUG: Loading ActionVerbs...');
             await window.ActionVerbs.loadActionVerbs();
             console.log('🔧 DEBUG: ActionVerbs loaded successfully');
         } else {
-            console.log('🔧 DEBUG: ActionVerbs not available, proceeding without it');
+            console.log('🔧 DEBUG: ActionVerbs not available or loadActionVerbs method missing, proceeding without it');
         }
         
         console.log('🔧 DEBUG: ActionVerbs setup complete, initializing results page');
