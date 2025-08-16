@@ -186,8 +186,8 @@ async function loadConfigs() {
 /**
  * Generate exactly 21 ATS categories based on real analysis data
  */
-function generateAll21Categories(data) {
-    console.log('🏗️ DEBUG: Starting generateAll21Categories with data:', {
+function generateAll23Categories(data) {
+    console.log('🏗️ DEBUG: Starting generateAll23Categories with data:', {
         hasData: !!data,
         hasContent: !!(data?.content),
         hasText: !!(data?.text),
@@ -382,6 +382,48 @@ function generateAll21Categories(data) {
             name: 'Personal Pronouns',
             score: 5, // fallback score
             issue: 'Remove personal pronouns (I, me, we)',
+            impact: 'LANGUAGE'
+        });
+    }
+    
+    // 22. Dates Format & Chronology
+    try {
+        console.log('🏗️ DEBUG: Analyzing Dates...');
+        const datesScore = analyzeDates(resumeText);
+        console.log('🏗️ DEBUG: Dates score:', datesScore);
+        categories.push({
+            name: 'Dates Format & Chronology',
+            score: datesScore,
+            issue: 'Consistent date formats and reverse chronological order',
+            impact: 'STRUCTURE'
+        });
+    } catch (error) {
+        console.error('❌ DEBUG: Error in Dates analysis:', error);
+        categories.push({
+            name: 'Dates Format & Chronology',
+            score: 5, // fallback score
+            issue: 'Consistent date formats and reverse chronological order',
+            impact: 'STRUCTURE'
+        });
+    }
+    
+    // 23. Action Verb Repetition
+    try {
+        console.log('🏗️ DEBUG: Analyzing Repetition...');
+        const repetitionScore = analyzeRepetition(resumeText);
+        console.log('🏗️ DEBUG: Repetition score:', repetitionScore);
+        categories.push({
+            name: 'Action Verb Repetition',
+            score: repetitionScore,
+            issue: 'Avoid repeating the same action verbs',
+            impact: 'LANGUAGE'
+        });
+    } catch (error) {
+        console.error('❌ DEBUG: Error in Repetition analysis:', error);
+        categories.push({
+            name: 'Action Verb Repetition',
+            score: 5, // fallback score
+            issue: 'Avoid repeating the same action verbs',
             impact: 'LANGUAGE'
         });
     }
@@ -1032,12 +1074,12 @@ function analyzeWhiteSpace(resumeText) {
 function displayOverallScore(data) {
     if (!atsScore) return;
     
-    // Calculate overall score from our 21 categories (sum / 210 * 100) 
-    const categories = generateAll21Categories(data); // This generates 21 categories
+    // Calculate overall score from our 23 categories (sum / 230 * 100) 
+    const categories = generateAll23Categories(data); // 23 categories total
     const categorySum = categories.reduce((sum, cat) => sum + cat.score, 0);
-    const calculatedScore = Math.round((categorySum / 210) * 100); // 21 categories * 10 max each = 210, scale to 100
+    const calculatedScore = Math.round((categorySum / 230) * 100); // 23 categories * 10 max each = 230, scale to 100
     let score = calculatedScore;
-    console.log(`Calculated overall score from 21 categories: ${calculatedScore} (sum: ${categorySum}/210)`);
+    console.log(`Calculated overall score from 23 categories: ${calculatedScore} (sum: ${categorySum}/230)`);
     
     console.log(`Using ATS score: ${score}`);
     
@@ -1076,9 +1118,9 @@ function displaySidebarCategories(data) {
     completedList.innerHTML = '';
     console.log('📊 DEBUG: Cleared existing content');
     
-    console.log('📊 DEBUG: Calling generateAll21Categories...');
-    // Generate ALL 21 ATS categories based on actual analysis data
-    const allCategories = generateAll21Categories(data);
+    console.log('📊 DEBUG: Calling generateAll23Categories...');
+    // Generate ALL 23 ATS categories based on actual analysis data
+    const allCategories = generateAll23Categories(data);
     console.log('📊 DEBUG: Generated categories:', {
         count: allCategories.length,
         categories: allCategories.map(cat => ({ name: cat.name, score: cat.score }))
@@ -2637,6 +2679,149 @@ function analyzeSummarySection(resumeText) {
     
     
     return Math.max(score, 0); // Ensure minimum 0
+}
+
+/**
+ * Analyze date format consistency and chronological order
+ */
+function analyzeDates(resumeText) {
+    console.log('🔍 DATES: Starting date analysis...');
+    let score = 10; // Start with perfect score
+    
+    // Extract all dates from the resume
+    const datePatterns = [
+        /\b(0[1-9]|1[0-2])\/\d{4}\b/g,           // MM/YYYY format
+        /\b(0[1-9]|1[0-2])-\d{4}\b/g,            // MM-YYYY format  
+        /\b\d{1,2}\/\d{4}\b/g,                    // M/YYYY format
+        /\b\d{1,2}-\d{4}\b/g,                     // M-YYYY format
+        /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}\b/gi, // Month YYYY
+        /\b\d{4}\s*[-–]\s*\d{4}\b/g,             // YYYY - YYYY
+        /\b\d{4}\s*[-–]\s*(Present|Ongoing|Current)\b/gi, // YYYY - Present
+        /\b(Present|Ongoing|Current)\b/gi         // Present/Ongoing/Current
+    ];
+    
+    const allDates = [];
+    const formatTypes = [];
+    
+    // Extract dates and their formats
+    datePatterns.forEach((pattern, index) => {
+        const matches = resumeText.match(pattern) || [];
+        matches.forEach(match => {
+            allDates.push(match.trim());
+            formatTypes.push(index); // Track which format was used
+        });
+    });
+    
+    console.log('🔍 DATES: Found dates:', allDates);
+    console.log('🔍 DATES: Format types:', formatTypes);
+    
+    // Check date format consistency
+    const uniqueFormats = [...new Set(formatTypes)];
+    if (uniqueFormats.length > 1) {
+        const inconsistencies = formatTypes.length - formatTypes.filter(f => f === formatTypes[0]).length;
+        const penalty = Math.min(inconsistencies * 2, 8); // Max 8 points penalty
+        score -= penalty;
+        console.log('🔍 DATES: Date format inconsistencies found:', inconsistencies, 'Penalty:', penalty);
+    } else {
+        console.log('🔍 DATES: Date formats are consistent');
+    }
+    
+    // Check chronological order in experience section
+    const chronologyPenalty = checkChronologicalOrder(resumeText);
+    score -= chronologyPenalty;
+    
+    const finalScore = Math.max(score, 0);
+    console.log('🔍 DATES: Final date score:', finalScore);
+    return finalScore;
+}
+
+/**
+ * Check if experience section is in reverse chronological order
+ */
+function checkChronologicalOrder(resumeText) {
+    console.log('🔍 DATES CHRONO: Checking chronological order...');
+    
+    // Extract experience section
+    const experienceSection = extractExperienceSection(resumeText);
+    if (!experienceSection) {
+        console.log('🔍 DATES CHRONO: No experience section found');
+        return 0;
+    }
+    
+    // Find year patterns in experience section
+    const yearPattern = /\b(19|20)\d{2}\b/g;
+    const years = [];
+    let match;
+    
+    while ((match = yearPattern.exec(experienceSection)) !== null) {
+        const year = parseInt(match[0]);
+        if (year >= 1990 && year <= new Date().getFullYear() + 1) { // Reasonable year range
+            years.push(year);
+        }
+    }
+    
+    console.log('🔍 DATES CHRONO: Extracted years from experience:', years);
+    
+    if (years.length < 2) {
+        console.log('🔍 DATES CHRONO: Not enough years to check order');
+        return 0; // Not enough data to verify order
+    }
+    
+    // Check if years are in reverse chronological order (most recent first)
+    let isReverseChronological = true;
+    for (let i = 0; i < years.length - 1; i++) {
+        if (years[i] < years[i + 1]) {
+            isReverseChronological = false;
+            break;
+        }
+    }
+    
+    if (!isReverseChronological) {
+        console.log('🔍 DATES CHRONO: Experience is NOT in reverse chronological order - applying 5 point penalty');
+        return 5;
+    }
+    
+    console.log('🔍 DATES CHRONO: Experience is in correct reverse chronological order');
+    return 0;
+}
+
+/**
+ * Analyze action verb repetition
+ */
+function analyzeRepetition(resumeText) {
+    console.log('🔍 REPETITION: Starting repetition analysis...');
+    let score = 10; // Start with perfect score
+    
+    // Extract all action verbs from the resume
+    const foundVerbs = extractActionVerbsFromText(resumeText);
+    console.log('🔍 REPETITION: Found action verbs:', foundVerbs);
+    
+    // Count occurrences of each verb
+    const verbCounts = {};
+    foundVerbs.forEach(verb => {
+        const lowerVerb = verb.toLowerCase();
+        verbCounts[lowerVerb] = (verbCounts[lowerVerb] || 0) + 1;
+    });
+    
+    console.log('🔍 REPETITION: Verb counts:', verbCounts);
+    
+    // Apply penalty for repetitions (beyond first use)
+    let totalRepetitions = 0;
+    Object.values(verbCounts).forEach(count => {
+        if (count > 1) {
+            totalRepetitions += (count - 1); // Count repetitions beyond first use
+        }
+    });
+    
+    const penalty = Math.min(totalRepetitions * 2, 10); // Max 10 points penalty
+    score -= penalty;
+    
+    console.log('🔍 REPETITION: Total repetitions found:', totalRepetitions);
+    console.log('🔍 REPETITION: Penalty applied:', penalty);
+    
+    const finalScore = Math.max(score, 0);
+    console.log('🔍 REPETITION: Final repetition score:', finalScore);
+    return finalScore;
 }
 
 /**
