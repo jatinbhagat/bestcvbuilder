@@ -777,79 +777,81 @@ function hasQuantifiableData(point) {
 // Analyze bullet point usage vs paragraphs
 function analyzeBulletUsage(resumeText) {
     console.log('🔍 USE OF BULLETS: Starting analysis...');
-    let score = 10; // Start with perfect score
     const lines = resumeText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     console.log('🔍 USE OF BULLETS: Total lines found:', lines.length);
     
-    let longParagraphCount = 0;
-    let currentParagraph = '';
-    let currentLineCount = 0;
+    let bulletCount = 0;
+    let paragraphBlockCount = 0;
+    let totalContentLines = 0;
+    let inExperienceSection = false;
     
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         
-        // Skip headers/section titles (typically short and uppercase or title case)
+        // Skip headers but track if we're in experience section
         if (isHeaderLine(line)) {
-            // End current paragraph if any
-            if (currentLineCount > 2) {
-                longParagraphCount++;
-            }
-            currentParagraph = '';
-            currentLineCount = 0;
+            const lowerLine = line.toLowerCase();
+            inExperienceSection = lowerLine.includes('experience') || lowerLine.includes('work') || lowerLine.includes('employment');
+            console.log(`🔍 USE OF BULLETS: Header detected: "${line}" -> inExperience: ${inExperienceSection}`);
             continue;
         }
         
-        // Check if this line starts a new bullet point - expanded patterns
-        const isBulletPoint = /^[\s]*[•·\*\-\+\>]\s/.test(line) || 
-                             /^\s*\d+[\.\)]\s/.test(line) ||
-                             /^[\s]*[\u2022\u2023\u25E6\u2043\u2219]\s/.test(line) || // Unicode bullets
-                             (line.startsWith('•') || line.startsWith('-') || line.startsWith('*')) ||
-                             // Also detect typical bullet-style content without explicit symbols
-                             (/^[A-Z][a-z]+/.test(line) && line.length > 30 && line.length < 200);
-        
-        console.log(`🔍 USE OF BULLETS: Line ${i} bullet check: "${line.substring(0, 50)}..." -> ${isBulletPoint}`);
-        
-        if (isBulletPoint) {
-            // End current paragraph if any
-            if (currentLineCount > 2) {
-                longParagraphCount++;
-            }
-            // Start new bullet tracking
-            currentParagraph = line;
-            currentLineCount = 1;
-        } else if (currentParagraph) {
-            // Continuation of current paragraph/bullet
-            currentLineCount++;
-            currentParagraph += ' ' + line;
-        } else {
-            // Start of new paragraph
-            currentParagraph = line;
-            currentLineCount = 1;
+        // Skip contact info, dates, and short descriptive lines
+        if (line.length < 20 || /^\d+\/\d+|@|•\s*\w+,\s*\w+/.test(line)) {
+            continue;
         }
         
-        // Check if we're at end of a paragraph (empty line follows or end of content)
-        const isEndOfParagraph = (i === lines.length - 1) || 
-                                 (i + 1 < lines.length && lines[i + 1].trim() === '') ||
-                                 (i + 1 < lines.length && isHeaderLine(lines[i + 1]));
+        totalContentLines++;
         
-        if (isEndOfParagraph && currentLineCount > 2) {
-            longParagraphCount++;
-            currentParagraph = '';
-            currentLineCount = 0;
+        // Check if this line starts with a bullet point
+        const isBulletPoint = /^[\s]*[•·\*\-\+\>]\s/.test(line) || 
+                             /^\s*\d+[\.\)]\s/.test(line) ||
+                             /^[\s]*[\u2022\u2023\u25E6\u2043\u2219]\s/.test(line) ||
+                             line.startsWith('•') || line.startsWith('- ') || line.startsWith('* ');
+        
+        console.log(`🔍 USE OF BULLETS: Line ${i} (${inExperienceSection ? 'EXP' : 'OTHER'}): "${line.substring(0, 50)}..." -> bullet: ${isBulletPoint}`);
+        
+        if (isBulletPoint) {
+            bulletCount++;
+        } else if (inExperienceSection && line.length > 50) {
+            // This is likely a paragraph-style responsibility in experience section
+            paragraphBlockCount++;
+            console.log(`🔍 USE OF BULLETS: Paragraph block detected in experience: "${line.substring(0, 50)}..."`);
         }
     }
     
-    // Deduct 2 points for each long paragraph (>2 lines)
-    console.log('🔍 USE OF BULLETS: Long paragraphs found:', longParagraphCount);
-    console.log('🔍 USE OF BULLETS: Score before penalty:', score);
+    console.log('🔍 USE OF BULLETS: Analysis summary:');
+    console.log('🔍 USE OF BULLETS: - Total content lines:', totalContentLines);
+    console.log('🔍 USE OF BULLETS: - Bullet points found:', bulletCount);
+    console.log('🔍 USE OF BULLETS: - Paragraph blocks in experience:', paragraphBlockCount);
     
-    score -= (longParagraphCount * 2);
-    console.log('🔍 USE OF BULLETS: Penalty applied (2 points per long paragraph):', longParagraphCount * 2);
+    // Calculate score based on bullet usage
+    let score = 0;
+    
+    if (totalContentLines === 0) {
+        score = 5; // Default if no content
+    } else {
+        // Reward bullet usage, penalize paragraph blocks
+        const bulletRatio = bulletCount / Math.max(totalContentLines, 1);
+        
+        if (bulletRatio > 0.7) score = 10;      // >70% bullets = excellent
+        else if (bulletRatio > 0.5) score = 8; // >50% bullets = good  
+        else if (bulletRatio > 0.3) score = 6; // >30% bullets = fair
+        else if (bulletRatio > 0.1) score = 4; // >10% bullets = poor
+        else score = 2;                        // <10% bullets = very poor
+        
+        // Apply penalty for paragraph blocks in experience sections
+        score -= Math.min(paragraphBlockCount, 5); // Max 5 point penalty
+    }
     
     const finalScore = Math.max(score, 0);
-    console.log('🔍 USE OF BULLETS: Final score:', finalScore);
+    console.log('🔍 USE OF BULLETS: Final score calculation:');
+    console.log('🔍 USE OF BULLETS: - Bullet ratio:', (bulletCount / Math.max(totalContentLines, 1) * 100).toFixed(1) + '%');
+    console.log('🔍 USE OF BULLETS: - Base score from ratio:', score + Math.min(paragraphBlockCount, 5));
+    console.log('🔍 USE OF BULLETS: - Paragraph penalty:', Math.min(paragraphBlockCount, 5));
+    console.log('🔍 USE OF BULLETS: - Final score:', finalScore);
     
-    return finalScore; // Minimum score is 0
+    return finalScore;
 }
 
 // Helper function to identify header lines
