@@ -31,31 +31,65 @@ let actionVerbsConfig = null;
  * Initialize the results page with new sidebar design
  */
 async function init() {
+    console.log('🚀 DEBUG: Starting result.js initialization...');
+    
     try {
+        console.log('🔍 DEBUG: Step 1 - Loading analysis data from session storage...');
+        
         // Load analysis data from session storage
         const storedData = sessionStorage.getItem('atsAnalysis');
         if (!storedData) {
-            console.error('No analysis data found in session storage');
+            console.error('❌ DEBUG: No analysis data found in session storage');
+            console.log('🔍 DEBUG: Available session storage keys:', Object.keys(sessionStorage));
             window.location.href = './index.html';
             return;
         }
 
-        analysisData = JSON.parse(storedData);
-        console.log('Analysis data loaded:', analysisData);
-
-        // Load config files for analysis
-        await loadConfigs();
-
-        // Display results in new sidebar format
-        displayOverallScore(analysisData);
-        displaySidebarCategories(analysisData);
-        displayMainIssuesList(analysisData);
-        displayStrengths(analysisData);
+        console.log('✅ DEBUG: Step 1 Complete - Found stored data, length:', storedData.length);
         
+        console.log('🔍 DEBUG: Step 2 - Parsing JSON data...');
+        analysisData = JSON.parse(storedData);
+        console.log('✅ DEBUG: Step 2 Complete - Analysis data loaded:', {
+            hasScore: !!analysisData.score,
+            score: analysisData.score,
+            hasContent: !!analysisData.content,
+            contentLength: analysisData.content?.length || 0,
+            keys: Object.keys(analysisData)
+        });
+
+        console.log('🔍 DEBUG: Step 3 - Loading config files...');
+        await loadConfigs();
+        console.log('✅ DEBUG: Step 3 Complete - Config files loaded');
+
+        console.log('🔍 DEBUG: Step 4 - Displaying overall score...');
+        displayOverallScore(analysisData);
+        console.log('✅ DEBUG: Step 4 Complete - Overall score displayed');
+        
+        console.log('🔍 DEBUG: Step 5 - Displaying sidebar categories...');
+        displaySidebarCategories(analysisData);
+        console.log('✅ DEBUG: Step 5 Complete - Sidebar categories displayed');
+        
+        console.log('🔍 DEBUG: Step 6 - Displaying main issues list...');
+        displayMainIssuesList(analysisData);
+        console.log('✅ DEBUG: Step 6 Complete - Main issues list displayed');
+        
+        console.log('🔍 DEBUG: Step 7 - Displaying strengths...');
+        displayStrengths(analysisData);
+        console.log('✅ DEBUG: Step 7 Complete - Strengths displayed');
+        
+        console.log('🔍 DEBUG: Step 8 - Setting up event handlers...');
         setupEventHandlers();
+        console.log('✅ DEBUG: Step 8 Complete - Event handlers setup');
+        
+        console.log('🎉 DEBUG: All initialization steps completed successfully!');
 
     } catch (error) {
-        console.error('Error initializing results page:', error);
+        console.error('❌ DEBUG: Error in initialization step:', error);
+        console.error('❌ DEBUG: Full error details:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        });
         // DON'T redirect - just show what we can
         displayFallbackResults();
     }
@@ -99,29 +133,49 @@ function displayFallbackResults() {
  * Load configuration files
  */
 async function loadConfigs() {
+    console.log('🔧 DEBUG: Starting config file loading...');
+    
     try {
-        console.log('Loading config files...');
+        console.log('🔧 DEBUG: Config Step 1 - Loading skills-buzzwords.json...');
         
         // Load skills-buzzwords.json
         const skillsResponse = await fetch('./config/skills-buzzwords.json');
+        console.log('🔧 DEBUG: Skills response status:', skillsResponse.status, skillsResponse.statusText);
+        
         if (skillsResponse.ok) {
             skillsBuzzwordsConfig = await skillsResponse.json();
-            console.log('✅ Skills-buzzwords config loaded');
+            console.log('✅ DEBUG: Skills-buzzwords config loaded successfully:', {
+                hasConfig: !!skillsBuzzwordsConfig,
+                keys: skillsBuzzwordsConfig ? Object.keys(skillsBuzzwordsConfig) : []
+            });
         } else {
-            console.warn('⚠️ Failed to load skills-buzzwords.json');
+            console.warn('⚠️ DEBUG: Failed to load skills-buzzwords.json - Status:', skillsResponse.status);
         }
+        
+        console.log('🔧 DEBUG: Config Step 2 - Loading action-verbs.json...');
         
         // Load action-verbs.json  
         const verbsResponse = await fetch('./config/action-verbs.json');
+        console.log('🔧 DEBUG: Verbs response status:', verbsResponse.status, verbsResponse.statusText);
+        
         if (verbsResponse.ok) {
             actionVerbsConfig = await verbsResponse.json();
-            console.log('✅ Action-verbs config loaded');
+            console.log('✅ DEBUG: Action-verbs config loaded successfully:', {
+                hasConfig: !!actionVerbsConfig,
+                keys: actionVerbsConfig ? Object.keys(actionVerbsConfig) : []
+            });
         } else {
-            console.warn('⚠️ Failed to load action-verbs.json');
+            console.warn('⚠️ DEBUG: Failed to load action-verbs.json - Status:', verbsResponse.status);
         }
         
+        console.log('🔧 DEBUG: Config loading completed');
+        
     } catch (error) {
-        console.warn('⚠️ Error loading config files:', error);
+        console.error('❌ DEBUG: Error loading config files:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        });
     }
 }
 
@@ -129,8 +183,23 @@ async function loadConfigs() {
  * Generate exactly 21 ATS categories based on real analysis data
  */
 function generateAll21Categories(data) {
+    console.log('🏗️ DEBUG: Starting generateAll21Categories with data:', {
+        hasData: !!data,
+        hasContent: !!(data?.content),
+        hasText: !!(data?.text),
+        contentLength: data?.content?.length || 0,
+        textLength: data?.text?.length || 0
+    });
+    
     const resumeText = data.content || data.text || "";
+    console.log('🏗️ DEBUG: Resume text extracted, length:', resumeText.length);
+    
+    if (!resumeText) {
+        console.warn('⚠️ DEBUG: No resume text found, using fallback');
+    }
+    
     const categories = [];
+    console.log('🏗️ DEBUG: Starting category generation...');
     
     // 1. Contact Information
     categories.push({
@@ -293,12 +362,28 @@ function generateAll21Categories(data) {
     });
     
     // 21. Personal Pronouns
-    categories.push({
-        name: 'Personal Pronouns',
-        score: analyzePersonalPronouns(resumeText),
-        issue: 'Remove personal pronouns (I, me, we)',
-        impact: 'LANGUAGE'
-    });
+    try {
+        console.log('🏗️ DEBUG: Analyzing Personal Pronouns...');
+        const pronounScore = analyzePersonalPronouns(resumeText);
+        console.log('🏗️ DEBUG: Personal Pronouns score:', pronounScore);
+        categories.push({
+            name: 'Personal Pronouns',
+            score: pronounScore,
+            issue: 'Remove personal pronouns (I, me, we)',
+            impact: 'LANGUAGE'
+        });
+    } catch (error) {
+        console.error('❌ DEBUG: Error in Personal Pronouns analysis:', error);
+        categories.push({
+            name: 'Personal Pronouns',
+            score: 5, // fallback score
+            issue: 'Remove personal pronouns (I, me, we)',
+            impact: 'LANGUAGE'
+        });
+    }
+    
+    console.log('🏗️ DEBUG: Category generation completed, returning', categories.length, 'categories');
+    console.log('🏗️ DEBUG: Final categories:', categories.map(cat => ({ name: cat.name, score: cat.score })));
     
     return categories;
 }
@@ -816,21 +901,41 @@ function displayOverallScore(data) {
  * Display categorized issues in the sidebar with comprehensive scoring
  */
 function displaySidebarCategories(data) {
-    if (!topFixesList || !completedList) return;
+    console.log('📊 DEBUG: Starting displaySidebarCategories...');
     
-    console.log('🔍 displaySidebarCategories called with data:', data);
+    if (!topFixesList || !completedList) {
+        console.error('❌ DEBUG: Missing DOM elements - topFixesList:', !!topFixesList, 'completedList:', !!completedList);
+        return;
+    }
+    
+    console.log('📊 DEBUG: DOM elements found, proceeding with data:', {
+        hasData: !!data,
+        dataKeys: data ? Object.keys(data) : []
+    });
     
     // Clear existing content
     topFixesList.innerHTML = '';
     completedList.innerHTML = '';
+    console.log('📊 DEBUG: Cleared existing content');
     
+    console.log('📊 DEBUG: Calling generateAll21Categories...');
     // Generate ALL 21 ATS categories based on actual analysis data
     const allCategories = generateAll21Categories(data);
+    console.log('📊 DEBUG: Generated categories:', {
+        count: allCategories.length,
+        categories: allCategories.map(cat => ({ name: cat.name, score: cat.score }))
+    });
     
     // Divide into High Priority (<6), Need Fixes (6-8), Completed (9-10)
     const topFixes = allCategories.filter(cat => cat.score < 6); // High Priority
     const needFixes = allCategories.filter(cat => cat.score >= 6 && cat.score < 9); // Need Fixes
     const completed = allCategories.filter(cat => cat.score >= 9); // Completed
+    
+    console.log('📊 DEBUG: Categories divided:', {
+        topFixes: topFixes.length,
+        needFixes: needFixes.length,
+        completed: completed.length
+    });
     
     console.log('🔍 High Priority (<6):', topFixes.length, topFixes);
     console.log('🔍 Need Fixes (6-8):', needFixes.length, needFixes);
@@ -3558,10 +3663,33 @@ function handleError(error, context = '') {
     main.insertBefore(errorDiv, main.firstChild);
 }
 
+// Debug: Log when result.js loads
+console.log('🔄 DEBUG: result.js module loaded');
+console.log('🔍 DEBUG: DOM readyState:', document.readyState);
+console.log('🔍 DEBUG: Available DOM elements check:');
+console.log('  - atsScore element:', !!document.getElementById('atsScore'));
+console.log('  - scoreCircle element:', !!document.getElementById('scoreCircle'));
+console.log('  - topFixesList element:', !!document.getElementById('topFixesList'));
+console.log('  - completedList element:', !!document.getElementById('completedList'));
+console.log('  - issuesList element:', !!document.getElementById('issuesList'));
+console.log('  - strengthsList element:', !!document.getElementById('strengthsList'));
+
 // Initialize when DOM is loaded and ActionVerbs is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeWithActionVerbs);
+    console.log('🔍 DEBUG: DOM still loading, adding event listener');
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('🔍 DEBUG: DOMContentLoaded event fired');
+        console.log('🔍 DEBUG: Re-checking DOM elements after DOMContentLoaded:');
+        console.log('  - atsScore element:', !!document.getElementById('atsScore'));
+        console.log('  - scoreCircle element:', !!document.getElementById('scoreCircle'));
+        console.log('  - topFixesList element:', !!document.getElementById('topFixesList'));
+        console.log('  - completedList element:', !!document.getElementById('completedList'));
+        console.log('  - issuesList element:', !!document.getElementById('issuesList'));
+        console.log('  - strengthsList element:', !!document.getElementById('strengthsList'));
+        initializeWithActionVerbs();
+    });
 } else {
+    console.log('🔍 DEBUG: DOM already loaded, initializing directly');
     initializeWithActionVerbs();
 }
 
@@ -3569,16 +3697,27 @@ if (document.readyState === 'loading') {
  * Initialize application with ActionVerbs support
  */
 async function initializeWithActionVerbs() {
+    console.log('🔧 DEBUG: Starting initializeWithActionVerbs...');
+    
     try {
+        console.log('🔧 DEBUG: Checking for ActionVerbs module:', !!window.ActionVerbs);
+        
         // Ensure ActionVerbs is loaded
         if (window.ActionVerbs) {
+            console.log('🔧 DEBUG: Loading ActionVerbs...');
             await window.ActionVerbs.loadActionVerbs();
+            console.log('🔧 DEBUG: ActionVerbs loaded successfully');
+        } else {
+            console.log('🔧 DEBUG: ActionVerbs not available, proceeding without it');
         }
-        console.log('ActionVerbs module loaded, initializing results page');
+        
+        console.log('🔧 DEBUG: ActionVerbs setup complete, initializing results page');
     } catch (error) {
+        console.error('❌ DEBUG: Failed to load ActionVerbs:', error);
         console.warn('Failed to load ActionVerbs, proceeding with fallback analysis:', error);
     }
     
+    console.log('🔧 DEBUG: Calling main init() function...');
     // Initialize the main application
     init();
 }
