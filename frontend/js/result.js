@@ -66,11 +66,11 @@ async function init() {
         console.log('✅ DEBUG: Step 4 Complete - Overall score displayed');
         
         console.log('🔍 DEBUG: Step 5 - Displaying sidebar categories...');
-        displaySidebarCategories(analysisData);
+        const categoryData = displaySidebarCategories(analysisData);
         console.log('✅ DEBUG: Step 5 Complete - Sidebar categories displayed');
         
         console.log('🔍 DEBUG: Step 6 - Displaying main issues list...');
-        displayMainIssuesList(analysisData);
+        displayMainIssuesList(analysisData, categoryData);
         console.log('✅ DEBUG: Step 6 Complete - Main issues list displayed');
         
         console.log('🔍 DEBUG: Step 7 - Displaying strengths...');
@@ -1000,6 +1000,14 @@ function displaySidebarCategories(data) {
     if (markedAsDone) {
         markedAsDone.textContent = `${completed.length} COMPLETED OF 21`;
     }
+    
+    // Return the category data for use by other functions
+    return {
+        topFixes,
+        needFixes,
+        completed,
+        allCategories
+    };
 }
 
 /**
@@ -3042,13 +3050,27 @@ function analyzeDriveAndInitiative(resumeText) {
 /**
  * Display main issues list with cards and FIX buttons
  */
-function displayMainIssuesList(data) {
+function displayMainIssuesList(data, categoryData = null) {
     if (!issuesList) return;
     
     issuesList.innerHTML = '';
     
-    // Only show issues that need fixing (score < 9)
-    const issuesNeedingFix = allIssues.filter(issue => issue.score && issue.score < 9);
+    // Use provided category data if available, otherwise fall back to allIssues
+    let issuesNeedingFix, topFixes, needFixes, completed;
+    
+    if (categoryData) {
+        // Use the consistent data from displaySidebarCategories
+        topFixes = categoryData.topFixes;
+        needFixes = categoryData.needFixes;
+        completed = categoryData.completed;
+        issuesNeedingFix = [...topFixes, ...needFixes]; // Combined issues needing fix
+    } else {
+        // Fallback to allIssues (legacy behavior)
+        issuesNeedingFix = allIssues.filter(issue => issue.score && issue.score < 9);
+        topFixes = allIssues.filter(i => i.score < 6);
+        needFixes = allIssues.filter(i => i.score >= 6 && i.score <= 8);
+        completed = allIssues.filter(i => i.score >= 9);
+    }
     
     if (issuesNeedingFix.length === 0) {
         issuesList.innerHTML = `
@@ -3110,15 +3132,15 @@ function displayMainIssuesList(data) {
         </div>
         <div class="grid grid-cols-3 gap-4 text-center">
             <div>
-                <div class="text-2xl font-bold text-red-600">${allIssues.filter(i => i.score < 6).length}</div>
+                <div class="text-2xl font-bold text-red-600">${topFixes.length}</div>
                 <div class="text-xs text-gray-600 uppercase">High Priority</div>
             </div>
             <div>
-                <div class="text-2xl font-bold text-yellow-600">${allIssues.filter(i => i.score >= 6 && i.score <= 8).length}</div>
+                <div class="text-2xl font-bold text-yellow-600">${needFixes.length}</div>
                 <div class="text-xs text-gray-600 uppercase">Need Fixes</div>
             </div>
             <div>
-                <div class="text-2xl font-bold text-green-600">${allIssues.filter(i => i.score >= 9).length}</div>
+                <div class="text-2xl font-bold text-green-600">${completed.length}</div>
                 <div class="text-xs text-gray-600 uppercase">Completed</div>
             </div>
         </div>
