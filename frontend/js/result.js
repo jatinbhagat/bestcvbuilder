@@ -2408,6 +2408,7 @@ function analyzeSummarySection(resumeText) {
     
     // 4. Quantification (-2 points if missing)
     const hasQuant = hasQuantification(summaryContent);
+    console.log('🔍 PROFESSIONAL SUMMARY: Quantification check:', hasQuant, 'for content:', summaryContent.substring(0, 200));
     if (!hasQuant) score -= 2;
     
     // 5. Brevity (-2 points if not appropriate length)
@@ -2486,18 +2487,84 @@ function extractSummarySection(resumeText) {
         
         for (const endMarker of endMarkers) {
             const endIndex = remainingText.toLowerCase().indexOf(endMarker);
-            if (endIndex !== -1 && endIndex < summaryEnd && endIndex > usedMarker.length + 10) {
-                summaryEnd = endIndex;
-                console.log('🔍 SUMMARY EXTRACTION: Found end marker:', endMarker, 'at position:', endIndex);
+            console.log(`🔍 SUMMARY EXTRACTION: Checking end marker "${endMarker}" at position:`, endIndex);
+            
+            // Only use end marker if it's far enough from the start AND looks like a section header
+            if (endIndex !== -1 && endIndex < summaryEnd && endIndex > usedMarker.length + 200) {
+                // Check if this is actually a section header (standalone line)
+                const beforeEndMarker = remainingText.substring(Math.max(0, endIndex - 50), endIndex);
+                const afterEndMarker = remainingText.substring(endIndex, endIndex + 50);
+                
+                console.log(`🔍 SUMMARY EXTRACTION: Context around "${endMarker}":`, {
+                    before: beforeEndMarker,
+                    after: afterEndMarker
+                });
+                
+                // Only break if it looks like a section header (has line breaks around it)
+                if (beforeEndMarker.includes('\n') && afterEndMarker.includes('\n')) {
+                    summaryEnd = endIndex;
+                    console.log('🔍 SUMMARY EXTRACTION: Using end marker:', endMarker, 'at position:', endIndex);
+                } else {
+                    console.log('🔍 SUMMARY EXTRACTION: Skipping end marker - not a section header');
+                }
+            } else if (endIndex !== -1) {
+                console.log(`🔍 SUMMARY EXTRACTION: Skipping end marker "${endMarker}" - too close to start (${endIndex} <= ${usedMarker.length + 200})`);
             }
         }
         
         let extractedSummary = remainingText.substring(usedMarker.length, summaryEnd).trim();
-        console.log('🔍 SUMMARY EXTRACTION: Raw extracted text:', extractedSummary);
+        console.log('🔍 SUMMARY EXTRACTION: Raw extracted text (length:', extractedSummary.length, '):', extractedSummary);
+        
+        // If summary seems too short, try a different approach - look for actual section headers
+        if (extractedSummary.length < 100) {
+            console.log('🔍 SUMMARY EXTRACTION: Summary too short, trying section header approach...');
+            
+            // Look for line-based section headers instead
+            const lines = remainingText.split('\n');
+            let summaryLines = [];
+            let foundStart = false;
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                
+                if (!foundStart) {
+                    // Skip the marker line itself
+                    if (line.toLowerCase().includes(usedMarker)) {
+                        foundStart = true;
+                        continue;
+                    }
+                    continue;
+                }
+                
+                // Check if this line is a section header (all caps, short, likely header)
+                const isHeader = (line.length > 0 && line.length < 30 && 
+                                 (line === line.toUpperCase() || 
+                                  ['EDUCATION', 'EXPERIENCE', 'SKILLS', 'PROFESSIONAL EXPERIENCE', 'WORK HISTORY'].includes(line.toUpperCase())));
+                
+                console.log(`🔍 SUMMARY EXTRACTION: Line "${line}" -> is header: ${isHeader}`);
+                
+                if (isHeader && summaryLines.length > 0) {
+                    console.log('🔍 SUMMARY EXTRACTION: Found section header, stopping extraction');
+                    break;
+                }
+                
+                if (line.length > 0) {
+                    summaryLines.push(line);
+                }
+            }
+            
+            const lineBased = summaryLines.join(' ').trim();
+            console.log('🔍 SUMMARY EXTRACTION: Line-based extraction (length:', lineBased.length, '):', lineBased);
+            
+            if (lineBased.length > extractedSummary.length) {
+                extractedSummary = lineBased;
+                console.log('🔍 SUMMARY EXTRACTION: Using line-based extraction as it\'s longer');
+            }
+        }
         
         // Clean up text that may have missing spaces (common in PDF extraction)
         extractedSummary = cleanupExtractedText(extractedSummary);
-        console.log('🔍 SUMMARY EXTRACTION: Cleaned extracted text:', extractedSummary);
+        console.log('🔍 SUMMARY EXTRACTION: Final cleaned extracted text (length:', extractedSummary.length, '):', extractedSummary);
         
         return { content: extractedSummary, hasHeading: true };
     }
