@@ -2,8 +2,11 @@
  * Results page JavaScript for displaying ATS analysis results
  * Handles score display, upgrade flow, and user interactions
  * Updated with sidebar layout to match screenshot design
- * Clean version - Aug 14, 2025
+ * DEBUG VERSION - Professional Summary scoring debug enabled - Aug 16, 2025
  */
+
+console.log('🚀 PROFESSIONAL SUMMARY DEBUG VERSION LOADED');
+console.log('🚀 This version has comprehensive debugging for Professional Summary scoring');
 
 import { supabase, DatabaseService } from './supabase.js';
 import { getScoreDescription, getImprovementSuggestions, calculatePotentialImprovement } from './atsAnalysis.js';
@@ -2330,7 +2333,9 @@ function analyzeSummarySection(resumeText) {
         score -= 1;
     }
     
-    console.log('Summary scoring breakdown:', {
+    console.log('🔍 PROFESSIONAL SUMMARY DEBUG - Full Analysis:', {
+        extractedContent: summaryContent,
+        contentLength: summaryContent.length,
         hasExperience: hasExp,
         hasSkills: hasSkills,
         hasBuzzWords: hasBuzz,
@@ -2340,6 +2345,15 @@ function analyzeSummarySection(resumeText) {
         totalScore: Math.max(score, 0)
     });
     
+    // Individual function detailed testing
+    console.log('🔍 DETAILED FUNCTION TESTING:');
+    console.log('hasYearsOfExperience result:', hasYearsOfExperience(summaryContent));
+    console.log('hasKeySkills result:', hasKeySkills(summaryContent));
+    console.log('hasBuzzWords result:', hasBuzzWords(summaryContent));
+    console.log('hasQuantification result:', hasQuantification(summaryContent));
+    console.log('checkBrevity result:', checkBrevity(summaryContent));
+    console.log('checkBrevityRelaxed result:', checkBrevityRelaxed(summaryContent));
+    
     return Math.max(score, 0); // Ensure minimum 0
 }
 
@@ -2347,8 +2361,14 @@ function analyzeSummarySection(resumeText) {
  * Extract summary/objective section from resume
  */
 function extractSummarySection(resumeText) {
+    console.log('🔍 EXTRACT SUMMARY: Starting extraction from resume text (length:', resumeText.length, ')');
+    console.log('🔍 EXTRACT SUMMARY: First 500 chars:', resumeText.substring(0, 500));
+    
     const text = resumeText.toLowerCase();
     const lines = resumeText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+    
+    console.log('🔍 EXTRACT SUMMARY: Split into', lines.length, 'lines');
+    console.log('🔍 EXTRACT SUMMARY: First 10 lines:', lines.slice(0, 10));
     
     // Look for explicit summary section markers
     const summaryMarkers = [
@@ -2359,16 +2379,21 @@ function extractSummarySection(resumeText) {
     let summaryStart = -1;
     let usedMarker = '';
     
+    console.log('🔍 EXTRACT SUMMARY: Looking for markers in lowercase text...');
     for (const marker of summaryMarkers) {
         const index = text.indexOf(marker);
+        console.log(`🔍 EXTRACT SUMMARY: Marker "${marker}" found at index:`, index);
         if (index !== -1 && (summaryStart === -1 || index < summaryStart)) {
             summaryStart = index;
             usedMarker = marker;
         }
     }
     
+    console.log('🔍 EXTRACT SUMMARY: Best marker found:', usedMarker, 'at position:', summaryStart);
+    
     if (summaryStart !== -1) {
         // Found explicit summary section
+        console.log('🔍 SUMMARY EXTRACTION: Found summary marker:', usedMarker, 'at position:', summaryStart);
         const remainingText = resumeText.substring(summaryStart);
         const endMarkers = ['experience', 'work history', 'employment', 'education', 'skills', 'technical skills', 'core competencies'];
         let summaryEnd = remainingText.length;
@@ -2377,18 +2402,22 @@ function extractSummarySection(resumeText) {
             const endIndex = remainingText.toLowerCase().indexOf(endMarker);
             if (endIndex !== -1 && endIndex < summaryEnd && endIndex > usedMarker.length + 10) {
                 summaryEnd = endIndex;
+                console.log('🔍 SUMMARY EXTRACTION: Found end marker:', endMarker, 'at position:', endIndex);
             }
         }
         
         let extractedSummary = remainingText.substring(usedMarker.length, summaryEnd).trim();
+        console.log('🔍 SUMMARY EXTRACTION: Raw extracted text:', extractedSummary);
         
         // Clean up text that may have missing spaces (common in PDF extraction)
         extractedSummary = cleanupExtractedText(extractedSummary);
+        console.log('🔍 SUMMARY EXTRACTION: Cleaned extracted text:', extractedSummary);
         
         return { content: extractedSummary, hasHeading: true };
     }
     
     // No explicit heading - look for intro lines at the start (after contact info)
+    console.log('🔍 EXTRACT SUMMARY: No explicit summary section found, looking for intro lines...');
     let startLine = 0;
     
     // Skip contact information lines (name, email, phone, address)
@@ -2404,45 +2433,72 @@ function extractSummarySection(resumeText) {
     for (let i = 0; i < Math.min(lines.length, 10); i++) {
         const line = lines[i];
         const isContactInfo = contactPatterns.some(pattern => pattern.test(line));
+        console.log(`🔍 EXTRACT SUMMARY: Line ${i}: "${line}" -> Contact info: ${isContactInfo}`);
         if (!isContactInfo && line.length > 30) {
             startLine = i;
+            console.log('🔍 EXTRACT SUMMARY: Starting summary extraction from line:', i);
             break;
         }
     }
     
     // Extract 2-8 lines that could be an intro summary
     const potentialSummaryLines = [];
+    console.log('🔍 EXTRACT SUMMARY: Extracting potential summary lines from line', startLine);
+    
     for (let i = startLine; i < Math.min(startLine + 8, lines.length); i++) {
         const line = lines[i];
         
         // Stop if we hit a section header
         const sectionHeaders = ['experience', 'work history', 'employment', 'education', 'skills', 'projects', 'certifications'];
-        if (sectionHeaders.some(header => line.toLowerCase().includes(header)) && line.length < 50) {
+        const hitSectionHeader = sectionHeaders.some(header => line.toLowerCase().includes(header)) && line.length < 50;
+        
+        console.log(`🔍 EXTRACT SUMMARY: Processing line ${i}: "${line}" (length: ${line.length}, section header: ${hitSectionHeader})`);
+        
+        if (hitSectionHeader) {
+            console.log('🔍 EXTRACT SUMMARY: Hit section header, stopping extraction');
             break;
         }
         
         // Include lines that look like summary content
-        if (line.length > 20 && !line.match(/^[A-Z\s]{2,}$/)) { // Not all caps headers
+        const isAllCapsHeader = line.match(/^[A-Z\s]{2,}$/);
+        const isGoodLength = line.length > 20;
+        
+        console.log(`🔍 EXTRACT SUMMARY: Line analysis - Good length: ${isGoodLength}, All caps header: ${!!isAllCapsHeader}`);
+        
+        if (isGoodLength && !isAllCapsHeader) {
             potentialSummaryLines.push(line);
+            console.log('🔍 EXTRACT SUMMARY: Added line to potential summary');
         }
         
         // Stop if we have enough lines and hit a clear break
-        if (potentialSummaryLines.length >= 2 && (line.length < 10 || line.match(/^[A-Z\s]{2,}$/))) {
+        if (potentialSummaryLines.length >= 2 && (line.length < 10 || isAllCapsHeader)) {
+            console.log('🔍 EXTRACT SUMMARY: Have enough lines and hit break, stopping');
             break;
         }
     }
     
     const summaryContent = potentialSummaryLines.join(' ').trim();
+    console.log('🔍 EXTRACT SUMMARY: Potential summary lines joined:', potentialSummaryLines);
+    console.log('🔍 EXTRACT SUMMARY: Combined summary content (length:', summaryContent.length, '):', summaryContent);
     
     // Return the intro summary (2-8 lines without heading)
     if (summaryContent.length > 50) {
-        return { content: cleanupExtractedText(summaryContent), hasHeading: false };
+        const cleanedContent = cleanupExtractedText(summaryContent);
+        console.log('🔍 EXTRACT SUMMARY: Returning intro summary (cleaned):', cleanedContent);
+        return { content: cleanedContent, hasHeading: false };
     }
     
     // Last resort - use first substantial paragraph
+    console.log('🔍 EXTRACT SUMMARY: Using fallback - first substantial paragraph');
     const paragraphs = resumeText.split('\n\n').filter(p => p.trim().length > 50);
+    console.log('🔍 EXTRACT SUMMARY: Found paragraphs:', paragraphs.length);
+    if (paragraphs.length > 0) {
+        console.log('🔍 EXTRACT SUMMARY: First paragraph:', paragraphs[0]);
+    }
     const fallbackContent = paragraphs[0] || '';
-    return { content: cleanupExtractedText(fallbackContent), hasHeading: false };
+    const cleanedFallback = cleanupExtractedText(fallbackContent);
+    console.log('🔍 EXTRACT SUMMARY: Returning fallback content (cleaned):', cleanedFallback);
+    return { content: cleanedFallback, hasHeading: false };
 }
 
 /**
@@ -2515,7 +2571,16 @@ function hasYearsOfExperience(summaryText) {
         /(accomplished|proven|established)\s*(professional|leader|expert)/gi
     ];
     
-    return experiencePatterns.some(pattern => pattern.test(summaryText));
+    console.log('🔍 hasYearsOfExperience testing against:', summaryText);
+    const matches = experiencePatterns.map((pattern, index) => {
+        const match = pattern.test(summaryText);
+        console.log(`Pattern ${index}: ${pattern} -> ${match}`);
+        return match;
+    });
+    
+    const result = matches.some(match => match);
+    console.log('🔍 hasYearsOfExperience final result:', result);
+    return result;
 }
 
 /**
@@ -2582,7 +2647,41 @@ function hasQuantification(summaryText) {
         /\b\d+\s*(years?|months?)\s*(of\s*)?(experience|exp)/gi  // Experience numbers
     ];
     
-    return quantificationPatterns.some(pattern => pattern.test(summaryText));
+    console.log('🔍 hasQuantification testing against:', summaryText);
+    
+    // Test specific patterns we expect to find
+    console.log('🔍 QUANTIFICATION TEST: Looking for "$10M+ ARR" pattern...');
+    const testText = '$10M+ ARR';
+    console.log('🔍 QUANTIFICATION TEST: Testing "$10M+ ARR" directly...');
+    
+    const matches = quantificationPatterns.map((pattern, index) => {
+        // Reset regex state
+        pattern.lastIndex = 0;
+        const match = pattern.test(summaryText);
+        pattern.lastIndex = 0;
+        const testMatch = pattern.test(testText);
+        
+        console.log(`Quantification Pattern ${index}: ${pattern} -> ${match} (test on "$10M+ ARR": ${testMatch})`);
+        
+        if (match) {
+            // Reset regex lastIndex and find actual matches
+            pattern.lastIndex = 0;
+            const actualMatches = summaryText.match(pattern);
+            console.log(`  -> Found matches in summary:`, actualMatches);
+        }
+        
+        if (testMatch) {
+            pattern.lastIndex = 0;
+            const testMatches = testText.match(pattern);
+            console.log(`  -> Test matches on "$10M+ ARR":`, testMatches);
+        }
+        
+        return match;
+    });
+    
+    const result = matches.some(match => match);
+    console.log('🔍 hasQuantification final result:', result);
+    return result;
 }
 
 /**
