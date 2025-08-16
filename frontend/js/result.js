@@ -603,12 +603,13 @@ function analyzeQuantifiableAchievements(resumeText) {
 
 // Extract Professional Experience section from resume
 function extractExperienceSection(resumeText) {
+    console.log('🔍 EXPERIENCE EXTRACTION: Starting experience section extraction...');
     const text = resumeText.toLowerCase();
     
-    // Experience section headers
+    // Experience section headers - prioritize more specific ones first
     const experienceHeaders = [
-        'experience', 'work experience', 'professional experience', 
-        'employment history', 'career history', 'work history'
+        'professional experience', 'work experience', 'employment history', 
+        'career history', 'work history', 'experience'
     ];
     
     // Other section headers that mark end of experience
@@ -621,12 +622,15 @@ function extractExperienceSection(resumeText) {
         'references', 'contact', 'additional information'
     ];
     
-    // Find experience section start
+    // Find experience section start - look for headers as section headers (likely at start of line)
     let experienceStart = -1;
     for (let header of experienceHeaders) {
-        const index = text.indexOf(header);
-        if (index !== -1) {
-            experienceStart = index;
+        // Look for the header at the start of a line (after newline or at beginning)
+        const headerPattern = new RegExp('(^|\\n)\\s*' + header.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*($|\\n)', 'i');
+        const match = text.match(headerPattern);
+        if (match) {
+            experienceStart = match.index + (match[1] ? match[1].length : 0);
+            console.log('🔍 EXPERIENCE EXTRACTION: Found experience header:', header, 'at position:', experienceStart);
             break;
         }
     }
@@ -659,21 +663,63 @@ function extractExperienceSection(resumeText) {
 
 // Extract individual points from experience section
 function extractExperiencePoints(experienceText) {
-    const lines = experienceText.split('\n');
-    const points = [];
+    console.log('🔍 EXPERIENCE POINTS: Starting point extraction...');
+    console.log('🔍 EXPERIENCE POINTS: Input text length:', experienceText.length);
     
-    for (let line of lines) {
-        line = line.trim();
-        if (!line) continue;
+    const lines = experienceText.split('\n');
+    console.log('🔍 EXPERIENCE POINTS: Total lines to process:', lines.length);
+    
+    const points = [];
+    let currentPoint = '';
+    
+    for (let i = 0; i < lines.length; i++) {
+        let line = lines[i].trim();
+        if (!line) {
+            // Empty line - if we have a current point, save it
+            if (currentPoint.trim()) {
+                points.push(currentPoint.trim());
+                currentPoint = '';
+            }
+            continue;
+        }
+        
+        console.log(`🔍 EXPERIENCE POINTS: Processing line ${i}: "${line}"`);
         
         // Skip job titles, company names, dates
-        if (isJobTitleOrCompany(line)) continue;
+        if (isJobTitleOrCompany(line)) {
+            console.log(`🔍 EXPERIENCE POINTS: Skipping job title/company: "${line}"`);
+            continue;
+        }
         
-        // Check if this is a bullet point or responsibility description
+        // Check if this starts a new bullet point or responsibility
         if (isBulletPoint(line) || isResponsibilityPoint(line)) {
+            // Save previous point if exists
+            if (currentPoint.trim()) {
+                points.push(currentPoint.trim());
+                console.log(`🔍 EXPERIENCE POINTS: Saved previous point: "${currentPoint.trim()}"`);
+            }
+            // Start new point
+            currentPoint = line;
+            console.log(`🔍 EXPERIENCE POINTS: Started new point: "${line}"`);
+        } else if (currentPoint) {
+            // Continuation of current point
+            currentPoint += ' ' + line;
+            console.log(`🔍 EXPERIENCE POINTS: Extended current point: "${line}"`);
+        } else {
+            // Standalone responsibility line
             points.push(line);
+            console.log(`🔍 EXPERIENCE POINTS: Added standalone point: "${line}"`);
         }
     }
+    
+    // Don't forget the last point
+    if (currentPoint.trim()) {
+        points.push(currentPoint.trim());
+        console.log(`🔍 EXPERIENCE POINTS: Saved final point: "${currentPoint.trim()}"`);
+    }
+    
+    console.log('🔍 EXPERIENCE POINTS: Final extracted points:', points.length);
+    console.log('🔍 EXPERIENCE POINTS: Points preview:', points.slice(0, 3));
     
     return points;
 }
@@ -753,8 +799,15 @@ function analyzeBulletUsage(resumeText) {
             continue;
         }
         
-        // Check if this line starts a new bullet point
-        const isBulletPoint = /^[\s]*[•·\*\-\+\>]\s/.test(line) || /^\s*\d+[\.\)]\s/.test(line);
+        // Check if this line starts a new bullet point - expanded patterns
+        const isBulletPoint = /^[\s]*[•·\*\-\+\>]\s/.test(line) || 
+                             /^\s*\d+[\.\)]\s/.test(line) ||
+                             /^[\s]*[\u2022\u2023\u25E6\u2043\u2219]\s/.test(line) || // Unicode bullets
+                             (line.startsWith('•') || line.startsWith('-') || line.startsWith('*')) ||
+                             // Also detect typical bullet-style content without explicit symbols
+                             (/^[A-Z][a-z]+/.test(line) && line.length > 30 && line.length < 200);
+        
+        console.log(`🔍 USE OF BULLETS: Line ${i} bullet check: "${line.substring(0, 50)}..." -> ${isBulletPoint}`);
         
         if (isBulletPoint) {
             // End current paragraph if any
@@ -811,16 +864,24 @@ function isHeaderLine(line) {
         'experience', 'education', 'skills', 'summary', 'objective', 
         'projects', 'certifications', 'awards', 'achievements', 'contact',
         'work history', 'employment', 'qualifications', 'professional summary',
-        'technical skills', 'core competencies'
+        'technical skills', 'core competencies', 'professional experience'
     ];
     
     const lowerLine = trimmedLine.toLowerCase();
-    if (headerKeywords.some(keyword => lowerLine.includes(keyword) && trimmedLine.length < 50)) {
+    if (headerKeywords.some(keyword => lowerLine === keyword || (lowerLine.includes(keyword) && trimmedLine.length < 50))) {
         return true;
     }
     
     // All caps (likely a header)
     if (trimmedLine === trimmedLine.toUpperCase() && trimmedLine.length < 30) {
+        return true;
+    }
+    
+    // Job titles and company names (not bullet content)
+    if (/^[A-Z][a-z\s]+@\s+[A-Z]/.test(trimmedLine) || // "Product @ Company"
+        /^\w+\s*@\s*\w+/.test(trimmedLine) || // "Role @ Company"
+        /^\d{2}\/\d{4}/.test(trimmedLine) || // Date formats
+        /^\w+\s*-\s*\w+/.test(trimmedLine) && trimmedLine.length < 50) { // "Company - Role"
         return true;
     }
     
@@ -1978,21 +2039,45 @@ async function analyzeLLMSpelling(resumeText) {
  * Analyze grammar issues
  */
 function analyzeGrammar(resumeText) {
+    console.log('🔍 GRAMMAR: Starting grammar analysis...');
+    console.log('🔍 GRAMMAR: Resume text length:', resumeText.length);
+    
     // Start async LLM analysis but return immediate fallback score
+    console.log('🔍 GRAMMAR: Starting async LLM grammar analysis...');
     analyzeLLMGrammar(resumeText).then(score => {
+        console.log('🔍 GRAMMAR: LLM analysis completed with score:', score);
         updateGrammarScore(score);
+    }).catch(error => {
+        console.error('❌ GRAMMAR: LLM analysis failed:', error);
     });
     
     // Return immediate fallback score
-    return getFallbackGrammarScore(resumeText);
+    const fallbackScore = getFallbackGrammarScore(resumeText);
+    console.log('🔍 GRAMMAR: Returning immediate fallback score:', fallbackScore);
+    return fallbackScore;
 }
 
 /**
  * Analyze grammar using LLM for accurate assessment
  */
 async function analyzeLLMGrammar(resumeText) {
+    console.log('🔍 GRAMMAR LLM: Starting LLM grammar API call...');
+    
     try {
-        const response = await fetch('/api/grammar-check', {
+        console.log('🔍 GRAMMAR LLM: Making fetch request to /api/grammar-check');
+        console.log('🔍 GRAMMAR LLM: Request payload:', {
+            text_length: resumeText.length,
+            check_type: 'grammar'
+        });
+        
+        // Try different API paths to ensure we hit the right endpoint
+        const apiUrl = window.location.hostname === 'localhost' ? 
+            'http://localhost:3001/api/grammar-check' : 
+            '/api/grammar-check';
+        
+        console.log('🔍 GRAMMAR LLM: Using API URL:', apiUrl);
+        
+        const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -2003,15 +2088,27 @@ async function analyzeLLMGrammar(resumeText) {
             })
         });
         
+        console.log('🔍 GRAMMAR LLM: API response status:', response.status, response.statusText);
+        
         if (response.ok) {
             const result = await response.json();
-            return Math.max(Math.min(result.grammar_score || 8, 10), 0);
+            console.log('🔍 GRAMMAR LLM: API response data:', result);
+            
+            const score = Math.max(Math.min(result.grammar_score || 8, 10), 0);
+            console.log('🔍 GRAMMAR LLM: Calculated final score:', score);
+            return score;
+        } else {
+            console.error('❌ GRAMMAR LLM: API request failed with status:', response.status);
+            const errorText = await response.text();
+            console.error('❌ GRAMMAR LLM: Error response:', errorText);
         }
     } catch (error) {
-        console.warn('LLM grammar check failed, using fallback:', error);
+        console.error('❌ GRAMMAR LLM: LLM grammar check failed:', error);
+        console.error('❌ GRAMMAR LLM: Error details:', error.message, error.stack);
     }
     
     // Fallback to basic grammar check
+    console.log('🔍 GRAMMAR LLM: API failed, using internal fallback grammar check...');
     let score = 0; // Start from 0 - purely content-based
     
     // Check for basic grammar issues
@@ -2023,18 +2120,28 @@ async function analyzeLLMGrammar(resumeText) {
     ];
     
     let issueCount = 0;
-    grammarIssues.forEach(pattern => {
-        issueCount += (resumeText.match(pattern) || []).length;
+    grammarIssues.forEach((pattern, index) => {
+        const matches = (resumeText.match(pattern) || []).length;
+        issueCount += matches;
+        if (matches > 0) {
+            console.log('🔍 GRAMMAR LLM FALLBACK: Found', matches, 'matches for pattern', index);
+        }
     });
+    console.log('🔍 GRAMMAR LLM FALLBACK: Total issues found:', issueCount);
     
     // Start with base score based on content quality
     if (resumeText.length > 100) score = 8;
     else if (resumeText.length > 50) score = 6;
     else score = 4;
+    console.log('🔍 GRAMMAR LLM FALLBACK: Base score:', score);
     
-    score -= Math.min(issueCount * 2, 6);
+    const penalty = Math.min(issueCount * 2, 6);
+    score -= penalty;
+    console.log('🔍 GRAMMAR LLM FALLBACK: Penalty applied:', penalty, 'Final score:', score);
     
-    return Math.max(score, 0);
+    const finalScore = Math.max(score, 0);
+    console.log('🔍 GRAMMAR LLM FALLBACK: Returning fallback score:', finalScore);
+    return finalScore;
 }
 
 /**
@@ -2295,27 +2402,59 @@ function analyzeWeakVerbs(resumeText) {
  * Extract action verbs from resume text
  */
 function extractActionVerbsFromText(resumeText) {
+    console.log('🔍 ACTION VERBS EXTRACT: Starting verb extraction...');
     const verbs = [];
     const text = resumeText.toLowerCase();
     
-    // Common action verb patterns in resumes
-    const verbPatterns = [
-        // Past tense verbs (most common in experience) - EXPANDED
-        /\b(managed|led|developed|created|implemented|achieved|increased|reduced|improved|delivered|executed|coordinated|supervised|administered|analyzed|designed|established|facilitated|generated|initiated|launched|optimized|organized|planned|produced|provided|supported|trained|collaborated|communicated|negotiated|presented|resolved|streamlined|transformed|upgraded|built|maintained|monitored|oversaw|recruited|directed|guided|mentored|coached|evaluated|assessed|identified|researched|tested|reviewed|audited|calculated|forecasted|interviewed|investigated|traced|classified|collected|compiled|processed|recorded|scheduled|arranged|prepared|operated|handled|assisted|helped|contributed|participated|worked|responsible|spearheaded|championed|pioneered|conceptualized|revamped|boosted|drove|conceived|programmed|scaled|orchestrated|engineered)\b/g,
+    // Instead of hardcoded patterns, extract verbs that match the config categories
+    if (window.actionVerbsConfig) {
+        console.log('🔍 ACTION VERBS EXTRACT: Using config-based extraction');
         
-        // Present tense verbs (for current roles) - EXPANDED  
-        /\b(manage|lead|develop|create|implement|achieve|increase|reduce|improve|deliver|execute|coordinate|supervise|administer|analyze|design|establish|facilitate|generate|initiate|launch|optimize|organize|plan|produce|provide|support|train|collaborate|communicate|negotiate|present|resolve|streamline|transform|upgrade|build|maintain|monitor|oversee|recruit|direct|guide|mentor|coach|evaluate|assess|identify|research|test|review|audit|calculate|forecast|interview|investigate|trace|classify|collect|compile|process|record|schedule|arrange|prepare|operate|handle|assist|help|contribute|participate|work|spearhead|champion|pioneer|conceptualize|revamp|boost|drive|conceive|program|scale|orchestrate|engineer)\b/g
-    ];
-    
-    for (const pattern of verbPatterns) {
-        const matches = text.match(pattern);
-        if (matches) {
-            verbs.push(...matches);
+        // Get all verbs from all categories in the config
+        const allConfigVerbs = [];
+        Object.keys(window.actionVerbsConfig).forEach(category => {
+            if (category !== 'WEAK_VERBS') {
+                const categoryVerbs = window.actionVerbsConfig[category] || [];
+                allConfigVerbs.push(...categoryVerbs.map(verb => verb.toLowerCase()));
+            }
+        });
+        
+        // Also add weak verbs to detect them
+        const weakVerbs = window.actionVerbsConfig.WEAK_VERBS || [];
+        allConfigVerbs.push(...weakVerbs.map(verb => verb.toLowerCase()));
+        
+        console.log('🔍 ACTION VERBS EXTRACT: Total config verbs to search for:', allConfigVerbs.length);
+        
+        // Find which verbs from config appear in the text
+        allConfigVerbs.forEach(verb => {
+            // Create a regex pattern for each verb (handle multi-word verbs)
+            const verbPattern = new RegExp('\\b' + verb.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi');
+            if (verbPattern.test(text)) {
+                verbs.push(verb);
+            }
+        });
+        
+        console.log('🔍 ACTION VERBS EXTRACT: Found config-based verbs:', verbs.length);
+    } else {
+        console.log('🔍 ACTION VERBS EXTRACT: Falling back to hardcoded patterns');
+        // Fallback to original patterns if config not available
+        const verbPatterns = [
+            /\b(managed|led|developed|created|implemented|achieved|increased|reduced|improved|delivered|executed|coordinated|supervised|administered|analyzed|designed|established|facilitated|generated|initiated|launched|optimized|organized|planned|produced|provided|supported|trained|collaborated|communicated|negotiated|presented|resolved|streamlined|transformed|upgraded|built|maintained|monitored|oversaw|recruited|directed|guided|mentored|coached|evaluated|assessed|identified|researched|tested|reviewed|audited|calculated|forecasted|interviewed|investigated|traced|classified|collected|compiled|processed|recorded|scheduled|arranged|prepared|operated|handled|assisted|helped|contributed|participated|worked|responsible|spearheaded|championed|pioneered|conceptualized|revamped|boosted|drove|conceived|programmed|scaled|orchestrated|engineered)\b/g,
+            /\b(manage|lead|develop|create|implement|achieve|increase|reduce|improve|deliver|execute|coordinate|supervise|administer|analyze|design|establish|facilitate|generate|initiate|launch|optimize|organize|plan|produce|provide|support|train|collaborate|communicate|negotiate|present|resolve|streamline|transform|upgrade|build|maintain|monitor|oversee|recruit|direct|guide|mentor|coach|evaluate|assess|identify|research|test|review|audit|calculate|forecast|interview|investigate|trace|classify|collect|compile|process|record|schedule|arrange|prepare|operate|handle|assist|help|contribute|participate|work|spearhead|champion|pioneer|conceptualize|revamp|boost|drive|conceive|program|scale|orchestrate|engineer)\b/g
+        ];
+        
+        for (const pattern of verbPatterns) {
+            const matches = text.match(pattern);
+            if (matches) {
+                verbs.push(...matches);
+            }
         }
     }
     
     // Remove duplicates and return unique verbs
-    return [...new Set(verbs)];
+    const uniqueVerbs = [...new Set(verbs)];
+    console.log('🔍 ACTION VERBS EXTRACT: Final unique verbs found:', uniqueVerbs.length, uniqueVerbs);
+    return uniqueVerbs;
 }
 
 /**
@@ -4025,6 +4164,7 @@ async function initializeWithActionVerbs() {
  * Get fallback grammar score while LLM processes
  */
 function getFallbackGrammarScore(resumeText) {
+    console.log('🔍 GRAMMAR FALLBACK: Calculating fallback grammar score...');
     let score = 0; // Start from 0 - purely content-based
     
     // Check for basic grammar issues
@@ -4036,18 +4176,28 @@ function getFallbackGrammarScore(resumeText) {
     ];
     
     let issueCount = 0;
-    grammarIssues.forEach(pattern => {
-        issueCount += (resumeText.match(pattern) || []).length;
+    grammarIssues.forEach((pattern, index) => {
+        const matches = (resumeText.match(pattern) || []).length;
+        issueCount += matches;
+        if (matches > 0) {
+            console.log('🔍 GRAMMAR FALLBACK: Found', matches, 'matches for pattern', index, pattern);
+        }
     });
+    console.log('🔍 GRAMMAR FALLBACK: Total grammar issues found:', issueCount);
     
     // Start with base score based on content quality
     if (resumeText.length > 100) score = 8;
     else if (resumeText.length > 50) score = 6;
     else score = 4;
+    console.log('🔍 GRAMMAR FALLBACK: Base score based on length:', score);
     
-    score -= Math.min(issueCount * 2, 6);
+    const penalty = Math.min(issueCount * 2, 6);
+    score -= penalty;
+    console.log('🔍 GRAMMAR FALLBACK: Penalty applied:', penalty, 'Score after penalty:', score);
     
-    return Math.max(score, 0);
+    const finalScore = Math.max(score, 0);
+    console.log('🔍 GRAMMAR FALLBACK: Final fallback score:', finalScore);
+    return finalScore;
 }
 
 /**
@@ -4089,14 +4239,28 @@ function getFallbackSpellingScore(resumeText) {
  * Update grammar score when LLM analysis completes
  */
 function updateGrammarScore(newScore) {
+    console.log('🔍 GRAMMAR UPDATE: Attempting to update grammar score to:', newScore);
+    
     // Find and update the grammar category score in the UI
     const grammarElements = document.querySelectorAll('[data-category="Grammar"]');
-    grammarElements.forEach(element => {
+    console.log('🔍 GRAMMAR UPDATE: Found grammar elements:', grammarElements.length);
+    
+    // Also try alternative selectors
+    const grammarElementsAlt = document.querySelectorAll('[data-category="Grammar & Spelling"]');
+    console.log('🔍 GRAMMAR UPDATE: Found "Grammar & Spelling" elements:', grammarElementsAlt.length);
+    
+    [...grammarElements, ...grammarElementsAlt].forEach((element, index) => {
+        console.log('🔍 GRAMMAR UPDATE: Processing element', index, element);
         const scoreElement = element.querySelector('.score');
         if (scoreElement) {
+            console.log('🔍 GRAMMAR UPDATE: Found score element, updating from', scoreElement.textContent, 'to', `${newScore}/10`);
             scoreElement.textContent = `${newScore}/10`;
             // Update color based on new score
-            scoreElement.className = `score ${newScore >= 8 ? 'text-green-600' : newScore >= 6 ? 'text-yellow-600' : 'text-red-600'}`;
+            const newClass = `score ${newScore >= 8 ? 'text-green-600' : newScore >= 6 ? 'text-yellow-600' : 'text-red-600'}`;
+            scoreElement.className = newClass;
+            console.log('🔍 GRAMMAR UPDATE: Applied new class:', newClass);
+        } else {
+            console.log('❌ GRAMMAR UPDATE: No score element found in element', index);
         }
     });
     
