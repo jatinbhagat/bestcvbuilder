@@ -447,11 +447,26 @@ function analyzeActionVerbs(resumeText) {
         return 3; // No action verbs found - poor score
     }
     
-    // Categorize found verbs
-    const categorizedVerbs = categorizeFoundVerbs(foundVerbs, strongVerbCategories);
-    console.log('🔍 ACTION VERBS: Categorized verbs:', categorizedVerbs);
+    // Categorize found verbs - try with fallback
+    let categorizedVerbs = {};
+    let weakVerbs = [];
     
-    const weakVerbs = (window.ActionVerbs && window.ActionVerbs.getVerbsForCategory) ? window.ActionVerbs.getVerbsForCategory('WEAK_VERBS') : [];
+    if (window.ActionVerbs && window.ActionVerbs.getVerbsForCategory) {
+        console.log('🔍 ACTION VERBS: Using ActionVerbs module for categorization');
+        categorizedVerbs = categorizeFoundVerbs(foundVerbs, strongVerbCategories);
+        weakVerbs = window.ActionVerbs.getVerbsForCategory('WEAK_VERBS');
+    } else if (window.actionVerbsConfig) {
+        console.log('🔍 ACTION VERBS: ActionVerbs module not available, using fallback with config');
+        categorizedVerbs = categorizeFoundVerbsWithConfig(foundVerbs, strongVerbCategories);
+        weakVerbs = window.actionVerbsConfig.WEAK_VERBS || [];
+    } else {
+        console.log('🔍 ACTION VERBS: No ActionVerbs module or config available, using basic fallback');
+        // Use basic classification for common strong verbs
+        categorizedVerbs = categorizeFoundVerbsFallback(foundVerbs);
+        weakVerbs = ['responsible', 'involved', 'participated', 'helped', 'assisted'];
+    }
+    
+    console.log('🔍 ACTION VERBS: Categorized verbs:', categorizedVerbs);
     console.log('🔍 ACTION VERBS: Weak verbs loaded:', weakVerbs.length > 0 ? weakVerbs.slice(0, 10) : 'None');
     
     // Count categories represented
@@ -493,15 +508,38 @@ function analyzeActionVerbs(resumeText) {
             weakVerbsFound.push(verb);
             console.log(`🔍 ACTION VERBS: "${verb}" classified as WEAK`);
         } else {
-            // Check if verb is in any strong category
-            const isInStrongCategory = strongVerbCategories.some(category => {
-                if (!window.ActionVerbs || !window.ActionVerbs.getVerbsForCategory) return false;
-                const categoryVerbs = window.ActionVerbs.getVerbsForCategory(category);
-                return categoryVerbs.some(strongVerb => 
-                    strongVerb.toLowerCase() === verb.toLowerCase() ||
-                    strongVerb.toLowerCase().includes(verb.toLowerCase())
-                );
-            });
+            // Check if verb is in any strong category using the same fallback approach
+            let isInStrongCategory = false;
+            
+            if (window.ActionVerbs && window.ActionVerbs.getVerbsForCategory) {
+                isInStrongCategory = strongVerbCategories.some(category => {
+                    const categoryVerbs = window.ActionVerbs.getVerbsForCategory(category);
+                    return categoryVerbs.some(strongVerb => 
+                        strongVerb.toLowerCase() === verb.toLowerCase() ||
+                        strongVerb.toLowerCase().includes(verb.toLowerCase())
+                    );
+                });
+            } else if (window.actionVerbsConfig) {
+                isInStrongCategory = strongVerbCategories.some(category => {
+                    const categoryVerbs = window.actionVerbsConfig[category] || [];
+                    return categoryVerbs.some(strongVerb => 
+                        strongVerb.toLowerCase() === verb.toLowerCase() ||
+                        strongVerb.toLowerCase().includes(verb.toLowerCase())
+                    );
+                });
+            } else {
+                // Use basic fallback - check against basic strong verbs
+                const basicStrongVerbs = [
+                    'managed', 'led', 'supervised', 'coordinated', 'directed', 'guided', 'oversaw',
+                    'spearheaded', 'championed', 'mentored', 'coached', 'launched', 'pioneered',
+                    'initiated', 'founded', 'established', 'created', 'built', 'developed',
+                    'engineered', 'programmed', 'designed', 'implemented', 'achieved', 'delivered',
+                    'executed', 'accomplished', 'completed', 'optimized', 'streamlined', 'improved',
+                    'enhanced', 'revamped', 'budgeted', 'forecasted', 'analyzed', 'calculated',
+                    'scaled', 'boosted', 'drove', 'conceived', 'orchestrated'
+                ];
+                isInStrongCategory = basicStrongVerbs.includes(verb.toLowerCase());
+            }
             
             if (!isInStrongCategory) {
                 unknownVerbCount++;
@@ -2341,6 +2379,86 @@ function categorizeFoundVerbs(foundVerbs, categories) {
     }
     
     console.log('🔍 CATEGORIZE VERBS: Final categorization result:', categorizedVerbs);
+    return categorizedVerbs;
+}
+
+/**
+ * Categorize found verbs using the config file directly (fallback)
+ */
+function categorizeFoundVerbsWithConfig(foundVerbs, categories) {
+    console.log('🔍 CATEGORIZE VERBS (CONFIG): Starting categorization with config...');
+    
+    const categorizedVerbs = {};
+    
+    for (const category of categories) {
+        console.log(`🔍 CATEGORIZE VERBS (CONFIG): Processing category: ${category}`);
+        
+        const categoryVerbs = window.actionVerbsConfig[category] || [];
+        console.log(`🔍 CATEGORIZE VERBS (CONFIG): Category "${category}" has ${categoryVerbs.length} verbs:`, categoryVerbs.slice(0, 10));
+        
+        const matchingVerbs = [];
+        
+        for (const verb of foundVerbs) {
+            const isMatch = categoryVerbs.some(categoryVerb => 
+                categoryVerb.toLowerCase() === verb.toLowerCase() ||
+                categoryVerb.toLowerCase().includes(verb.toLowerCase()) ||
+                verb.toLowerCase().includes(categoryVerb.toLowerCase())
+            );
+            
+            if (isMatch) {
+                matchingVerbs.push(verb);
+                console.log(`🔍 CATEGORIZE VERBS (CONFIG): "${verb}" matches category "${category}"`);
+            }
+        }
+        
+        if (matchingVerbs.length > 0) {
+            categorizedVerbs[category] = matchingVerbs;
+            console.log(`🔍 CATEGORIZE VERBS (CONFIG): Category "${category}" final matches:`, matchingVerbs);
+        }
+    }
+    
+    console.log('🔍 CATEGORIZE VERBS (CONFIG): Final categorization result:', categorizedVerbs);
+    return categorizedVerbs;
+}
+
+/**
+ * Basic fallback categorization for common strong verbs
+ */
+function categorizeFoundVerbsFallback(foundVerbs) {
+    console.log('🔍 CATEGORIZE VERBS (FALLBACK): Starting basic categorization...');
+    
+    const basicCategories = {
+        'MANAGEMENT_SKILLS': ['managed', 'led', 'supervised', 'coordinated', 'directed', 'guided', 'oversaw'],
+        'LEADERSHIP_MENTORSHIP_AND_TEACHING_SKILLS': ['spearheaded', 'championed', 'mentored', 'coached', 'led', 'guided'],
+        'ENTREPRENEURIAL_SKILLS': ['launched', 'pioneered', 'initiated', 'founded', 'established', 'created'],
+        'ENGINEERING_TECHNICAL_ROLES': ['built', 'developed', 'engineered', 'programmed', 'designed', 'implemented'],
+        'STRONG_ACCOMPLISHMENT_DRIVEN_VERBS': ['achieved', 'delivered', 'executed', 'accomplished', 'completed'],
+        'PROCESS_IMPROVEMENT_CONSULTING_AND_OPERATIONS': ['optimized', 'streamlined', 'improved', 'enhanced', 'revamped'],
+        'FINANCIAL_SKILLS': ['budgeted', 'forecasted', 'analyzed', 'calculated', 'scaled']
+    };
+    
+    const categorizedVerbs = {};
+    
+    for (const [category, categoryVerbs] of Object.entries(basicCategories)) {
+        const matchingVerbs = [];
+        
+        for (const verb of foundVerbs) {
+            const isMatch = categoryVerbs.some(categoryVerb => 
+                categoryVerb.toLowerCase() === verb.toLowerCase()
+            );
+            
+            if (isMatch) {
+                matchingVerbs.push(verb);
+                console.log(`🔍 CATEGORIZE VERBS (FALLBACK): "${verb}" matches category "${category}"`);
+            }
+        }
+        
+        if (matchingVerbs.length > 0) {
+            categorizedVerbs[category] = matchingVerbs;
+        }
+    }
+    
+    console.log('🔍 CATEGORIZE VERBS (FALLBACK): Final categorization result:', categorizedVerbs);
     return categorizedVerbs;
 }
 
