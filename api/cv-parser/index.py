@@ -2370,6 +2370,7 @@ def calculate_comprehensive_ats_score(content: str, job_posting: str = None, kno
     comprehensive_final_score = min(100, (total_comprehensive_score / max_comprehensive_score) * 100)
     
     logger.info(f'🎯 Comprehensive scoring: {total_comprehensive_score}/{max_comprehensive_score} = {comprehensive_final_score:.1f}%')
+    logger.info(f'🔍 DEBUG: Individual category scores: {[cat["score"] for cat in comprehensive_categories]}')
     
     # Debug logging for frontend 
     logger.info(f'🔍 DEBUG: comprehensive_analysis keys: {list(comprehensive_analysis.keys())}')
@@ -2393,6 +2394,7 @@ def calculate_comprehensive_ats_score(content: str, job_posting: str = None, kno
     }
     
     # Final debug logging to verify what's being returned
+    logger.info(f'🔍 DEBUG: RESPONSE scores - ats_score: {response_data["ats_score"]}, comprehensive score: {response_data["score"]}')
     logger.info(f'🔍 DEBUG: RESPONSE detailedAnalysis count: {len(response_data["detailedAnalysis"])}')
     logger.info(f'🔍 DEBUG: RESPONSE detailedAnalysis keys: {list(response_data["detailedAnalysis"].keys())[:10]}')
     logger.info(f'🔍 DEBUG: RESPONSE detailed_analysis count: {len(response_data["detailed_analysis"])}')
