@@ -2371,6 +2371,11 @@ def calculate_comprehensive_ats_score(content: str, job_posting: str = None, kno
     
     logger.info(f'🎯 Comprehensive scoring: {total_comprehensive_score}/{max_comprehensive_score} = {comprehensive_final_score:.1f}%')
     
+    # Debug logging for frontend 
+    logger.info(f'🔍 DEBUG: comprehensive_analysis keys: {list(comprehensive_analysis.keys())}')
+    logger.info(f'🔍 DEBUG: comprehensive_analysis count: {len(comprehensive_analysis)}')
+    logger.info(f'🔍 DEBUG: Sample comprehensive_analysis: {dict(list(comprehensive_analysis.items())[:3])}')
+    
     return {
         'ats_score': final_score,  # Keep original for compatibility
         'score': comprehensive_final_score,  # New comprehensive score

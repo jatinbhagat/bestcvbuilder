@@ -108,6 +108,11 @@ function displayComponentBreakdown() {
     const detailed = analysisData.detailedAnalysis || analysisData.detailed_analysis || {};
     const components = analysisData.component_scores || {}; // This may be empty
     
+    console.log('📊 DEBUG: Full analysisData keys:', Object.keys(analysisData));
+    console.log('📊 DEBUG: analysisData.detailedAnalysis exists:', !!analysisData.detailedAnalysis);
+    console.log('📊 DEBUG: analysisData.detailed_analysis exists:', !!analysisData.detailed_analysis);
+    console.log('📊 DEBUG: detailedAnalysis keys:', analysisData.detailedAnalysis ? Object.keys(analysisData.detailedAnalysis) : 'NONE');
+    console.log('📊 DEBUG: detailedAnalysis count:', analysisData.detailedAnalysis ? Object.keys(analysisData.detailedAnalysis).length : 0);
     console.log('📊 Detailed Analysis:', detailed);
     console.log('📊 Component Scores:', components);
     
