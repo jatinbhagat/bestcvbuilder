@@ -1901,11 +1901,25 @@ def analyze_verb_tenses_frontend(resume_text: str) -> int:
         return 4
 
 def analyze_personal_pronouns_frontend(resume_text: str) -> int:
-    """Copied exactly from frontend analyzePersonalPronouns"""
-    pronouns = ['i ', 'me ', 'my ', 'myself ', 'our ', 'we ']
-    text_lower = resume_text.lower()
+    """Analyzes personal pronouns with improved word boundary detection"""
+    import re
     
-    pronoun_count = sum(text_lower.count(pronoun) for pronoun in pronouns)
+    # Use word boundaries to avoid false positives with company names and abbreviations
+    pronoun_patterns = [
+        r'\bi\b',        # "i" as standalone word
+        r'\bme\b',       # "me" as standalone word  
+        r'\bmy\b',       # "my" as standalone word
+        r'\bmyself\b',   # "myself" as standalone word
+        r'\bour\b',      # "our" as standalone word
+        r'\bwe\b'        # "we" as standalone word
+    ]
+    
+    text_lower = resume_text.lower()
+    pronoun_count = 0
+    
+    for pattern in pronoun_patterns:
+        matches = re.findall(pattern, text_lower)
+        pronoun_count += len(matches)
     
     if pronoun_count == 0:
         return 10
@@ -2028,15 +2042,49 @@ def analyze_teamwork_skills_frontend(resume_text: str) -> int:
         return 3
 
 def analyze_repetition_frontend(resume_text: str) -> int:
-    """Copied exactly from frontend analyzeRepetition"""
-    words = resume_text.lower().split()
+    """Analyzes repetition while excluding legitimate repeated terms"""
+    import re
+    
+    # Whitelist of terms that are legitimately repeated and should not be penalized
+    whitelist_terms = {
+        # Location names (Indian cities and international)
+        'mumbai', 'delhi', 'bangalore', 'bengaluru', 'hyderabad', 'chennai', 'pune', 
+        'gurugram', 'gurgaon', 'noida', 'kolkata', 'ahmedabad', 'surat', 'jaipur',
+        'lucknow', 'kanpur', 'nagpur', 'indore', 'bhopal', 'visakhapatnam', 'patna',
+        'vadodara', 'ludhiana', 'coimbatore', 'kochi', 'kozhikode', 'thrissur',
+        'london', 'newyork', 'singapore', 'dubai', 'toronto', 'sydney', 'tokyo',
+        'berlin', 'paris', 'amsterdam', 'stockholm', 'zurich', 'vancouver',
+        
+        # Professional disciplines and roles
+        'product', 'software', 'engineering', 'development', 'management', 'marketing',
+        'design', 'technology', 'business', 'strategy', 'operations', 'finance',
+        'sales', 'analytics', 'research', 'consulting', 'architecture', 'security',
+        'quality', 'testing', 'analysis', 'planning', 'leadership', 'project',
+        'program', 'digital', 'mobile', 'cloud', 'platform', 'systems', 'network',
+        'database', 'infrastructure', 'service', 'support', 'customer', 'client',
+        
+        # Common technology terms
+        'python', 'javascript', 'react', 'angular', 'nodejs', 'docker', 'kubernetes',
+        'microservices', 'machine', 'learning', 'artificial', 'intelligence',
+        'blockchain', 'devops', 'agile', 'scrum', 'framework', 'library',
+        
+        # Common resume terms that naturally repeat
+        'experience', 'skills', 'education', 'certification', 'training', 'course',
+        'project', 'achievement', 'responsibility', 'requirement', 'implementation',
+        'collaboration', 'communication', 'problem', 'solution', 'improvement',
+        'optimization', 'performance', 'efficiency', 'innovation', 'creativity'
+    }
+    
+    # Clean and split text
+    words = re.findall(r'\b[a-zA-Z]{5,}\b', resume_text.lower())  # Only words 5+ chars, alphabetic only
     word_freq = {}
     
     for word in words:
-        if len(word) > 4:  # Only check longer words
+        # Skip whitelisted terms
+        if word not in whitelist_terms:
             word_freq[word] = word_freq.get(word, 0) + 1
     
-    # Find words that appear too frequently
+    # Find words that appear too frequently (more than 5 times)
     repetitive_words = [word for word, count in word_freq.items() if count > 5]
     
     if len(repetitive_words) == 0:
@@ -2047,39 +2095,351 @@ def analyze_repetition_frontend(resume_text: str) -> int:
         return 5
 
 def analyze_unnecessary_sections_frontend(resume_text: str) -> int:
-    """Copied exactly from frontend analyzeUnnecessarySections"""
-    unnecessary_keywords = [
-        'references available', 'hobbies', 'interests', 'personal',
-        'marital status', 'age', 'photo', 'picture'
-    ]
+    """Analyzes unnecessary sections based on modern resume standards"""
+    import re
+    
     text_lower = resume_text.lower()
+    penalty_points = 0
     
-    found_unnecessary = sum(1 for keyword in unnecessary_keywords if keyword in text_lower)
+    # Check for References section (extremely outdated - major penalty)
+    references_patterns = [
+        r'\breferences\b',
+        r'references available',
+        r'references upon request',
+        r'references provided'
+    ]
     
-    if found_unnecessary == 0:
+    if any(re.search(pattern, text_lower) for pattern in references_patterns):
+        penalty_points += 4  # Heavy penalty for references
+    
+    # Check for Objective section (outdated - major penalty)
+    objective_patterns = [
+        r'\bobjective\b',
+        r'career objective',
+        r'professional objective',
+        r'job objective'
+    ]
+    
+    if any(re.search(pattern, text_lower) for pattern in objective_patterns):
+        penalty_points += 4  # Heavy penalty for objective
+    
+    # Check for high school when higher education exists
+    # Use word boundaries to avoid false positives (e.g., "ma" matching in "diploma")
+    higher_ed_patterns = [
+        r'\bbachelor\b', r'\bmaster\b', r'\bphd\b', r'\bdoctorate\b', 
+        r'\buniversity\b', r'\bcollege\b', r'\bbsc\b', r'\bmsc\b', 
+        r'\bba\b', r'\bma\b', r'\bbba\b', r'\bmba\b', 
+        r'graduate degree', r'undergraduate degree', r'\bpostgraduate\b'
+    ]
+    
+    has_higher_education = any(re.search(pattern, text_lower) for pattern in higher_ed_patterns)
+    
+    # Check for diploma but exclude high school diploma
+    if 'diploma' in text_lower and 'high school diploma' not in text_lower:
+        # Additional check for other diploma types that indicate higher education
+        diploma_indicators = ['college diploma', 'university diploma', 'graduate diploma', 'professional diploma']
+        if any(indicator in text_lower for indicator in diploma_indicators):
+            has_higher_education = True
+    
+    has_high_school = any(keyword in text_lower for keyword in [
+        'high school', 'secondary school', 'grade 12', 'matriculation',
+        'high school diploma', 'secondary education'
+    ])
+    
+    # Only penalize high school if higher education also exists
+    if has_higher_education and has_high_school:
+        penalty_points += 2  # Penalty for including high school with higher education
+    
+    # Check for other unnecessary sections
+    other_unnecessary = [
+        'hobbies', 'interests', 'personal', 'marital status', 'age', 
+        'photo', 'picture', 'nationality', 'religion', 'gender'
+    ]
+    
+    found_other = sum(1 for keyword in other_unnecessary if keyword in text_lower)
+    penalty_points += found_other
+    
+    # Calculate final score based on penalty points
+    if penalty_points == 0:
         return 10
-    elif found_unnecessary <= 1:
-        return 7
-    else:
+    elif penalty_points <= 1:
+        return 8
+    elif penalty_points <= 2:
+        return 6
+    elif penalty_points <= 3:
         return 4
+    elif penalty_points <= 5:
+        return 2
+    else:
+        return 1  # Extremely low score for multiple outdated sections
 
 def analyze_growth_signals_frontend(resume_text: str) -> int:
-    """Copied exactly from frontend analyzeGrowthSignals"""
-    growth_keywords = [
-        'promoted', 'advancement', 'progression', 'increased responsibility',
-        'senior', 'lead', 'principal', 'director', 'growth', 'expanded'
-    ]
-    text_lower = resume_text.lower()
-    found_keywords = sum(1 for keyword in growth_keywords if keyword in text_lower)
+    """Enhanced growth signals analysis with promotion and progression detection"""
+    import re
     
-    if found_keywords >= 3:
-        return 9
-    elif found_keywords >= 2:
+    # Signal 1: Detect promotions within same organization
+    internal_promotions = detect_promotions_within_organization(resume_text)
+    
+    # Signal 2: Detect promotion/promoted keywords
+    promotion_keywords = detect_promotion_keywords(resume_text)
+    
+    # Signal 3: Detect designation progression across organizations
+    cross_org_progression = detect_designation_progression(resume_text)
+    
+    # Count signals found
+    signals_found = sum([
+        internal_promotions > 0,
+        promotion_keywords > 0,
+        cross_org_progression > 0
+    ])
+    
+    # Apply new scoring system
+    if signals_found == 3:
+        return 10
+    elif signals_found == 2:
         return 7
-    elif found_keywords >= 1:
-        return 5
+    elif signals_found == 1:
+        return 4
     else:
-        return 3
+        return 0
+
+def detect_promotions_within_organization(resume_text: str) -> int:
+    """Detect promotions within the same company heading"""
+    import re
+    
+    # Split text into sections and look for experience sections
+    lines = resume_text.split('\n')
+    
+    promotions_found = 0
+    current_company_section = []
+    in_experience_section = False
+    
+    for line in lines:
+        line_clean = line.strip()
+        if not line_clean:
+            continue
+            
+        line_lower = line_clean.lower()
+        
+        # Check if we're entering an experience section
+        if any(keyword in line_lower for keyword in ['experience', 'employment', 'work history', 'career']):
+            in_experience_section = True
+            continue
+            
+        # Check if we're leaving experience section
+        if any(keyword in line_lower for keyword in ['education', 'skills', 'projects', 'certifications']):
+            # Process final company section before leaving
+            if current_company_section:
+                promotions_found += analyze_company_section_for_promotions(current_company_section)
+                current_company_section = []
+            in_experience_section = False
+            continue
+            
+        if in_experience_section:
+            # Check if this line is a company header (contains company name with dates)
+            if is_company_header(line_clean):
+                # Process previous company section if exists
+                if current_company_section:
+                    promotions_found += analyze_company_section_for_promotions(current_company_section)
+                # Start new company section
+                current_company_section = [line_clean]
+            else:
+                # Add to current company section
+                current_company_section.append(line_clean)
+    
+    # Process final company section
+    if current_company_section:
+        promotions_found += analyze_company_section_for_promotions(current_company_section)
+    
+    return promotions_found
+
+def is_company_header(line: str) -> bool:
+    """Check if line is a company header (company name with date range)"""
+    import re
+    
+    # Company header should have company name and date range
+    # Pattern: "CompanyName (YYYY-YYYY)" or "CompanyName Inc. 2020-2023"
+    has_dates = bool(re.search(r'\b(20\d{2}|19\d{2})\b', line))
+    
+    # Company indicators
+    company_indicators = ['inc', 'ltd', 'corp', 'company', 'technologies', 'solutions', 'systems', 'group']
+    has_company_word = any(indicator in line.lower() for indicator in company_indicators)
+    
+    # Check if it looks like a company header (not a job title line)
+    # Job titles usually start with job-related words
+    job_title_starters = ['senior', 'junior', 'lead', 'principal', 'chief', 'manager', 'director', 
+                         'analyst', 'engineer', 'developer', 'specialist', 'consultant', 
+                         'coordinator', 'assistant', 'associate']
+    
+    starts_with_title = any(line.lower().startswith(title) for title in job_title_starters)
+    
+    # Company header: has dates AND (has company indicators OR doesn't start with job title)
+    return has_dates and (has_company_word or not starts_with_title)
+
+def analyze_company_section_for_promotions(company_lines: list) -> int:
+    """Analyze a company section for multiple job titles indicating promotion"""
+    import re
+    
+    if len(company_lines) < 2:
+        return 0
+        
+    # Look for multiple job titles with dates in the same company section
+    job_entries = []
+    
+    for line in company_lines:
+        # Look for lines that have job titles and dates
+        if re.search(r'\b(20\d{2}|19\d{2})\b', line):
+            # Extract potential job title (text before company name or date)
+            title_match = re.search(r'^([^(]+?)(?:\s*[-–@]\s*|\s*\()', line)
+            if title_match:
+                title = title_match.group(1).strip()
+                
+                # Extract year for chronological analysis
+                year_matches = re.findall(r'\b(20\d{2}|19\d{2})\b', line)
+                if year_matches:
+                    start_year = min(int(year) for year in year_matches)
+                    job_entries.append((title, start_year))
+    
+    # If we have multiple job titles, check for hierarchy progression
+    if len(job_entries) >= 2:
+        # Sort by year
+        job_entries.sort(key=lambda x: x[1])
+        
+        # Check for progression in titles
+        titles = [entry[0].lower() for entry in job_entries]
+        
+        # Look for clear progression indicators
+        progression_patterns = [
+            ['associate', 'senior'],
+            ['junior', 'senior'],
+            ['analyst', 'senior analyst'],
+            ['engineer', 'senior engineer'],
+            ['engineer', 'lead engineer'],
+            ['senior', 'lead'],
+            ['senior', 'principal'],
+            ['developer', 'senior developer'],
+            ['manager', 'senior manager'],
+            ['executive', 'senior executive']
+        ]
+        
+        for i in range(len(titles) - 1):
+            current_title = titles[i]
+            next_title = titles[i + 1]
+            
+            # Check for direct progression patterns
+            for pattern in progression_patterns:
+                if pattern[0] in current_title and pattern[1] in next_title:
+                    return 1
+                    
+            # Check for role expansion (same role but with additional words)
+            if current_title in next_title and len(next_title) > len(current_title):
+                return 1
+    
+    return 0
+
+def detect_promotion_keywords(resume_text: str) -> int:
+    """Detect promotion-related keywords in context"""
+    import re
+    
+    promotion_patterns = [
+        r'\bpromoted\b',
+        r'\bpromotion\b',
+        r'\badvanced to\b',
+        r'\belevated to\b',
+        r'\bprogressed to\b',
+        r'\btransitioned to\b.*\b(senior|lead|principal|manager|director)\b',
+        r'\bincreased responsibility\b',
+        r'\bexpanded role\b',
+        r'\brecognized.*and\s+(promoted|advanced)\b',
+        r'\bselected for.*(promotion|advancement)\b'
+    ]
+    
+    text_lower = resume_text.lower()
+    
+    # Count distinct promotion indicators
+    found_patterns = 0
+    for pattern in promotion_patterns:
+        if re.search(pattern, text_lower):
+            found_patterns += 1
+    
+    return min(found_patterns, 1)  # Return 1 if any promotion keywords found
+
+def detect_designation_progression(resume_text: str) -> int:
+    """Detect career progression across different organizations"""
+    import re
+    
+    # Extract job entries with companies and dates
+    lines = resume_text.split('\n')
+    job_entries = []
+    
+    for line in lines:
+        line_clean = line.strip()
+        if not line_clean:
+            continue
+            
+        # Look for lines with dates (indicating job entries)
+        if re.search(r'\b(20\d{2}|19\d{2})\b', line_clean):
+            # Extract year range
+            years = re.findall(r'\b(20\d{2}|19\d{2})\b', line_clean)
+            if years:
+                start_year = min(int(year) for year in years)
+                
+                # Extract job title (usually at the beginning of the line)
+                title_match = re.match(r'^([^-–@(]+)', line_clean)
+                if title_match:
+                    title = title_match.group(1).strip()
+                    
+                    # Extract company (usually after - or @ or in parentheses)
+                    company_match = re.search(r'[-–@]\s*([^(,]+)', line_clean)
+                    company = company_match.group(1).strip() if company_match else "Unknown"
+                    
+                    job_entries.append((title, company, start_year))
+    
+    if len(job_entries) < 2:
+        return 0
+        
+    # Sort by year
+    job_entries.sort(key=lambda x: x[2])
+    
+    # Check for progression across organizations
+    hierarchy_levels = {
+        'intern': 1, 'trainee': 1,
+        'associate': 2, 'junior': 2, 'analyst': 2,
+        'engineer': 3, 'developer': 3, 'executive': 3,
+        'senior': 4, 'specialist': 4,
+        'lead': 5, 'principal': 5, 'staff': 5,
+        'manager': 6, 'supervisor': 6,
+        'senior manager': 7, 'director': 7,
+        'senior director': 8, 'vice president': 8, 'vp': 8,
+        'president': 9, 'ceo': 10, 'cto': 10, 'cfo': 10
+    }
+    
+    progression_found = 0
+    
+    for i in range(len(job_entries) - 1):
+        current_title = job_entries[i][0].lower()
+        next_title = job_entries[i + 1][0].lower()
+        current_company = job_entries[i][1].lower()
+        next_company = job_entries[i + 1][1].lower()
+        
+        # Only consider if different companies
+        if current_company != next_company:
+            # Check for level progression
+            current_level = 0
+            next_level = 0
+            
+            for keyword, level in hierarchy_levels.items():
+                if keyword in current_title:
+                    current_level = max(current_level, level)
+                if keyword in next_title:
+                    next_level = max(next_level, level)
+            
+            # If we found a progression
+            if next_level > current_level:
+                progression_found = 1
+                break
+    
+    return progression_found
 
 def analyze_drive_and_initiative_frontend(resume_text: str) -> int:
     """Copied exactly from frontend analyzeDriveAndInitiative"""
@@ -2112,7 +2472,338 @@ def analyze_certifications_frontend(resume_text: str) -> int:
     else:
         return 4
 
-def generate_comprehensive_ats_scores_frontend(content: str, component_scores: dict = None, detailed_analysis: dict = None) -> List[dict]:
+def analyze_experience_section_percentage(resume_text: str) -> int:
+    """Analyzes what percentage of the resume is dedicated to experience content"""
+    import re
+    
+    lines = resume_text.split('\n')
+    total_lines = len([line for line in lines if line.strip()])
+    
+    # Look for experience section indicators
+    exp_section_patterns = [
+        r'(professional\s+)?experience',
+        r'work\s+experience', 
+        r'employment\s+history',
+        r'career\s+history',
+        r'professional\s+background'
+    ]
+    
+    experience_lines = 0
+    in_experience_section = False
+    
+    for line in lines:
+        line_lower = line.lower().strip()
+        if not line_lower:
+            continue
+            
+        # Check if this line starts an experience section
+        if any(re.search(pattern, line_lower) for pattern in exp_section_patterns):
+            in_experience_section = True
+            experience_lines += 1
+            continue
+            
+        # Check if we've moved to a new section (common section headers)
+        section_headers = [
+            r'education', r'skills', r'certifications', r'achievements',
+            r'projects', r'publications', r'references', r'languages'
+        ]
+        if any(re.search(f'^{header}', line_lower) for header in section_headers):
+            in_experience_section = False
+            continue
+            
+        # Count lines that appear to be in experience section
+        if in_experience_section:
+            # Look for job-related content (dates, companies, bullet points)
+            if (re.search(r'\b(20\d{2}|19\d{2})\b', line) or  # Years
+                line.strip().startswith(('•', '-', '*')) or      # Bullet points
+                len(line.strip()) > 20):                         # Substantial content
+                experience_lines += 1
+    
+    if total_lines == 0:
+        return 1
+        
+    experience_percentage = (experience_lines / total_lines) * 100
+    
+    # Linear scaling: 1 if <20%, 10 if >=70%
+    if experience_percentage < 20:
+        return 1
+    elif experience_percentage >= 70:
+        return 10
+    else:
+        # Linear interpolation between 20% and 70%
+        return round(1 + ((experience_percentage - 20) / 50) * 9)
+
+def analyze_section_titles_clarity(resume_text: str) -> int:
+    """Analyzes clarity and consistency of section titles"""
+    import re
+    
+    lines = resume_text.split('\n')
+    
+    # Expected main sections
+    expected_sections = [
+        r'(professional\s+)?experience',
+        r'(work\s+)?experience', 
+        r'education',
+        r'skills',
+    ]
+    
+    # Optional but common sections
+    optional_sections = [
+        r'certifications?',
+        r'achievements?',
+        r'projects?',
+        r'summary',
+        r'objective'
+    ]
+    
+    found_main_sections = 0
+    total_sections_found = 0
+    unclear_sections = 0
+    
+    for line in lines:
+        line_clean = line.strip()
+        if not line_clean or len(line_clean) < 3:
+            continue
+            
+        line_lower = line_clean.lower()
+        
+        # Check if line looks like a section header (short, uppercase/title case)
+        if (len(line_clean) < 50 and 
+            (line_clean.isupper() or line_clean.istitle()) and
+            not any(char.isdigit() for char in line_clean[:10])):
+            
+            total_sections_found += 1
+            
+            # Check against expected main sections
+            if any(re.search(pattern, line_lower) for pattern in expected_sections):
+                found_main_sections += 1
+            elif any(re.search(pattern, line_lower) for pattern in optional_sections):
+                pass  # Optional section, counts as clear
+            else:
+                # Check for unclear/generic headers
+                if len(line_clean) < 10 or line_lower in ['details', 'information', 'data']:
+                    unclear_sections += 1
+    
+    # Calculate score based on clarity
+    if total_sections_found == 0:
+        return 1  # No clear sections found
+        
+    clarity_ratio = (total_sections_found - unclear_sections) / total_sections_found
+    main_section_score = min(found_main_sections, 3) / 3  # Cap at 3 main sections
+    
+    # Combine both factors
+    final_score = (clarity_ratio * 0.6) + (main_section_score * 0.4)
+    return max(1, round(final_score * 10))
+
+def analyze_job_titles_clarity(resume_text: str) -> int:
+    """Analyzes presence and clarity of job titles"""
+    import re
+    
+    lines = resume_text.split('\n')
+    
+    # Common job title patterns
+    job_title_patterns = [
+        r'\b(senior|junior|lead|principal|chief)\s+\w+',
+        r'\b(manager|director|analyst|engineer|developer|specialist)\b',
+        r'\b(consultant|coordinator|assistant|associate)\b',
+        r'\b(designer|architect|administrator|technician)\b'
+    ]
+    
+    # Look for job titles near date patterns
+    potential_job_titles = 0
+    clear_job_titles = 0
+    
+    for i, line in enumerate(lines):
+        line_clean = line.strip()
+        if not line_clean:
+            continue
+            
+        # Look for dates indicating employment periods
+        has_date = re.search(r'\b(20\d{2}|19\d{2})\b', line_clean)
+        
+        if has_date:
+            # Check current line and nearby lines for job titles
+            check_lines = [lines[max(0, i-1)], line_clean, lines[min(len(lines)-1, i+1)]]
+            
+            for check_line in check_lines:
+                check_clean = check_line.strip()
+                if not check_clean:
+                    continue
+                    
+                # Skip if line contains common non-title indicators
+                if any(word in check_clean.lower() for word in ['education', 'university', 'college', 'school']):
+                    continue
+                    
+                potential_job_titles += 1
+                
+                # Check if it matches common job title patterns
+                if any(re.search(pattern, check_clean, re.IGNORECASE) for pattern in job_title_patterns):
+                    clear_job_titles += 1
+                # Or if it's properly formatted (title case, reasonable length)
+                elif (check_clean.istitle() and 10 <= len(check_clean) <= 50 and 
+                      not check_clean.startswith(('•', '-', '*'))):
+                    clear_job_titles += 1
+                
+                break  # Only count one per date entry
+    
+    if potential_job_titles == 0:
+        return 1  # No job entries found
+        
+    clarity_ratio = clear_job_titles / potential_job_titles
+    return max(1, round(clarity_ratio * 10))
+
+def analyze_filename_appropriateness(filename: str = None) -> int:
+    """Analyzes filename appropriateness based on best practices"""
+    import re
+    
+    if not filename:
+        return 1  # No filename provided
+        
+    # Remove file extension for analysis
+    name_without_ext = re.sub(r'\.[^.]*$', '', filename)
+    
+    # Best practice pattern: FirstName-LastName-Resume
+    best_practice_pattern = r'^[A-Za-z]+-[A-Za-z]+-Resume$'
+    
+    if re.match(best_practice_pattern, name_without_ext, re.IGNORECASE):
+        return 10
+        
+    # Good patterns
+    good_patterns = [
+        r'^[A-Za-z]+[_\s][A-Za-z]+[_\s-]Resume$',  # FirstName LastName Resume
+        r'^[A-Za-z]+[A-Za-z]+Resume$',              # FirstnameLastnameResume
+        r'^Resume[_\s-][A-Za-z]+[_\s-][A-Za-z]+$'  # Resume-FirstName-LastName
+    ]
+    
+    if any(re.match(pattern, name_without_ext, re.IGNORECASE) for pattern in good_patterns):
+        return 8
+        
+    # Acceptable patterns (contains name and resume)
+    if (re.search(r'resume', name_without_ext, re.IGNORECASE) and 
+        re.search(r'[A-Za-z]{2,}', name_without_ext)):
+        return 6
+        
+    # Poor patterns
+    poor_patterns = [
+        r'^(resume|cv)$',           # Just "resume" or "cv"
+        r'^document\d*$',           # Generic document names
+        r'^untitled',               # Untitled files
+        r'^\d+$'                   # Just numbers
+    ]
+    
+    if any(re.match(pattern, name_without_ext, re.IGNORECASE) for pattern in poor_patterns):
+        return 1
+        
+    # Default for unclear but not terrible filenames
+    return 4
+
+def analyze_font_readability(resume_text: str) -> int:
+    """Analyzes font readability based on special characters and parsing issues"""
+    import re
+    
+    # Count special/problematic characters that indicate font issues
+    problematic_chars = 0
+    total_chars = len(resume_text)
+    
+    if total_chars == 0:
+        return 1
+        
+    # Look for problematic character patterns
+    issues = {
+        'weird_quotes': len(re.findall(r'[""''`´]', resume_text)),
+        'special_symbols': len(re.findall(r'[►▪▫■□●○♦♠♣♥]', resume_text)),
+        'unusual_spaces': len(re.findall(r'[\u00A0\u2000-\u200F\u2028-\u202F]', resume_text)),
+        'accented_where_unexpected': len(re.findall(r'[àáâãäåæçèéêëìíîïñòóôõöøùúûüý]', resume_text)),
+        'replacement_chars': len(re.findall(r'[�]', resume_text)),
+        'weird_dashes': len(re.findall(r'[–—]', resume_text))
+    }
+    
+    total_issues = sum(issues.values())
+    
+    # Calculate issue percentage
+    issue_percentage = (total_issues / total_chars) * 100
+    
+    # Check for proper standard characters (letters, numbers, basic punctuation)
+    standard_chars = len(re.findall(r'[a-zA-Z0-9\s.,;:!?()[\]\-_+=@#$%&*/\\]', resume_text))
+    standard_percentage = (standard_chars / total_chars) * 100
+    
+    # Score based on readability
+    if issue_percentage > 5:
+        return 1  # Too many problematic characters
+    elif issue_percentage > 2:
+        return 4  # Some issues
+    elif standard_percentage > 95:
+        return 10  # Excellent readability
+    elif standard_percentage > 90:
+        return 8  # Good readability
+    else:
+        return 6  # Acceptable readability
+
+def analyze_formatting_ats_parsing(resume_text: str) -> int:
+    """Analyzes formatting quality and ATS parsing compatibility"""
+    import re
+    
+    score = 10  # Start with perfect score, deduct for issues
+    
+    # Check for parsing errors (indicators of complex formatting)
+    parsing_issues = [
+        len(re.findall(r'[^\x00-\x7F]', resume_text)),  # Non-ASCII characters
+        resume_text.count('\t'),                        # Excessive tabs
+        len(re.findall(r'\n\s*\n\s*\n', resume_text)), # Excessive blank lines
+        len(re.findall(r'[|│┃]', resume_text)),         # Table/column borders
+        len(re.findall(r'[═─━]', resume_text))          # Graphic elements
+    ]
+    
+    total_parsing_issues = sum(parsing_issues)
+    
+    # Deduct for parsing complexity
+    if total_parsing_issues > 50:
+        score -= 6
+    elif total_parsing_issues > 20:
+        score -= 4
+    elif total_parsing_issues > 10:
+        score -= 2
+    
+    # Check for good structure indicators
+    has_bullet_points = bool(re.search(r'^[\s]*[•\-*]', resume_text, re.MULTILINE))
+    has_clear_sections = len(re.findall(r'^[A-Z\s]{5,}$', resume_text, re.MULTILINE)) >= 2
+    has_reasonable_line_length = len([l for l in resume_text.split('\n') if len(l) > 200]) < 5
+    
+    # Reward good structure
+    if has_bullet_points:
+        score += 1
+    if has_clear_sections:
+        score += 1
+    if has_reasonable_line_length:
+        score += 1
+    
+    # Ensure score stays within bounds
+    return max(1, min(10, score))
+
+def calculate_cv_readability_score(resume_text: str, filename: str = None) -> float:
+    """Calculate the weighted CV Readability Score"""
+    
+    # Get individual scores
+    experience_score = analyze_experience_section_percentage(resume_text)
+    section_titles_score = analyze_section_titles_clarity(resume_text)
+    job_titles_score = analyze_job_titles_clarity(resume_text)
+    filename_score = analyze_filename_appropriateness(filename)
+    font_score = analyze_font_readability(resume_text)
+    formatting_score = analyze_formatting_ats_parsing(resume_text)
+    
+    # Apply weighted formula
+    final_score = (
+        (experience_score * 0.30) +
+        (section_titles_score * 0.20) +
+        (job_titles_score * 0.15) +
+        (filename_score * 0.10) +
+        (font_score * 0.15) +
+        (formatting_score * 0.10)
+    )
+    
+    return round(final_score, 1)
+
+def generate_comprehensive_ats_scores_frontend(content: str, component_scores: dict = None, detailed_analysis: dict = None, filename: str = None) -> List[dict]:
     """
     Generate comprehensive ATS scores for all 23+ categories - COPIED EXACTLY FROM FRONTEND
     """
@@ -2246,7 +2937,7 @@ def generate_comprehensive_ats_scores_frontend(content: str, component_scores: d
     categories.append({
         'name': 'Unnecessary Sections',
         'score': analyze_unnecessary_sections_frontend(resume_text),
-        'issue': 'Remove sections that don\'t add value',
+        'issue': 'Remove outdated sections like References, Objective, and high school education when you have higher qualifications',
         'impact': 'SECTIONS'
     })
     categories.append({
@@ -2270,6 +2961,14 @@ def generate_comprehensive_ats_scores_frontend(content: str, component_scores: d
         'impact': 'ALL'
     })
     
+    # 24. CV READABILITY SCORE (WEIGHTED)
+    categories.append({
+        'name': 'CV Readability Score',
+        'score': calculate_cv_readability_score(resume_text, filename),
+        'issue': 'Improve resume structure, formatting, and ATS compatibility for better readability',
+        'impact': 'ALL'
+    })
+    
     logger.info(f'🏗️ Generated {len(categories)} comprehensive categories from frontend logic')
     for cat in categories:
         logger.info(f'🏗️ {cat["name"]}: {cat["score"]}/10')
@@ -2280,7 +2979,7 @@ def generate_comprehensive_ats_scores_frontend(content: str, component_scores: d
 # END FRONTEND ANALYSIS FUNCTIONS
 # ========================================
 
-def calculate_comprehensive_ats_score(content: str, job_posting: str = None, knockout_questions: List[Dict] = None) -> Dict[str, Any]:
+def calculate_comprehensive_ats_score(content: str, job_posting: str = None, knockout_questions: List[Dict] = None, filename: str = None) -> Dict[str, Any]:
     """Calculate comprehensive ATS compatibility score with penalty system"""
     
     # Detect industry for targeted analysis
@@ -2345,7 +3044,7 @@ def calculate_comprehensive_ats_score(content: str, job_posting: str = None, kno
             break
     
     # Generate comprehensive categories using frontend logic
-    comprehensive_categories = generate_comprehensive_ats_scores_frontend(content, {k: v['score'] for k, v in components.items()}, components)
+    comprehensive_categories = generate_comprehensive_ats_scores_frontend(content, {k: v['score'] for k, v in components.items()}, components, filename)
     
     # Create comprehensive detailed analysis with all 23+ categories
     comprehensive_analysis = {}
@@ -3928,8 +4627,12 @@ def analyze_resume_content(file_url: str) -> Dict[str, Any]:
         logger.info(f"Full name found: {personal_info.get('full_name', 'None')}")
         logger.info(f"Years of experience: {personal_info.get('years_of_experience', 'None')}")
         
+        # Extract filename from URL for analysis
+        import os
+        filename = os.path.basename(file_url) if file_url else None
+        
         # Perform comprehensive ATS analysis
-        ats_analysis = calculate_comprehensive_ats_score(content)
+        ats_analysis = calculate_comprehensive_ats_score(content, filename=filename)
         
         # Debug: Log component scores to see why total is 100
         logger.info(f"Component scores breakdown:")
