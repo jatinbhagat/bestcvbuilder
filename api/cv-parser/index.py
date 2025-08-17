@@ -2269,12 +2269,6 @@ def generate_comprehensive_ats_scores_frontend(content: str, component_scores: d
         'issue': 'Add relevant certifications and professional credentials',
         'impact': 'ALL'
     })
-    categories.append({
-        'name': 'Action Verb Repetition',
-        'score': analyze_repetition_frontend(resume_text),  # Reuse repetition logic
-        'issue': 'Avoid repeating the same action verbs',
-        'impact': 'LANGUAGE'
-    })
     
     logger.info(f'🏗️ Generated {len(categories)} comprehensive categories from frontend logic')
     for cat in categories:

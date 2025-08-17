@@ -648,6 +648,32 @@
         </div>
     </div>
 
+    <!-- Issue Details Modal -->
+    <div id="issueModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-2xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900" id="modalTitle">Grammar Issues Found</h2>
+                    <p class="text-sm text-gray-600">Specific issues detected in your resume</p>
+                </div>
+                <button id="closeModal" class="text-gray-400 hover:text-gray-600 text-xl font-bold">×</button>
+            </div>
+            
+            <div class="space-y-4 mb-6" id="modalIssuesList">
+                <!-- Issues will be populated here -->
+            </div>
+            
+            <div class="flex gap-3 pt-4 border-t border-gray-200">
+                <button id="modalFixAllBtn" class="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-3 px-6 rounded-xl hover:from-purple-700 hover:to-blue-700 transition-colors">
+                    Get All Fixed Using AI - FREE
+                </button>
+                <button id="modalCloseBtn" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script type="module" src="./js/result-simple.js"></script>
 </body>

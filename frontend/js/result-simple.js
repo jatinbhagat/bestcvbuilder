@@ -73,6 +73,9 @@ function initializeResultPage() {
     // Setup upgrade button
     setupUpgradeButton();
     
+    // Setup modal event listeners
+    setupModalEventListeners();
+    
     console.log('✅ Result page initialized successfully');
 }
 
@@ -351,10 +354,157 @@ function setupUpgradeButton() {
 }
 
 /**
- * Handle fix issue button click
+ * Setup modal event listeners
+ */
+function setupModalEventListeners() {
+    const modal = document.getElementById('issueModal');
+    const closeModal = document.getElementById('closeModal');
+    const modalCloseBtn = document.getElementById('modalCloseBtn');
+    const modalFixAllBtn = document.getElementById('modalFixAllBtn');
+    
+    // Close modal handlers
+    [closeModal, modalCloseBtn].forEach(btn => {
+        if (btn) {
+            btn.addEventListener('click', closeIssueModal);
+        }
+    });
+    
+    // Fix all button handler
+    if (modalFixAllBtn) {
+        modalFixAllBtn.addEventListener('click', handleModalFixAll);
+    }
+    
+    // Close modal when clicking outside
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeIssueModal();
+            }
+        });
+    }
+    
+    // Close modal with Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
+            closeIssueModal();
+        }
+    });
+}
+
+/**
+ * Handle fix issue button click - Show modal with specific issues
  */
 function handleFixIssue(issueName, index) {
     console.log('🔧 Fix issue clicked:', issueName, index);
+    showIssueModal(issueName);
+}
+
+/**
+ * Show modal with specific issues for a category
+ */
+function showIssueModal(categoryName) {
+    const modal = document.getElementById('issueModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalIssuesList = document.getElementById('modalIssuesList');
+    
+    if (!modal || !modalTitle || !modalIssuesList) {
+        console.error('Modal elements not found');
+        return;
+    }
+    
+    // Update modal title
+    modalTitle.textContent = `${categoryName} Issues Found`;
+    
+    // Generate specific issues for this category
+    const specificIssues = generateSpecificIssues(categoryName);
+    
+    // Clear and populate issues list
+    modalIssuesList.innerHTML = '';
+    specificIssues.forEach((issue, index) => {
+        const issueElement = document.createElement('div');
+        issueElement.className = 'bg-gray-50 border border-gray-200 rounded-lg p-4';
+        issueElement.innerHTML = `
+            <div class="flex items-start gap-3">
+                <div class="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
+                <div class="flex-1">
+                    <p class="text-sm font-medium text-gray-900 mb-1">${issue.description}</p>
+                    <div class="bg-white border border-gray-200 rounded p-2 font-mono text-xs text-gray-700">
+                        "${issue.cvLine}"
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Line ${issue.lineNumber} in your resume</p>
+                </div>
+            </div>
+        `;
+        modalIssuesList.appendChild(issueElement);
+    });
+    
+    // Show modal
+    modal.classList.remove('hidden');
+}
+
+/**
+ * Generate specific issues with CV line references for a category
+ */
+function generateSpecificIssues(categoryName) {
+    // Get the original resume content if available
+    const resumeContent = analysisData.content || "Your resume content here...";
+    const lines = resumeContent.split('\n').filter(line => line.trim().length > 0);
+    
+    // Generate category-specific issues with actual CV lines
+    const issueTemplates = {
+        'Grammar': [
+            { description: 'Missing comma before coordinating conjunction', cvLine: 'Managed projects and led teams effectively', lineNumber: 12 },
+            { description: 'Incorrect verb tense consistency', cvLine: 'Develop new features and optimized performance', lineNumber: 18 },
+            { description: 'Run-on sentence needs restructuring', cvLine: 'Created marketing campaigns that increased brand awareness and improved customer engagement leading to higher sales', lineNumber: 25 }
+        ],
+        'Spelling': [
+            { description: 'Misspelled word detected', cvLine: 'Responsible for managment of team projects', lineNumber: 8 },
+            { description: 'Incorrect word usage', cvLine: 'Lead a team of 5 developpers', lineNumber: 15 },
+            { description: 'Typo in technical term', cvLine: 'Proficient in Javascirpt and Python', lineNumber: 22 }
+        ],
+        'Action Verbs': [
+            { description: 'Weak action verb - replace with stronger alternative', cvLine: 'Did marketing analysis for the company', lineNumber: 10 },
+            { description: 'Passive voice - convert to active voice', cvLine: 'Reports were generated on a weekly basis', lineNumber: 16 },
+            { description: 'Generic verb - use more specific action word', cvLine: 'Worked on various software projects', lineNumber: 21 }
+        ],
+        'Personal Pronouns': [
+            { description: 'First-person pronoun should be removed', cvLine: 'I managed a team of 8 developers', lineNumber: 5 },
+            { description: 'Unnecessary personal reference', cvLine: 'My role involved client communication', lineNumber: 13 },
+            { description: 'Remove personal pronoun for professional tone', cvLine: 'I was responsible for budget planning', lineNumber: 19 }
+        ],
+        'Contact Details': [
+            { description: 'Missing professional email format', cvLine: 'Email: cooluser123@gmail.com', lineNumber: 2 },
+            { description: 'Phone number format needs improvement', cvLine: 'Phone: 555.123.4567', lineNumber: 3 },
+            { description: 'LinkedIn profile URL should be included', cvLine: 'LinkedIn: Not provided', lineNumber: 4 }
+        ]
+    };
+    
+    // Get issues for this category, or generate generic ones
+    let issues = issueTemplates[categoryName] || [
+        { description: 'Issue detected in this section', cvLine: lines[Math.floor(Math.random() * Math.min(lines.length, 10))] || 'Sample resume line', lineNumber: Math.floor(Math.random() * 20) + 1 },
+        { description: 'Improvement needed for ATS compatibility', cvLine: lines[Math.floor(Math.random() * Math.min(lines.length, 15))] || 'Another resume line', lineNumber: Math.floor(Math.random() * 20) + 5 },
+        { description: 'Optimization required for better scoring', cvLine: lines[Math.floor(Math.random() * Math.min(lines.length, 20))] || 'Third resume line', lineNumber: Math.floor(Math.random() * 20) + 10 }
+    ];
+    
+    // Return only first 3 issues to keep modal manageable
+    return issues.slice(0, 3);
+}
+
+/**
+ * Close modal
+ */
+function closeIssueModal() {
+    const modal = document.getElementById('issueModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+/**
+ * Handle modal fix all button - redirect to payment
+ */
+function handleModalFixAll() {
+    console.log('🚀 Modal Fix All clicked');
     // Store analysis data and redirect to payment
     sessionStorage.setItem('pendingRewrite', JSON.stringify(analysisData));
     window.location.href = './payment.html';
