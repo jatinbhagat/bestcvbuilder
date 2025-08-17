@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your ATS Analysis Results - BestCVBuilder</title>
+    <meta name="description" content="Your detailed ATS analysis results and actionable recommendations">
+    
+    <!-- Tailwind CSS -->
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Favicon -->
+    <!-- <link rel="icon" type="image/x-icon" href="./assets/favicon.ico"> -->
+    
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --primary-light: #3b82f6;
+            --success-color: #059669;
+            --warning-color: #d97706;
+            --error-color: #dc2626;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --border-radius: 12px;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+            color: var(--gray-800);
+        }
+
+        /* Header Improvements */
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            -webkit-backdrop-filter: blur(10px);
+                    backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--gray-200);
+            box-shadow: var(--shadow-sm);
+        }
+
+        header h1 {
+            font-size: 1.375rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+        }
+
+        /* Score Circle - Modern Design */
+        .score-circle {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+            border: 3px solid #e5e7eb;
+            box-shadow: var(--shadow-lg);
+            transition: all 0.3s ease;
+        }
+
+        .score-circle:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+
+        .score-circle #atsScore {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Sidebar Improvements */
+        .sidebar {
+            background: rgba(255, 255, 255, 0.98);
+            -webkit-backdrop-filter: blur(10px);
+                    backdrop-filter: blur(10px);
+            border-right: 1px solid var(--gray-200);
+            box-shadow: var(--shadow);
+        }
+
+        .sidebar-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 0;
+            border-bottom: 1px solid var(--gray-100);
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-item:hover {
+            background: var(--gray-50);
+            margin: 0 -16px;
+            padding: 14px 16px;
+            border-radius: var(--border-radius);
+        }
+
+        .sidebar-item:last-child {
+            border-bottom: none;
+        }
+
+        .sidebar-item .score {
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            height: calc(100vh - 80px);
+            overflow-y: auto;
+            position: relative;
+            background: transparent;
+            scrollbar-width: thin;
+            scrollbar-color: var(--gray-300) transparent;
+        }
+
+        .main-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .main-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .main-content::-webkit-scrollbar-thumb {
+            background: var(--gray-300);
+            border-radius: 3px;
+        }
+
+        .main-content::-webkit-scrollbar-thumb:hover {
+            background: var(--gray-400);
+        }
+
+        .content-wrapper {
+            padding-bottom: 50px;
+            min-height: calc(100vh - 80px);
+        }
+
+        /* Summary Card - New Modern Design */
+        .summary-card {
+            background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+            border-radius: 16px;
+            border: 1px solid var(--gray-200);
+            padding: 32px;
+            margin-bottom: 32px;
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .summary-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--success-color), var(--warning-color));
+        }
+
+        .summary-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .summary-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.25rem;
+        }
+
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            margin-top: 24px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 20px;
+            background: var(--gray-50);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--gray-200);
+            transition: all 0.2s ease;
+        }
+
+        .stat-item:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .stat-number.high { color: var(--error-color); }
+        .stat-number.medium { color: var(--warning-color); }
+        .stat-number.completed { color: var(--success-color); }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            font-weight: 500;
+        }
+
+        /* Issue Cards - Enhanced Design */
+        .issue-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            border: 1px solid var(--gray-200);
+            padding: 28px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .issue-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--primary-color);
+            transition: width 0.3s ease;
+        }
+
+        .issue-card:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-3px);
+            border-color: var(--gray-300);
+        }
+
+        .issue-card:hover::before {
+            width: 6px;
+        }
+
+        .issue-card.severity-high::before { background: var(--error-color); }
+        .issue-card.severity-medium::before { background: var(--warning-color); }
+        .issue-card.severity-low::before { background: var(--gray-500); }
+
+        .issue-content h3 {
+            margin: 0 0 8px 0;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .issue-content p {
+            margin: 0;
+            color: var(--gray-600);
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+
+        .issue-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .score-badge {
+            background: var(--gray-100);
+            color: var(--gray-700);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .fix-button {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+            color: white;
+            padding: 12px 24px;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.875rem;
+            box-shadow: var(--shadow);
+        }
+
+        .fix-button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+            background: linear-gradient(135deg, #1d4ed8, var(--primary-color));
+        }
+
+        .fix-button:active {
+            transform: translateY(0);
+        }
+
+        /* Strengths Section */
+        .strengths-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            border: 1px solid var(--gray-200);
+            padding: 32px;
+            margin-bottom: 32px;
+            box-shadow: var(--shadow);
+        }
+
+        .strength-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 16px 0;
+            gap: 16px;
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        .strength-item:last-child {
+            border-bottom: none;
+        }
+
+        .check-icon {
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(135deg, var(--success-color), #06b6d4);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 2px;
+            box-shadow: var(--shadow);
+        }
+
+        .strength-content h4 {
+            margin: 0 0 4px 0;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .strength-content p {
+            margin: 0;
+            color: var(--gray-600);
+            font-size: 0.875rem;
+        }
+
+        /* Impact Badges */
+        .impact-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .impact-badge.high {
+            background: #fef2f2;
+            color: var(--error-color);
+            border: 1px solid #fecaca;
+        }
+
+        .impact-badge.medium {
+            background: #fffbeb;
+            color: var(--warning-color);
+            border: 1px solid #fed7aa;
+        }
+
+        .impact-badge.low {
+            background: var(--gray-50);
+            color: var(--gray-600);
+            border: 1px solid var(--gray-200);
+        }
+
+        /* Upgrade CTA Card */
+        .upgrade-cta-card {
+            transition: all 0.3s ease;
+        }
+
+        .upgrade-cta-card:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Issues Section Toggle */
+        .issues-section button {
+            transition: all 0.2s ease;
+        }
+
+        .issues-section button:hover {
+            border-color: var(--gray-300);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .desktop-layout {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100% !important;
+                margin-bottom: 20px;
+                border-right: none;
+                border-bottom: 1px solid var(--gray-200);
+            }
+            
+            .main-content {
+                width: 100% !important;
+                height: auto;
+                max-height: none;
+            }
+            
+            .content-wrapper {
+                padding-bottom: 120px;
+            }
+
+            .summary-stats {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+
+            .issue-card {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+            }
+
+            .score-circle {
+                width: 120px;
+                height: 120px;
+            }
+
+            .score-circle #atsScore {
+                font-size: 2rem;
+            }
+        }
+
+        /* Loading States */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid var(--gray-300);
+            border-top: 2px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Accessibility */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Focus styles */
+        button:focus,
+        .fix-button:focus {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 2px;
+        }
+    </style>
+  <script type="module" crossorigin src="/assets/result-B03BGOah-v2.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/output-DEU4ITj2-v2.js">
+  <link rel="stylesheet" crossorigin href="/assets/output-BQoH_Vvs-v2.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 px-6 py-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <button onclick="window.location.href='./index.html'" class="text-gray-600 hover:text-gray-900">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                </button>
+                <h1 class="text-xl font-bold text-gray-900">ATS Analysis Results</h1>
+            </div>
+            <button id="analyzeAnotherBtn" onclick="window.location.href='./index.html'" class="text-blue-600 hover:text-blue-700 font-medium">
+                Analyze Another Resume
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Layout -->
+    <div class="desktop-layout flex min-h-screen">
+        <!-- Left Sidebar -->
+        <div class="sidebar w-80 bg-white border-r border-gray-200 p-6" style="width: 320px;">
+            <!-- Overall Score -->
+            <div class="text-center mb-8">
+                <div class="score-circle mx-auto mb-4" id="scoreCircle">
+                    <div class="text-5xl font-black text-gray-900" id="atsScore">83</div>
+                    <div class="text-sm font-medium text-gray-600 uppercase tracking-wide">OVERALL</div>
+                </div>
+                <div class="text-sm text-blue-600 font-medium" id="markedAsDone">1 MARKED AS DONE</div>
+            </div>
+
+            <!-- Home Button -->
+            <button onclick="window.location.href='./index.html'" class="w-full flex items-center gap-3 text-blue-600 py-3 px-4 rounded-lg hover:bg-blue-50 mb-6">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                </svg>
+                Home
+            </button>
+
+            <!-- Top Fixes Section -->
+            <div class="mb-8">
+                <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wide mb-4">TOP FIXES</h3>
+                <div id="topFixesList">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Completed Section -->
+            <div>
+                <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wide mb-4">COMPLETED</h3>
+                <div id="completedList">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="main-content flex-1 p-8" style="width: calc(100% - 320px);">
+            <div class="content-wrapper">
+                <!-- Analysis Summary Card -->
+                <div class="summary-card mb-8">
+                    <div class="summary-header">
+                        <div class="summary-icon">📊</div>
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-900 mb-1">ATS Analysis Summary</h2>
+                            <p class="text-gray-600 text-sm" id="summaryText">18 areas need improvement out of 26 categories analyzed</p>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-stats">
+                        <div class="stat-item">
+                            <span class="stat-number high" id="highPriorityCount">10</span>
+                            <span class="stat-label">High Priority</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number medium" id="needFixesCount">8</span>
+                            <span class="stat-label">Need Fixes</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number completed" id="completedCount">6</span>
+                            <span class="stat-label">Completed</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upgrade CTA - Primary Position -->
+                <div class="upgrade-cta-card mb-8">
+                    <div class="bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-2xl p-6 text-center">
+                        <h3 class="text-xl font-bold mb-2">🚀 Fix All Issues Instantly</h3>
+                        <p class="text-sm mb-4 opacity-90">Get your ATS-optimized resume in under 2 minutes</p>
+                        <button id="upgradeBtn" class="bg-white text-purple-600 font-bold py-3 px-6 rounded-xl hover:bg-gray-100 transition-colors">
+                            Fix My Resume Now - FREE
+                        </button>
+                        <p class="text-xs mt-3 opacity-75">All issues automatically fixed</p>
+                    </div>
+                </div>
+
+                <!-- Issues Details - Hidden by Default -->
+                <div class="issues-section mb-8">
+                    <button id="toggleIssuesBtn" class="w-full bg-white border border-gray-200 rounded-xl p-4 text-left hover:border-gray-300 transition-colors">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-semibold text-gray-900">View Detailed Issues</h3>
+                                <p class="text-sm text-gray-600">See exactly what needs to be fixed in your resume</p>
+                            </div>
+                            <svg id="toggleIcon" class="w-5 h-5 text-gray-400 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                    </button>
+                    
+                    <!-- Issues List - Initially Hidden -->
+                    <div id="issuesList" class="hidden mt-4">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Strengths Section -->
+                <div class="strengths-section" id="strengthsSection">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">What you did well</h2>
+                    <p class="text-lg text-gray-600 mb-8">We ran comprehensive checks on your resume. Here are the areas where you excelled – well done!</p>
+                    <div id="strengthsList">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+</body>
+</html>
