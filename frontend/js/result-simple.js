@@ -82,10 +82,11 @@ function initializeResultPage() {
 function displayOverallScore() {
     if (!atsScore) return;
     
-    const finalScore = Math.round(analysisData.ats_score || 0);
+    // Backend sends 'score' field, not 'ats_score'
+    const finalScore = Math.round(analysisData.score || analysisData.ats_score || 0);
     atsScore.textContent = finalScore;
     
-    console.log('📊 Displaying score:', finalScore);
+    console.log('📊 Displaying score:', finalScore, 'from data:', { score: analysisData.score, ats_score: analysisData.ats_score });
     
     // Update color based on score
     if (scoreCircle) {
@@ -103,11 +104,12 @@ function displayOverallScore() {
  * Display component breakdown from backend
  */
 function displayComponentBreakdown() {
-    const components = analysisData.component_scores || {};
-    const detailed = analysisData.detailed_analysis || {};
+    // Backend sends detailedAnalysis, not component_scores and detailed_analysis
+    const detailed = analysisData.detailedAnalysis || analysisData.detailed_analysis || {};
+    const components = analysisData.component_scores || {}; // This may be empty
     
-    console.log('📊 Components:', components);
-    console.log('📊 Detailed:', detailed);
+    console.log('📊 Detailed Analysis:', detailed);
+    console.log('📊 Component Scores:', components);
     
     // Clear existing content
     if (topFixesList) topFixesList.innerHTML = '';
@@ -157,42 +159,52 @@ function displayComponentBreakdown() {
 function createCategoriesFromBackend(components, detailed) {
     const categories = [];
     
-    // Map backend components to friendly names
-    const componentMap = {
-        'structure': { name: 'Resume Structure', maxScore: 25 },
-        'keywords': { name: 'Keywords & Skills', maxScore: 20 },
-        'contact': { name: 'Contact Information', maxScore: 15 },
-        'formatting': { name: 'Formatting & Layout', maxScore: 10 },
-        'achievements': { name: 'Quantified Achievements', maxScore: 10 },
-        'readability': { name: 'Readability & Length', maxScore: 10 },
-        'dates': { name: 'Date Formatting', maxScore: 5 },
-        'bullet_lengths': { name: 'Bullet Lengths', maxScore: 5 }
-    };
+    console.log('🔍 Creating categories from detailed analysis:', detailed);
     
-    // Convert backend scores to 0-10 scale
-    for (const [key, data] of Object.entries(componentMap)) {
-        const backendScore = components[key] || 0;
-        const maxScore = data.maxScore;
-        
-        // Scale to 0-10
-        const scaledScore = Math.round((backendScore / maxScore) * 10);
-        
-        categories.push({
-            name: data.name,
-            score: Math.max(0, Math.min(10, scaledScore)),
-            issue: getIssueForComponent(key),
-            impact: getImpactForComponent(key)
-        });
-    }
+    // Backend sends scores directly in detailedAnalysis
+    const categoryMappings = [
+        { key: 'structure', name: 'Resume Structure', data: detailed.structure },
+        { key: 'keywords', name: 'Keywords & Skills', data: detailed.keywords },
+        { key: 'contact', name: 'Contact Information', data: detailed.contact },
+        { key: 'formatting', name: 'Formatting & Layout', data: detailed.formatting },
+        { key: 'achievements', name: 'Quantified Achievements', data: detailed.achievements },
+        { key: 'readability', name: 'Readability & Length', data: detailed.readability },
+        { key: 'dates', name: 'Date Formatting', data: detailed.dates },
+        { key: 'bullet_lengths', name: 'Bullet Lengths', data: detailed.bullet_lengths }
+    ];
     
+    categoryMappings.forEach(mapping => {
+        if (mapping.data && typeof mapping.data.score !== 'undefined') {
+            const score = Math.max(0, Math.min(10, Math.round(mapping.data.score)));
+            
+            categories.push({
+                name: mapping.name,
+                score: score,
+                issue: getIssueForComponent(mapping.key, mapping.data),
+                impact: getImpactForComponent(mapping.key)
+            });
+            
+            console.log(`📊 ${mapping.name}: ${score}/10`);
+        } else {
+            console.warn(`⚠️ No data for ${mapping.name}:`, mapping.data);
+        }
+    });
+    
+    console.log('📊 Final categories created:', categories);
     return categories;
 }
 
 /**
  * Get issue description for component
  */
-function getIssueForComponent(component) {
-    const issues = {
+function getIssueForComponent(component, data) {
+    // Use actual backend issues if available
+    if (data && data.issues && data.issues.length > 0) {
+        return data.issues[0]; // Use first issue
+    }
+    
+    // Fallback to default messages
+    const defaultIssues = {
         'structure': 'Improve resume structure and section organization',
         'keywords': 'Add more relevant industry keywords',
         'contact': 'Complete contact information with phone, email, LinkedIn',
@@ -202,7 +214,7 @@ function getIssueForComponent(component) {
         'dates': 'Use consistent date formatting',
         'bullet_lengths': 'Optimize bullet point length (10-30 words)'
     };
-    return issues[component] || 'Needs improvement';
+    return defaultIssues[component] || 'Needs improvement';
 }
 
 /**
