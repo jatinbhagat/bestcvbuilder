@@ -18,8 +18,16 @@ const needFixesCount = document.getElementById('needFixesCount');
 const completedCount = document.getElementById('completedCount');
 
 // Get data from session storage
-const analysisData = JSON.parse(sessionStorage.getItem('atsResults') || '{}');
-console.log('📊 Analysis Data:', analysisData);
+let analysisData;
+try {
+    const rawData = sessionStorage.getItem('atsAnalysis');
+    console.log('📊 Raw session data:', rawData);
+    analysisData = JSON.parse(rawData || '{}');
+    console.log('📊 Parsed Analysis Data:', analysisData);
+} catch (error) {
+    console.error('❌ Failed to parse session data:', error);
+    analysisData = {};
+}
 
 /**
  * Initialize the result page
@@ -27,10 +35,30 @@ console.log('📊 Analysis Data:', analysisData);
 function initializeResultPage() {
     console.log('🚀 Initializing result page...');
     
+    // Check all possible session storage keys for debugging
+    console.log('🔍 All session storage keys:', Object.keys(sessionStorage));
+    console.log('🔍 atsAnalysis:', sessionStorage.getItem('atsAnalysis'));
+    console.log('🔍 atsResults:', sessionStorage.getItem('atsResults'));
+    
     if (!analysisData || Object.keys(analysisData).length === 0) {
         console.error('❌ No analysis data found');
-        showError('No analysis data found. Please upload your resume again.');
-        return;
+        
+        // Try alternative keys
+        const altData = sessionStorage.getItem('atsResults') || sessionStorage.getItem('analysisResults');
+        if (altData) {
+            console.log('📊 Found alternative data:', altData);
+            try {
+                analysisData = JSON.parse(altData);
+                console.log('📊 Using alternative data:', analysisData);
+            } catch (e) {
+                console.error('❌ Failed to parse alternative data:', e);
+            }
+        }
+        
+        if (!analysisData || Object.keys(analysisData).length === 0) {
+            showError('No analysis data found. Please upload your resume again.');
+            return;
+        }
     }
     
     // Display overall score
@@ -354,9 +382,32 @@ function handleFixIssue(issueName, index) {
  * Show error message
  */
 function showError(message) {
-    if (atsScore) atsScore.textContent = 'Error';
-    if (summaryText) summaryText.textContent = message;
     console.error('❌ Error:', message);
+    
+    // Update UI to show error state
+    if (atsScore) atsScore.textContent = '—';
+    if (summaryText) summaryText.textContent = message;
+    
+    // Show error in main content area
+    if (issuesList) {
+        issuesList.innerHTML = `
+            <div class="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+                <div class="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+                    <span class="text-2xl text-red-600">❌</span>
+                </div>
+                <h3 class="text-lg font-bold text-red-900 mb-2">No Analysis Data Found</h3>
+                <p class="text-red-700 mb-4">${message}</p>
+                <button onclick="window.location.href='./index.html'" class="bg-red-600 text-white px-6 py-2 rounded-xl hover:bg-red-700 transition-colors">
+                    Upload Resume
+                </button>
+            </div>
+        `;
+        issuesList.classList.remove('hidden');
+    }
+    
+    // Clear sidebar
+    if (topFixesList) topFixesList.innerHTML = '<div class="text-sm text-gray-500 p-4">No data available</div>';
+    if (completedList) completedList.innerHTML = '<div class="text-sm text-gray-500 p-4">No data available</div>';
 }
 
 // Make function global for onclick access
