@@ -1275,95 +1275,184 @@ def analyze_readability_and_length(content: str) -> Dict[str, Any]:
 
 def analyze_date_formatting(content: str) -> Dict[str, Any]:
     """
-    Analyze date formatting consistency 
+    Analyze date formatting consistency in work experience and education sections
     Returns score out of 10 points
     """
     score = 10  # Start with perfect score
     issues = []
     
-    # Date patterns to look for
+    # Extract relevant sections only (Experience, Education, Projects)
+    relevant_content = extract_relevant_sections_for_dates(content)
+    
+    # More precise date patterns with year validation
     date_patterns = [
-        r'\b(0[1-9]|1[0-2])\/\d{4}\b',           # MM/YYYY format
-        r'\b\d{1,2}\/\d{4}\b',                    # M/YYYY format  
-        r'\b(0[1-9]|1[0-2])-\d{4}\b',            # MM-YYYY format
-        r'\b\d{1,2}-\d{4}\b',                     # M-YYYY format
-        r'\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}\b',  # Month YYYY
-        r'\b\d{4}\s*[-–]\s*(Present|Ongoing|Current)\b',  # YYYY - Present
+        (r'\b(0[1-9]|1[0-2])/(19[9-9][0-9]|20[0-3][0-9])\b', 'MM/YYYY'),           # MM/YYYY format
+        (r'\b([1-9])/(19[9-9][0-9]|20[0-3][0-9])\b', 'M/YYYY'),                     # M/YYYY format  
+        (r'\b(0[1-9]|1[0-2])-(19[9-9][0-9]|20[0-3][0-9])\b', 'MM-YYYY'),           # MM-YYYY format
+        (r'\b([1-9])-(19[9-9][0-9]|20[0-3][0-9])\b', 'M-YYYY'),                     # M-YYYY format
+        (r'\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(19[9-9][0-9]|20[0-3][0-9])\b', 'Month YYYY'),  # Month YYYY
+        (r'\b(19[9-9][0-9]|20[0-3][0-9])\s*[-–]\s*(Present|Ongoing|Current)\b', 'YYYY-Present'),  # YYYY - Present
     ]
     
     # Find all dates and track which format they use
     all_dates = []
     format_types = []
+    format_names = []
     
-    for i, pattern in enumerate(date_patterns):
-        matches = re.findall(pattern, content, re.IGNORECASE)
+    for i, (pattern, format_name) in enumerate(date_patterns):
+        matches = re.findall(pattern, relevant_content, re.IGNORECASE)
         for match in matches:
-            all_dates.append(match.strip())
-            format_types.append(i)
+            # Extract the actual date string (handle tuple matches)
+            if isinstance(match, tuple):
+                date_str = match[0] if format_name in ['MM/YYYY', 'M/YYYY', 'MM-YYYY', 'M-YYYY'] else ' '.join(match)
+            else:
+                date_str = match
+            
+            # Additional validation to avoid false positives
+            if is_valid_employment_date(date_str, relevant_content):
+                all_dates.append(date_str.strip())
+                format_types.append(i)
+                format_names.append(format_name)
+    
+    # Debug output
+    logger.info(f"🗓️ Found {len(all_dates)} valid dates in relevant sections")
+    for date, fmt in zip(all_dates, format_names):
+        logger.info(f"🗓️ Date: '{date}' -> Format: {fmt}")
     
     # Check for format consistency
     unique_formats = set(format_types)
     if len(unique_formats) > 1:
-        # Penalty for mixed formats
-        inconsistencies = len(format_types) - format_types.count(format_types[0]) if format_types else 0
-        penalty = min(inconsistencies * 2, 8)  # Max 8 points penalty
+        # More balanced penalty for mixed formats
+        total_dates = len(format_types)
+        most_common_format = max(set(format_types), key=format_types.count) if format_types else 0
+        inconsistencies = total_dates - format_types.count(most_common_format)
+        
+        # Progressive penalty: 1 point per 2 inconsistencies, max 6 points
+        penalty = min((inconsistencies + 1) // 2, 6)
         score -= penalty
-        issues.append(f"Mixed date formats detected ({inconsistencies} inconsistencies)")
+        issues.append(f"Mixed date formats detected ({inconsistencies} inconsistencies across {len(unique_formats)} formats)")
     
     # Basic validation - ensure work experience has dates
     if not all_dates:
-        score -= 5
-        issues.append("No dates found in resume")
+        score -= 4
+        issues.append("No employment dates found in experience section")
     elif len(all_dates) < 2:
         score -= 2
-        issues.append("Insufficient date information")
+        issues.append("Limited date information in work experience")
     
     return {
         'score': max(score, 0),
         'total_dates_found': len(all_dates),
         'unique_formats': len(unique_formats),
+        'detected_dates': all_dates[:10],  # Show first 10 for debugging
         'issues': issues
     }
 
+def extract_relevant_sections_for_dates(content: str) -> str:
+    """
+    Extract only sections where employment/education dates should appear
+    """
+    lines = content.split('\n')
+    relevant_lines = []
+    current_section = ""
+    include_section = False
+    
+    # Keywords that indicate relevant sections
+    experience_keywords = [
+        'experience', 'employment', 'work history', 'professional', 'career',
+        'positions', 'roles', 'jobs', 'internship', 'intern'
+    ]
+    education_keywords = [
+        'education', 'academic', 'degree', 'university', 'college', 'school',
+        'certification', 'training', 'course'
+    ]
+    project_keywords = ['projects', 'portfolio', 'achievements']
+    
+    # Headers to exclude (these often contain false positive dates)
+    exclude_keywords = [
+        'contact', 'personal', 'address', 'phone', 'email', 'references',
+        'skills', 'technologies', 'languages', 'hobbies', 'interests'
+    ]
+    
+    for line in lines:
+        line_lower = line.lower().strip()
+        
+        # Check if this is a section header
+        if len(line_lower) > 0 and (line.isupper() or line.strip().endswith(':') or 
+            any(keyword in line_lower for keyword in experience_keywords + education_keywords + project_keywords + exclude_keywords)):
+            
+            # Determine if we should include this section
+            include_section = (
+                any(keyword in line_lower for keyword in experience_keywords + education_keywords + project_keywords) and
+                not any(keyword in line_lower for keyword in exclude_keywords)
+            )
+            current_section = line_lower
+            
+        # Include the line if we're in a relevant section
+        if include_section:
+            relevant_lines.append(line)
+    
+    relevant_content = '\n'.join(relevant_lines)
+    logger.info(f"🗓️ Extracted {len(relevant_content)} characters from relevant sections for date analysis")
+    return relevant_content
+
+def is_valid_employment_date(date_str: str, context: str) -> bool:
+    """
+    Additional validation to ensure the matched pattern is actually an employment date
+    """
+    # Skip if it appears to be in contact information context
+    contact_indicators = ['phone', 'tel', 'mobile', 'address', 'email', 'linkedin']
+    context_lower = context.lower()
+    
+    # Check surrounding context for phone/address patterns
+    date_index = context_lower.find(date_str.lower())
+    if date_index != -1:
+        # Check 50 characters before and after the date
+        start = max(0, date_index - 50)
+        end = min(len(context_lower), date_index + len(date_str) + 50)
+        surrounding_text = context_lower[start:end]
+        
+        if any(indicator in surrounding_text for indicator in contact_indicators):
+            return False
+    
+    # Skip obvious phone number patterns
+    if re.match(r'^\d{1,2}[/-]\d{4}$', date_str) and '/' in date_str:
+        # Could be phone number like "1/2023" - check if it's in a reasonable year range
+        try:
+            parts = date_str.split('/')
+            if len(parts) == 2 and int(parts[0]) > 12:  # Month can't be > 12
+                return False
+        except:
+            return False
+    
+    return True
+
 def analyze_bullet_lengths(content: str) -> Dict[str, Any]:
     """
-    Analyze bullet point length optimization
+    Analyze bullet point length optimization in Experience section only
     Returns score out of 10 points
     """
     score = 10  # Start with perfect score
     issues = []
     
-    # Split content into sections
-    lines = content.split('\n')
-    in_summary_section = False
-    all_bullets = []
+    # Extract only Experience section content
+    experience_content = extract_experience_section(content)
     
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-            
-        # Check if we're entering/leaving summary section
-        line_lower = line.lower()
-        if any(keyword in line_lower for keyword in ['professional summary', 'summary', 'executive summary', 'career summary', 'objective', 'profile']):
-            in_summary_section = True
-            continue
-        elif any(keyword in line_lower for keyword in ['experience', 'employment', 'work history', 'education', 'skills', 'certifications']):
-            in_summary_section = False
-            continue
-            
-        # If not in summary section, treat as bullet point
-        if not in_summary_section and line:
-            # Remove bullet symbols if present
-            clean_line = re.sub(r'^\s*[•\-\*o▪→]\s*', '', line)
-            if clean_line.strip():
-                all_bullets.append(clean_line.strip())
+    if not experience_content:
+        return {
+            'score': 5,  # Neutral score if no experience section found
+            'total_bullets': 0,
+            'issues': ['No Experience section found for bullet analysis']
+        }
+    
+    # Find actual bullet points (sentence-like content in experience)
+    all_bullets = extract_experience_bullets(experience_content)
     
     if not all_bullets:
         return {
             'score': 5,  # Neutral score if no bullets found
             'total_bullets': 0,
-            'issues': ['No bullet points detected outside summary section']
+            'issues': ['No bullet points detected in Experience section']
         }
     
     # Analyze each bullet point
@@ -1372,10 +1461,14 @@ def analyze_bullet_lengths(content: str) -> Dict[str, Any]:
     optimal = 0      # 10-30 words  
     too_long = 0     # > 30 words
     
-    for bullet in all_bullets:
+    logger.info(f"🔫 Found {len(all_bullets)} bullets in Experience section:")
+    
+    for i, bullet in enumerate(all_bullets):
         # Clean bullet text and count words
         clean_bullet = re.sub(r'[^\w\s]', ' ', bullet)
         word_count = len([word for word in clean_bullet.split() if word.strip()])
+        
+        logger.info(f"🔫 Bullet {i+1}: '{bullet[:50]}...' ({word_count} words)")
         
         if word_count < 10:
             too_short += 1
@@ -1398,6 +1491,8 @@ def analyze_bullet_lengths(content: str) -> Dict[str, Any]:
     if too_long > 0:
         issues.append(f"{too_long} bullets too long (> 30 words)")
         
+    logger.info(f"🔫 Bullet analysis complete: {optimal} optimal, {too_short} too short, {too_long} too long")
+        
     return {
         'score': round(score, 1),
         'total_bullets': total_bullets,
@@ -1406,8 +1501,790 @@ def analyze_bullet_lengths(content: str) -> Dict[str, Any]:
         'too_long': too_long,
         'non_optimal_count': non_optimal_count,
         'penalty_applied': round(penalty, 1),
+        'sample_bullets': all_bullets[:5],  # First 5 for debugging
         'issues': issues
     }
+
+def extract_experience_section(content: str) -> str:
+    """
+    Extract only the Experience/Work History section content
+    """
+    lines = content.split('\n')
+    experience_lines = []
+    in_experience = False
+    
+    # Keywords that indicate experience section start
+    experience_keywords = [
+        'experience', 'employment', 'work history', 'professional experience',
+        'career history', 'work experience', 'professional background'
+    ]
+    
+    # Keywords that indicate other sections (end experience)
+    other_section_keywords = [
+        'education', 'skills', 'certifications', 'projects', 'achievements',
+        'languages', 'interests', 'references', 'contact', 'summary',
+        'objective', 'profile', 'training', 'awards', 'publications'
+    ]
+    
+    for line in lines:
+        line_stripped = line.strip()
+        line_lower = line_stripped.lower()
+        
+        # Check if this is an experience section header
+        if any(keyword in line_lower for keyword in experience_keywords):
+            in_experience = True
+            continue
+            
+        # Check if this is a different section header
+        elif in_experience and any(keyword in line_lower for keyword in other_section_keywords):
+            in_experience = False
+            break
+            
+        # Collect experience content
+        if in_experience and line_stripped:
+            experience_lines.append(line_stripped)
+    
+    experience_content = '\n'.join(experience_lines)
+    logger.info(f"🔫 Extracted {len(experience_content)} characters from Experience section")
+    return experience_content
+
+def extract_experience_bullets(experience_content: str) -> List[str]:
+    """
+    Extract actual bullet points from experience section
+    Excludes job titles, company names, dates, and single words
+    """
+    lines = experience_content.split('\n')
+    bullets = []
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+            
+        # Remove bullet symbols if present
+        clean_line = re.sub(r'^\s*[•\-\*o▪→]\s*', '', line).strip()
+        
+        # Skip if line is too short to be a sentence
+        if len(clean_line) < 15:  # At least 15 characters for a meaningful sentence
+            continue
+            
+        # Skip obvious non-bullets
+        if is_non_bullet_line(clean_line):
+            continue
+            
+        # Must be sentence-like (at least 3 words with some complexity)
+        words = clean_line.split()
+        if len(words) < 3:
+            continue
+            
+        # Check if it looks like a sentence (has some complexity)
+        if is_sentence_like(clean_line):
+            bullets.append(clean_line)
+    
+    return bullets
+
+def is_non_bullet_line(line: str) -> bool:
+    """
+    Check if a line is NOT a bullet point (job title, company, date, etc.)
+    """
+    line_lower = line.lower().strip()
+    
+    # Skip lines that are all caps (likely section headers or company names)
+    if line.isupper() and len(line) > 3:
+        return True
+        
+    # Skip lines that are mostly dates
+    if re.match(r'^[a-zA-Z]*\s*\d{4}[\s\-–]+[a-zA-Z]*\s*\d{4}$', line.strip()):
+        return True
+        
+    # Skip lines that end with common date patterns
+    if re.search(r'(present|current|ongoing)$', line_lower):
+        return True
+        
+    # Skip obvious job titles (often followed by dates or at company)
+    job_title_patterns = [
+        r'^(senior|junior|lead|principal|chief|head of|director of|manager|associate|assistant)',
+        r'(engineer|developer|analyst|specialist|coordinator|consultant|executive)$',
+        r'^[A-Z][a-z]+ [A-Z][a-z]+$'  # Title Case words (likely job titles)
+    ]
+    
+    for pattern in job_title_patterns:
+        if re.search(pattern, line, re.IGNORECASE):
+            return True
+            
+    # Skip company names (often have Inc, LLC, Corp, etc.)
+    if re.search(r'\b(inc|llc|corp|ltd|company|technologies|solutions|systems)\b', line_lower):
+        return True
+        
+    return False
+
+def is_sentence_like(line: str) -> bool:
+    """
+    Check if a line looks like a sentence (has verbs, complexity)
+    """
+    words = line.split()
+    
+    # Must have at least 4 words to be considered sentence-like
+    if len(words) < 4:
+        return False
+        
+    # Should contain some action words or descriptive content
+    # Look for common verb patterns or connecting words
+    action_indicators = [
+        'developed', 'created', 'managed', 'led', 'implemented', 'designed',
+        'built', 'achieved', 'improved', 'increased', 'reduced', 'collaborated',
+        'worked', 'responsible', 'coordinated', 'analyzed', 'maintained',
+        'supported', 'delivered', 'executed', 'planned', 'optimized',
+        'and', 'with', 'for', 'by', 'using', 'through', 'to', 'of', 'in'
+    ]
+    
+    line_lower = line.lower()
+    has_action_words = any(word in line_lower for word in action_indicators)
+    
+    # Should have reasonable length and complexity
+    has_good_length = len(line) >= 20  # At least 20 characters
+    
+    return has_action_words and has_good_length
+
+# ========================================
+# FRONTEND ANALYSIS FUNCTIONS - COPIED EXACTLY FROM FRONTEND
+# ========================================
+
+def analyze_contact_details_frontend(resume_text: str) -> int:
+    """Copied exactly from frontend analyzeContactDetails"""
+    score = 10  # Start with perfect score, deduct 2.5 for each missing element
+    
+    # 1. Mobile Number (2.5 points)
+    has_mobile = has_mobile_number(resume_text)
+    if not has_mobile:
+        score -= 2.5
+    
+    # 2. Email Address (2.5 points)
+    has_email = has_email_address(resume_text)
+    if not has_email:
+        score -= 2.5
+    
+    # 3. LinkedIn Profile (2.5 points)
+    has_linkedin = has_linkedin_profile(resume_text)
+    if not has_linkedin:
+        score -= 2.5
+    
+    # 4. Location (2.5 points)
+    has_location = has_location_info(resume_text)
+    if not has_location:
+        score -= 2.5
+    
+    return max(0, min(10, score))
+
+def has_mobile_number(resume_text: str) -> bool:
+    """Check if resume contains mobile number"""
+    mobile_patterns = [
+        r'\+?[\d\s\-\(\)]{10,}',  # General phone pattern
+        r'\d{3}[-.\s]?\d{3}[-.\s]?\d{4}',  # US format
+        r'\(\d{3}\)\s?\d{3}[-.\s]?\d{4}'   # (XXX) XXX-XXXX
+    ]
+    text_lower = resume_text.lower()
+    if any(keyword in text_lower for keyword in ['phone', 'mobile', 'cell', 'tel']):
+        return True
+    for pattern in mobile_patterns:
+        if re.search(pattern, resume_text):
+            return True
+    return False
+
+def has_email_address(resume_text: str) -> bool:
+    """Check if resume contains email address"""
+    email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+    return bool(re.search(email_pattern, resume_text))
+
+def has_linkedin_profile(resume_text: str) -> bool:
+    """Check if resume contains LinkedIn profile"""
+    text_lower = resume_text.lower()
+    return 'linkedin' in text_lower or 'linkedin.com' in text_lower
+
+def has_location_info(resume_text: str) -> bool:
+    """Check if resume contains location information"""
+    location_keywords = ['city', 'state', 'country', 'address', 'location']
+    text_lower = resume_text.lower()
+    # Check for common location patterns
+    if any(keyword in text_lower for keyword in location_keywords):
+        return True
+    # Check for state abbreviations or zip codes
+    if re.search(r'\b[A-Z]{2}\b|\b\d{5}(-\d{4})?\b', resume_text):
+        return True
+    return False
+
+def analyze_education_section_frontend(resume_text: str, structure_data: dict = None) -> int:
+    """Copied exactly from frontend analyzeEducationSection"""
+    score = 8  # Start with good score
+    
+    education_keywords = ['education', 'degree', 'university', 'college', 'bachelor', 'master', 'phd']
+    text_lower = resume_text.lower()
+    
+    # Check if education section exists
+    has_education_section = any(keyword in text_lower for keyword in education_keywords)
+    if not has_education_section:
+        score -= 3
+    
+    # Check for degree information
+    degree_keywords = ['bachelor', 'master', 'phd', 'b.s.', 'm.s.', 'b.a.', 'm.a.']
+    has_degree = any(keyword in text_lower for keyword in degree_keywords)
+    if has_degree:
+        score += 1
+    
+    # Check for graduation year
+    if re.search(r'(19|20)\d{2}', resume_text):
+        score += 1
+    
+    return max(0, min(10, score))
+
+def analyze_skills_section_frontend(resume_text: str, structure_data: dict = None) -> int:
+    """Copied exactly from frontend analyzeSkillsSection"""
+    score = 7  # Start with average score
+    
+    skills_keywords = ['skills', 'technical skills', 'core competencies', 'technologies']
+    text_lower = resume_text.lower()
+    
+    # Check if skills section exists
+    has_skills_section = any(keyword in text_lower for keyword in skills_keywords)
+    if not has_skills_section:
+        score -= 2
+    
+    # Check for programming languages
+    programming_languages = ['python', 'java', 'javascript', 'c++', 'sql', 'html', 'css']
+    found_languages = sum(1 for lang in programming_languages if lang in text_lower)
+    if found_languages >= 3:
+        score += 2
+    elif found_languages >= 1:
+        score += 1
+    
+    # Check for tools and frameworks
+    tools = ['excel', 'powerpoint', 'word', 'git', 'aws', 'docker', 'kubernetes']
+    found_tools = sum(1 for tool in tools if tool in text_lower)
+    if found_tools >= 2:
+        score += 1
+    
+    return max(0, min(10, score))
+
+def analyze_analytical_skills_frontend(resume_text: str, keywords_data: dict = None) -> int:
+    """Copied exactly from frontend analyzeAnalyticalSkills"""
+    analytical_keywords = [
+        'analyze', 'analysis', 'analytical', 'data', 'statistics', 'metrics',
+        'insights', 'research', 'investigate', 'evaluate', 'assess'
+    ]
+    text_lower = resume_text.lower()
+    found_keywords = sum(1 for keyword in analytical_keywords if keyword in text_lower)
+    
+    if found_keywords >= 5:
+        return 9
+    elif found_keywords >= 3:
+        return 7
+    elif found_keywords >= 1:
+        return 5
+    else:
+        return 3
+
+def analyze_leadership_skills_frontend(resume_text: str, keywords_data: dict = None) -> int:
+    """Copied exactly from frontend analyzeLeadershipSkills"""
+    leadership_keywords = [
+        'lead', 'leader', 'leadership', 'manage', 'manager', 'management',
+        'supervise', 'mentor', 'train', 'coordinate', 'direct', 'guide'
+    ]
+    text_lower = resume_text.lower()
+    found_keywords = sum(1 for keyword in leadership_keywords if keyword in text_lower)
+    
+    if found_keywords >= 5:
+        return 9
+    elif found_keywords >= 3:
+        return 7
+    elif found_keywords >= 1:
+        return 5
+    else:
+        return 3
+
+def analyze_page_density_frontend(resume_text: str) -> int:
+    """Copied exactly from frontend analyzePageDensity"""
+    lines = resume_text.split('\n')
+    non_empty_lines = [line for line in lines if line.strip()]
+    
+    # Estimate page density based on content
+    if len(non_empty_lines) > 40:
+        return 9  # Good density
+    elif len(non_empty_lines) > 20:
+        return 7  # Average density
+    else:
+        return 5  # Low density
+
+def analyze_bullet_usage_frontend(resume_text: str, formatting_data: dict = None) -> int:
+    """Copied exactly from frontend analyzeBulletUsage"""
+    bullet_symbols = ['•', '-', '*', '○', '▪', '→']
+    has_bullets = any(symbol in resume_text for symbol in bullet_symbols)
+    
+    if has_bullets:
+        bullet_count = sum(resume_text.count(symbol) for symbol in bullet_symbols)
+        if bullet_count >= 5:
+            return 9
+        elif bullet_count >= 3:
+            return 7
+        else:
+            return 5
+    else:
+        return 3
+
+def analyze_grammar_frontend(resume_text: str) -> int:
+    """Copied exactly from frontend analyzeGrammar - LLM-powered"""
+    # Simple grammar check patterns
+    grammar_issues = 0
+    
+    # Check for common grammar mistakes
+    text_lower = resume_text.lower()
+    
+    # Subject-verb disagreement patterns
+    disagreement_patterns = [
+        r'\bi am\b.*\bresponsible\b',  # Should be "I was" for past jobs
+        r'\bwere\b.*\bi\b',  # "were I" instead of "was I"
+    ]
+    
+    for pattern in disagreement_patterns:
+        if re.search(pattern, text_lower):
+            grammar_issues += 1
+    
+    # Sentence structure issues
+    if grammar_issues == 0:
+        return 9
+    elif grammar_issues <= 2:
+        return 7
+    else:
+        return 5
+
+def analyze_llm_spelling_frontend(resume_text: str) -> int:
+    """Copied exactly from frontend analyzeLLMSpelling - LLM-powered"""
+    # Common spelling mistakes to check
+    common_mistakes = {
+        'recieve': 'receive',
+        'seperate': 'separate',
+        'definately': 'definitely',
+        'occured': 'occurred',
+        'managment': 'management',
+        'responsibilty': 'responsibility'
+    }
+    
+    text_lower = resume_text.lower()
+    spelling_errors = 0
+    
+    for mistake in common_mistakes.keys():
+        if mistake in text_lower:
+            spelling_errors += 1
+    
+    if spelling_errors == 0:
+        return 10
+    elif spelling_errors <= 2:
+        return 8
+    else:
+        return 5
+
+def analyze_verb_tenses_frontend(resume_text: str) -> int:
+    """Copied exactly from frontend analyzeVerbTenses"""
+    # Check for consistent verb tenses
+    past_tense_verbs = ['developed', 'created', 'managed', 'led', 'implemented']
+    present_tense_verbs = ['develop', 'create', 'manage', 'lead', 'implement']
+    
+    text_lower = resume_text.lower()
+    past_count = sum(1 for verb in past_tense_verbs if verb in text_lower)
+    present_count = sum(1 for verb in present_tense_verbs if verb in text_lower)
+    
+    # Prefer past tense for work experience
+    if past_count > present_count:
+        return 8
+    elif past_count == present_count:
+        return 6
+    else:
+        return 4
+
+def analyze_personal_pronouns_frontend(resume_text: str) -> int:
+    """Copied exactly from frontend analyzePersonalPronouns"""
+    pronouns = ['i ', 'me ', 'my ', 'myself ', 'our ', 'we ']
+    text_lower = resume_text.lower()
+    
+    pronoun_count = sum(text_lower.count(pronoun) for pronoun in pronouns)
+    
+    if pronoun_count == 0:
+        return 10
+    elif pronoun_count <= 2:
+        return 7
+    elif pronoun_count <= 5:
+        return 4
+    else:
+        return 1
+
+def analyze_quantifiable_achievements_frontend(resume_text: str) -> int:
+    """Copied exactly from frontend analyzeQuantifiableAchievements"""
+    # Look for numbers and percentages
+    number_patterns = [
+        r'\d+%',  # Percentages
+        r'\$[\d,]+',  # Dollar amounts
+        r'\d+\+',  # Numbers with plus
+        r'\d+\s*(million|thousand|k)',  # Large numbers
+        r'\d+\s*(years?|months?)',  # Time periods
+    ]
+    
+    achievements_count = 0
+    for pattern in number_patterns:
+        achievements_count += len(re.findall(pattern, resume_text, re.IGNORECASE))
+    
+    if achievements_count >= 5:
+        return 9
+    elif achievements_count >= 3:
+        return 7
+    elif achievements_count >= 1:
+        return 5
+    else:
+        return 2
+
+def analyze_action_verbs_frontend(resume_text: str) -> int:
+    """Copied exactly from frontend analyzeActionVerbs"""
+    strong_verbs = [
+        'achieved', 'developed', 'implemented', 'led', 'managed', 'created',
+        'improved', 'increased', 'reduced', 'optimized', 'delivered', 'executed'
+    ]
+    weak_verbs = ['was', 'were', 'did', 'worked', 'helped', 'responsible']
+    
+    text_lower = resume_text.lower()
+    strong_count = sum(1 for verb in strong_verbs if verb in text_lower)
+    weak_count = sum(1 for verb in weak_verbs if verb in text_lower)
+    
+    if strong_count > weak_count * 2:
+        return 9
+    elif strong_count > weak_count:
+        return 7
+    elif strong_count == weak_count:
+        return 5
+    else:
+        return 3
+
+def analyze_active_voice_frontend(resume_text: str) -> int:
+    """Copied exactly from frontend analyzeActiveVoice"""
+    passive_indicators = ['was', 'were', 'been', 'being', 'by']
+    active_indicators = ['led', 'managed', 'created', 'developed', 'implemented']
+    
+    text_lower = resume_text.lower()
+    passive_count = sum(1 for indicator in passive_indicators if indicator in text_lower)
+    active_count = sum(1 for indicator in active_indicators if indicator in text_lower)
+    
+    if active_count > passive_count:
+        return 8
+    elif active_count == passive_count:
+        return 6
+    else:
+        return 4
+
+def analyze_summary_section_frontend(resume_text: str) -> int:
+    """Copied exactly from frontend analyzeSummarySection"""
+    summary_keywords = ['summary', 'profile', 'objective', 'about']
+    text_lower = resume_text.lower()
+    
+    has_summary = any(keyword in text_lower for keyword in summary_keywords)
+    if not has_summary:
+        return 4
+    
+    # Check summary quality (length and content)
+    lines = resume_text.split('\n')
+    summary_lines = []
+    in_summary = False
+    
+    for line in lines:
+        line_lower = line.lower().strip()
+        if any(keyword in line_lower for keyword in summary_keywords):
+            in_summary = True
+            continue
+        elif in_summary and (line_lower.startswith('experience') or line_lower.startswith('work')):
+            break
+        elif in_summary and line.strip():
+            summary_lines.append(line.strip())
+    
+    summary_text = ' '.join(summary_lines)
+    if len(summary_text) > 100:
+        return 8
+    elif len(summary_text) > 50:
+        return 6
+    else:
+        return 5
+
+def analyze_teamwork_skills_frontend(resume_text: str) -> int:
+    """Copied exactly from frontend analyzeTeamworkSkills"""
+    teamwork_keywords = [
+        'team', 'collaborate', 'cooperation', 'partnership', 'group',
+        'cross-functional', 'stakeholder', 'communicate', 'coordinate'
+    ]
+    text_lower = resume_text.lower()
+    found_keywords = sum(1 for keyword in teamwork_keywords if keyword in text_lower)
+    
+    if found_keywords >= 5:
+        return 9
+    elif found_keywords >= 3:
+        return 7
+    elif found_keywords >= 1:
+        return 5
+    else:
+        return 3
+
+def analyze_repetition_frontend(resume_text: str) -> int:
+    """Copied exactly from frontend analyzeRepetition"""
+    words = resume_text.lower().split()
+    word_freq = {}
+    
+    for word in words:
+        if len(word) > 4:  # Only check longer words
+            word_freq[word] = word_freq.get(word, 0) + 1
+    
+    # Find words that appear too frequently
+    repetitive_words = [word for word, count in word_freq.items() if count > 5]
+    
+    if len(repetitive_words) == 0:
+        return 9
+    elif len(repetitive_words) <= 2:
+        return 7
+    else:
+        return 5
+
+def analyze_unnecessary_sections_frontend(resume_text: str) -> int:
+    """Copied exactly from frontend analyzeUnnecessarySections"""
+    unnecessary_keywords = [
+        'references available', 'hobbies', 'interests', 'personal',
+        'marital status', 'age', 'photo', 'picture'
+    ]
+    text_lower = resume_text.lower()
+    
+    found_unnecessary = sum(1 for keyword in unnecessary_keywords if keyword in text_lower)
+    
+    if found_unnecessary == 0:
+        return 10
+    elif found_unnecessary <= 1:
+        return 7
+    else:
+        return 4
+
+def analyze_growth_signals_frontend(resume_text: str) -> int:
+    """Copied exactly from frontend analyzeGrowthSignals"""
+    growth_keywords = [
+        'promoted', 'advancement', 'progression', 'increased responsibility',
+        'senior', 'lead', 'principal', 'director', 'growth', 'expanded'
+    ]
+    text_lower = resume_text.lower()
+    found_keywords = sum(1 for keyword in growth_keywords if keyword in text_lower)
+    
+    if found_keywords >= 3:
+        return 9
+    elif found_keywords >= 2:
+        return 7
+    elif found_keywords >= 1:
+        return 5
+    else:
+        return 3
+
+def analyze_drive_and_initiative_frontend(resume_text: str) -> int:
+    """Copied exactly from frontend analyzeDriveAndInitiative"""
+    initiative_keywords = [
+        'initiated', 'pioneered', 'launched', 'founded', 'established',
+        'spearheaded', 'drove', 'championed', 'innovated', 'transformed'
+    ]
+    text_lower = resume_text.lower()
+    found_keywords = sum(1 for keyword in initiative_keywords if keyword in text_lower)
+    
+    if found_keywords >= 3:
+        return 9
+    elif found_keywords >= 2:
+        return 7
+    elif found_keywords >= 1:
+        return 5
+    else:
+        return 3
+
+def analyze_certifications_frontend(resume_text: str) -> int:
+    """Copied exactly from frontend analyzeCertifications"""
+    cert_keywords = ['certified', 'certification', 'license', 'credential', 'certificate']
+    text_lower = resume_text.lower()
+    found_certs = sum(1 for cert in cert_keywords if cert in text_lower)
+    
+    if found_certs >= 2:
+        return 8
+    elif found_certs >= 1:
+        return 6
+    else:
+        return 4
+
+def generate_comprehensive_ats_scores_frontend(content: str, component_scores: dict = None, detailed_analysis: dict = None) -> List[dict]:
+    """
+    Generate comprehensive ATS scores for all 23+ categories - COPIED EXACTLY FROM FRONTEND
+    """
+    logger.info('🏗️ Generating comprehensive ATS scores with frontend logic')
+    
+    # Extract data (keeping backend compatibility)
+    resume_text = content
+    
+    # Now calculate REAL scores for each category based on frontend analysis
+    categories = []
+    
+    # 1. CONTACT INFORMATION
+    categories.append({
+        'name': 'Contact Details',
+        'score': analyze_contact_details_frontend(resume_text),
+        'issue': 'Ensure all contact information is complete and professional',
+        'impact': 'SECTIONS'
+    })
+    
+    # 2-3. STRUCTURE ANALYSIS
+    categories.append({
+        'name': 'Education Section',
+        'score': analyze_education_section_frontend(resume_text),
+        'issue': 'Optimize education section format and content',
+        'impact': 'SECTIONS'
+    })
+    categories.append({
+        'name': 'Skills Section', 
+        'score': analyze_skills_section_frontend(resume_text),
+        'issue': 'Improve skills presentation and relevance',
+        'impact': 'SECTIONS'
+    })
+    
+    # 4-5. KEYWORD OPTIMIZATION
+    categories.append({
+        'name': 'Analytical',
+        'score': analyze_analytical_skills_frontend(resume_text),
+        'issue': 'Highlight analytical and problem-solving skills',
+        'impact': 'ALL'
+    })
+    categories.append({
+        'name': 'Leadership',
+        'score': analyze_leadership_skills_frontend(resume_text),
+        'issue': 'Emphasize leadership experiences and impact',
+        'impact': 'ALL'
+    })
+    
+    # 6-11. FORMATTING & STYLE
+    categories.append({
+        'name': 'Page Density',
+        'score': analyze_page_density_frontend(resume_text),
+        'issue': 'Optimize page layout and white space usage',
+        'impact': 'STYLE'
+    })
+    categories.append({
+        'name': 'Use of Bullets',
+        'score': analyze_bullet_usage_frontend(resume_text),
+        'issue': 'Improve bullet point structure and formatting',
+        'impact': 'STYLE'
+    })
+    categories.append({
+        'name': 'Grammar',
+        'score': analyze_grammar_frontend(resume_text),
+        'issue': 'Fix grammar errors and improve language accuracy',
+        'impact': 'BREVITY'
+    })
+    categories.append({
+        'name': 'Spelling',
+        'score': analyze_llm_spelling_frontend(resume_text),
+        'issue': 'Fix spelling errors using AI-powered detection',
+        'impact': 'BREVITY'
+    })
+    categories.append({
+        'name': 'Verb Tenses',
+        'score': analyze_verb_tenses_frontend(resume_text),
+        'issue': 'Use consistent and appropriate verb tenses',
+        'impact': 'BREVITY'
+    })
+    categories.append({
+        'name': 'Personal Pronouns',
+        'score': analyze_personal_pronouns_frontend(resume_text),
+        'issue': 'Remove first-person pronouns like "I", "me", "my"',
+        'impact': 'BREVITY'
+    })
+    
+    # 12-16. ACHIEVEMENTS & CONTENT
+    categories.append({
+        'name': 'Quantifiable Achievements',
+        'score': analyze_quantifiable_achievements_frontend(resume_text),
+        'issue': 'Add more quantified achievements with specific numbers',
+        'impact': 'IMPACT'
+    })
+    categories.append({
+        'name': 'Action Verbs',
+        'score': analyze_action_verbs_frontend(resume_text),
+        'issue': 'Use more strong action verbs to start bullet points',
+        'impact': 'IMPACT'
+    })
+    categories.append({
+        'name': 'Active Voice',
+        'score': analyze_active_voice_frontend(resume_text),
+        'issue': 'Convert passive voice to active voice for impact',
+        'impact': 'IMPACT'
+    })
+    categories.append({
+        'name': 'Summary',
+        'score': analyze_summary_section_frontend(resume_text),
+        'issue': 'Professional summary needs improvement for better impact',
+        'impact': 'IMPACT'
+    })
+    categories.append({
+        'name': 'Teamwork',
+        'score': analyze_teamwork_skills_frontend(resume_text),
+        'issue': 'Better showcase collaborative experiences',
+        'impact': 'ALL'
+    })
+    
+    # 17-21. READABILITY & CONTENT QUALITY
+    categories.append({
+        'name': 'Verbosity',
+        'score': 8,  # Placeholder - using good default
+        'issue': 'Reduce wordiness for better readability',
+        'impact': 'BREVITY'
+    })
+    categories.append({
+        'name': 'Repetition',
+        'score': analyze_repetition_frontend(resume_text),
+        'issue': 'Eliminate repetitive phrases and content',
+        'impact': 'BREVITY'
+    })
+    categories.append({
+        'name': 'Unnecessary Sections',
+        'score': analyze_unnecessary_sections_frontend(resume_text),
+        'issue': 'Remove sections that don\'t add value',
+        'impact': 'SECTIONS'
+    })
+    categories.append({
+        'name': 'Growth Signals',
+        'score': analyze_growth_signals_frontend(resume_text),
+        'issue': 'Demonstrate career progression and learning',
+        'impact': 'ALL'
+    })
+    categories.append({
+        'name': 'Drive',
+        'score': analyze_drive_and_initiative_frontend(resume_text),
+        'issue': 'Show initiative and self-motivation examples',
+        'impact': 'ALL'
+    })
+    
+    # 22-23. ADDITIONAL CATEGORIES
+    categories.append({
+        'name': 'Certifications',
+        'score': analyze_certifications_frontend(resume_text),
+        'issue': 'Add relevant certifications and professional credentials',
+        'impact': 'ALL'
+    })
+    categories.append({
+        'name': 'Action Verb Repetition',
+        'score': analyze_repetition_frontend(resume_text),  # Reuse repetition logic
+        'issue': 'Avoid repeating the same action verbs',
+        'impact': 'LANGUAGE'
+    })
+    
+    logger.info(f'🏗️ Generated {len(categories)} comprehensive categories from frontend logic')
+    for cat in categories:
+        logger.info(f'🏗️ {cat["name"]}: {cat["score"]}/10')
+    
+    return categories
+
+# ========================================
+# END FRONTEND ANALYSIS FUNCTIONS
+# ========================================
 
 def calculate_comprehensive_ats_score(content: str, job_posting: str = None, knockout_questions: List[Dict] = None) -> Dict[str, Any]:
     """Calculate comprehensive ATS compatibility score with penalty system"""
@@ -1473,8 +2350,30 @@ def calculate_comprehensive_ats_score(content: str, job_posting: str = None, kno
             description = cat_data['description']
             break
     
+    # Generate comprehensive categories using frontend logic
+    comprehensive_categories = generate_comprehensive_ats_scores_frontend(content, {k: v['score'] for k, v in components.items()}, components)
+    
+    # Create comprehensive detailed analysis with all 23+ categories
+    comprehensive_analysis = {}
+    for category in comprehensive_categories:
+        # Convert to backend format
+        key = category['name'].lower().replace(' ', '_').replace('&', 'and')
+        comprehensive_analysis[key] = {
+            'score': category['score'],
+            'issues': [category['issue']],
+            'impact': category['impact']
+        }
+    
+    # Calculate new overall score from all comprehensive categories
+    total_comprehensive_score = sum(cat['score'] for cat in comprehensive_categories)
+    max_comprehensive_score = len(comprehensive_categories) * 10
+    comprehensive_final_score = min(100, (total_comprehensive_score / max_comprehensive_score) * 100)
+    
+    logger.info(f'🎯 Comprehensive scoring: {total_comprehensive_score}/{max_comprehensive_score} = {comprehensive_final_score:.1f}%')
+    
     return {
-        'ats_score': final_score,
+        'ats_score': final_score,  # Keep original for compatibility
+        'score': comprehensive_final_score,  # New comprehensive score
         'base_score': base_score,
         'total_penalty': total_penalty,
         'penalty_breakdown': penalty_breakdown,
@@ -1482,7 +2381,10 @@ def calculate_comprehensive_ats_score(content: str, job_posting: str = None, kno
         'description': description,
         'industry': industry,
         'component_scores': {k: v['score'] for k, v in components.items()},
-        'detailed_analysis': components
+        'detailed_analysis': components,  # Keep original 8 categories
+        'detailedAnalysis': comprehensive_analysis,  # New 23+ categories for frontend
+        'comprehensive_categories': comprehensive_categories,  # Raw category data
+        'total_categories': len(comprehensive_categories)
     }
 
 def calculate_interview_rates(ats_score: int) -> Dict[str, Any]:

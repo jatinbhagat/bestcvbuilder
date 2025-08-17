@@ -159,80 +159,45 @@ function displayComponentBreakdown() {
 function createCategoriesFromBackend(components, detailed) {
     const categories = [];
     
-    console.log('🔍 Creating categories from detailed analysis:', detailed);
+    console.log('🔍 Creating categories from comprehensive backend analysis:', detailed);
     
-    // Backend sends scores directly in detailedAnalysis
-    const categoryMappings = [
-        { key: 'structure', name: 'Resume Structure', data: detailed.structure },
-        { key: 'keywords', name: 'Keywords & Skills', data: detailed.keywords },
-        { key: 'contact', name: 'Contact Information', data: detailed.contact },
-        { key: 'formatting', name: 'Formatting & Layout', data: detailed.formatting },
-        { key: 'achievements', name: 'Quantified Achievements', data: detailed.achievements },
-        { key: 'readability', name: 'Readability & Length', data: detailed.readability },
-        { key: 'dates', name: 'Date Formatting', data: detailed.dates },
-        { key: 'bullet_lengths', name: 'Bullet Lengths', data: detailed.bullet_lengths }
-    ];
+    // USE COMPREHENSIVE BACKEND CATEGORIES (23+ categories from frontend logic)
+    if (detailed && Object.keys(detailed).length > 0) {
+        // Convert backend comprehensive analysis to frontend format
+        Object.entries(detailed).forEach(([key, data]) => {
+            if (data && typeof data.score !== 'undefined') {
+                const score = Math.max(0, Math.min(10, Math.round(data.score)));
+                
+                // Convert key back to readable name
+                const name = key.split('_').map(word => 
+                    word.charAt(0).toUpperCase() + word.slice(1)
+                ).join(' ').replace('And', '&');
+                
+                const issue = data.issues && data.issues.length > 0 ? data.issues[0] : 'Needs improvement';
+                const impact = data.impact || 'IMPROVEMENT';
+                
+                categories.push({
+                    name: name,
+                    score: score,
+                    issue: issue,
+                    impact: impact
+                });
+                
+                console.log(`📊 ${name}: ${score}/10`);
+            } else {
+                console.warn(`⚠️ No data for ${key}:`, data);
+            }
+        });
+    } else {
+        console.error('❌ No comprehensive backend analysis found');
+    }
     
-    categoryMappings.forEach(mapping => {
-        if (mapping.data && typeof mapping.data.score !== 'undefined') {
-            const score = Math.max(0, Math.min(10, Math.round(mapping.data.score)));
-            
-            categories.push({
-                name: mapping.name,
-                score: score,
-                issue: getIssueForComponent(mapping.key, mapping.data),
-                impact: getImpactForComponent(mapping.key)
-            });
-            
-            console.log(`📊 ${mapping.name}: ${score}/10`);
-        } else {
-            console.warn(`⚠️ No data for ${mapping.name}:`, mapping.data);
-        }
-    });
-    
-    console.log('📊 Final categories created:', categories);
+    console.log(`📊 Final categories created: ${categories.length} total`);
+    console.log('📊 Categories:', categories.map(cat => cat.name));
     return categories;
 }
 
-/**
- * Get issue description for component
- */
-function getIssueForComponent(component, data) {
-    // Use actual backend issues if available
-    if (data && data.issues && data.issues.length > 0) {
-        return data.issues[0]; // Use first issue
-    }
-    
-    // Fallback to default messages
-    const defaultIssues = {
-        'structure': 'Improve resume structure and section organization',
-        'keywords': 'Add more relevant industry keywords',
-        'contact': 'Complete contact information with phone, email, LinkedIn',
-        'formatting': 'Improve document formatting and layout',
-        'achievements': 'Add more quantified achievements with numbers',
-        'readability': 'Optimize text length and readability',
-        'dates': 'Use consistent date formatting',
-        'bullet_lengths': 'Optimize bullet point length (10-30 words)'
-    };
-    return defaultIssues[component] || 'Needs improvement';
-}
-
-/**
- * Get impact category for component
- */
-function getImpactForComponent(component) {
-    const impacts = {
-        'structure': 'SECTIONS',
-        'keywords': 'KEYWORDS', 
-        'contact': 'SECTIONS',
-        'formatting': 'FORMAT',
-        'achievements': 'IMPACT',
-        'readability': 'READABILITY',
-        'dates': 'FORMAT',
-        'bullet_lengths': 'LANGUAGE'
-    };
-    return impacts[component] || 'IMPROVEMENT';
-}
+// Helper functions removed - now using comprehensive backend data directly
 
 /**
  * Display sidebar items
