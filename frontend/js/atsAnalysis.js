@@ -223,12 +223,16 @@ export async function analyzeResume(fileUrl, userId = null) {
  * @returns {Object} Formatted analysis result
  */
 function processAnalysisResult(rawResult, fileUrl) {
+    // Debug logging to verify field selection
+    console.log('🔍 PROCESSING: rawResult.detailedAnalysis keys:', rawResult.detailedAnalysis ? Object.keys(rawResult.detailedAnalysis).length : 'NONE');
+    console.log('🔍 PROCESSING: rawResult.detailed_analysis keys:', rawResult.detailed_analysis ? Object.keys(rawResult.detailed_analysis).length : 'NONE');
+    
     return {
         score: rawResult.ats_score || 0,
         scoreCategory: getScoreCategory(rawResult.ats_score),
         strengths: rawResult.strengths || [],
         improvements: rawResult.improvements || [],
-        detailedAnalysis: rawResult.detailed_analysis || '',
+        detailedAnalysis: rawResult.detailedAnalysis || rawResult.detailed_analysis || {},
         keywords: rawResult.keywords || [],
         missingKeywords: rawResult.missing_keywords || [],
         formattingIssues: rawResult.formatting_issues || [],

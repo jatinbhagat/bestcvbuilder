@@ -2376,7 +2376,7 @@ def calculate_comprehensive_ats_score(content: str, job_posting: str = None, kno
     logger.info(f'🔍 DEBUG: comprehensive_analysis count: {len(comprehensive_analysis)}')
     logger.info(f'🔍 DEBUG: Sample comprehensive_analysis: {dict(list(comprehensive_analysis.items())[:3])}')
     
-    return {
+    response_data = {
         'ats_score': final_score,  # Keep original for compatibility
         'score': comprehensive_final_score,  # New comprehensive score
         'base_score': base_score,
@@ -2391,6 +2391,13 @@ def calculate_comprehensive_ats_score(content: str, job_posting: str = None, kno
         'comprehensive_categories': comprehensive_categories,  # Raw category data
         'total_categories': len(comprehensive_categories)
     }
+    
+    # Final debug logging to verify what's being returned
+    logger.info(f'🔍 DEBUG: RESPONSE detailedAnalysis count: {len(response_data["detailedAnalysis"])}')
+    logger.info(f'🔍 DEBUG: RESPONSE detailedAnalysis keys: {list(response_data["detailedAnalysis"].keys())[:10]}')
+    logger.info(f'🔍 DEBUG: RESPONSE detailed_analysis count: {len(response_data["detailed_analysis"])}')
+    
+    return response_data
 
 def calculate_interview_rates(ats_score: int) -> Dict[str, Any]:
     """
@@ -3949,6 +3956,10 @@ def analyze_resume_content(file_url: str) -> Dict[str, Any]:
         quick_fixes = detailed_issues['quick_fixes']
         content_improvements = detailed_issues['content_improvements']
         
+        # Debug: Log the ats_analysis keys before merging
+        logger.info(f'🔍 DEBUG: ats_analysis keys before merge: {list(ats_analysis.keys())}')
+        logger.info(f'🔍 DEBUG: ats_analysis detailedAnalysis count: {len(ats_analysis.get("detailedAnalysis", {}))}')
+        
         # Combine results with enhanced data
         result = {
             **ats_analysis,
@@ -3975,6 +3986,11 @@ def analyze_resume_content(file_url: str) -> Dict[str, Any]:
             'estimated_time': detailed_issues['estimated_time'],  # Time to complete
             'actionable_improvements': len([i for i in critical_issues + quick_fixes if i.get('time_to_fix', '').split()[0].isdigit() and int(i.get('time_to_fix', '0').split()[0]) <= 5])
         }
+        
+        # Debug: Log the final result keys after merging
+        logger.info(f'🔍 DEBUG: final result keys: {list(result.keys())}')
+        logger.info(f'🔍 DEBUG: final result detailedAnalysis count: {len(result.get("detailedAnalysis", {}))}')
+        logger.info(f'🔍 DEBUG: final result detailed_analysis count: {len(result.get("detailed_analysis", {}))}')
         
         logger.info(f"Analysis completed - Score: {ats_analysis['ats_score']}")
         return result
