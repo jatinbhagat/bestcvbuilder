@@ -1070,12 +1070,12 @@ function analyzeWhiteSpace(resumeText) {
 function displayOverallScore(data) {
     if (!atsScore) return;
     
-    // Calculate overall score from our 23 categories (sum / 230 * 100) 
-    const categories = generateAll23Categories(data); // 23 categories total
+    // Calculate overall score from our 26 categories (sum / 260 * 100) 
+    const categories = generateComprehensiveATSScores(data); // 26 categories total
     const categorySum = categories.reduce((sum, cat) => sum + cat.score, 0);
-    const calculatedScore = Math.round((categorySum / 230) * 100); // 23 categories * 10 max each = 230, scale to 100
+    const calculatedScore = Math.round((categorySum / 260) * 100); // 26 categories * 10 max each = 260, scale to 100
     let score = calculatedScore;
-    console.log(`Calculated overall score from 23 categories: ${calculatedScore} (sum: ${categorySum}/230)`);
+    console.log(`Calculated overall score from 26 categories: ${calculatedScore} (sum: ${categorySum}/260)`);
     
     console.log(`Using ATS score: ${score}`);
     
@@ -1114,9 +1114,9 @@ function displaySidebarCategories(data) {
     completedList.innerHTML = '';
     console.log('📊 DEBUG: Cleared existing content');
     
-    console.log('📊 DEBUG: Calling generateAll23Categories...');
-    // Generate ALL 23 ATS categories based on actual analysis data
-    const allCategories = generateAll23Categories(data);
+    console.log('📊 DEBUG: Calling generateComprehensiveATSScores...');
+    // Generate ALL 26 ATS categories based on actual analysis data
+    const allCategories = generateComprehensiveATSScores(data);
     console.log('📊 DEBUG: Generated categories:', {
         count: allCategories.length,
         categories: allCategories.map(cat => ({ name: cat.name, score: cat.score }))
@@ -1206,7 +1206,7 @@ function displaySidebarCategories(data) {
 }
 
 /**
- * Generate comprehensive ATS scores for all 21 categories - NOW USING REAL DATA
+ * Generate comprehensive ATS scores for all 26 categories - NOW USING REAL DATA
  */
 function generateComprehensiveATSScores(data) {
     console.log('Generating scores with real data:', data);
@@ -1222,14 +1222,14 @@ function generateComprehensiveATSScores(data) {
     // Now calculate REAL scores for each category based on actual backend analysis
     const categories = [];
     
-    // Map backend components to our 21 frontend categories with real analysis
+    // Map backend components to our 26 frontend categories with real analysis
     
     // 1. CONTACT INFORMATION (from backend 'contact' component)
     const contactData = detailedAnalysis.contact || {};
     categories.push({
         name: 'Contact Details',
         score: analyzeContactDetails(resumeText),
-        issue: generateContactIssue(contactData),
+        issue: 'Ensure all contact information is complete and professional',
         impact: 'SECTIONS'
     });
     
@@ -1292,26 +1292,92 @@ function generateComprehensiveATSScores(data) {
         issue: 'Fix spelling errors and maintain consistency',
         impact: 'BREVITY'
     });
+    const grammarScore = analyzeGrammar(resumeText);
+    console.log('🔍 NEW CATEGORY - Grammar (LLM-powered):', {
+        score: grammarScore,
+        maxScore: 10,
+        percentage: Math.round((grammarScore / 10) * 100) + '%',
+        analysis: 'Uses AI-powered grammar checking for accuracy'
+    });
+    categories.push({
+        name: 'Grammar',
+        score: grammarScore,
+        issue: 'Fix grammar errors and improve language accuracy',
+        impact: 'BREVITY'
+    });
+    const spellingScore = analyzeLLMSpelling(resumeText);
+    console.log('🔍 NEW CATEGORY - Spelling (LLM-powered):', {
+        score: spellingScore,
+        maxScore: 10,
+        percentage: Math.round((spellingScore / 10) * 100) + '%',
+        analysis: 'Uses AI-powered spelling detection for accuracy'
+    });
+    categories.push({
+        name: 'Spelling',
+        score: spellingScore,
+        issue: 'Fix spelling errors using AI-powered detection',
+        impact: 'BREVITY'
+    });
     categories.push({
         name: 'Verb Tenses',
         score: analyzeVerbTenses(resumeText),
         issue: 'Use consistent and appropriate verb tenses',
         impact: 'BREVITY'
     });
+    const personalPronounsScore = analyzePersonalPronouns(resumeText);
+    console.log('🔍 NEW CATEGORY - Personal Pronouns:', {
+        score: personalPronounsScore,
+        maxScore: 10,
+        percentage: Math.round((personalPronounsScore / 10) * 100) + '%',
+        analysis: 'Checks for "I", "me", "my", "myself", "our", "we" pronouns'
+    });
+    categories.push({
+        name: 'Personal Pronouns',
+        score: personalPronounsScore,
+        issue: 'Remove first-person pronouns like "I", "me", "my"',
+        impact: 'BREVITY'
+    });
+    const datesScore = analyzeDates(resumeText);
+    console.log('🔍 NEW CATEGORY - Dates:', {
+        score: datesScore,
+        maxScore: 10,
+        percentage: Math.round((datesScore / 10) * 100) + '%',
+        analysis: 'Checks date format consistency and chronological order'
+    });
+    categories.push({
+        name: 'Dates',
+        score: datesScore,
+        issue: 'Improve date formatting and chronological consistency',
+        impact: 'STYLE'
+    });
     
     // 12-16. ACHIEVEMENTS & CONTENT (from backend 'achievements' component)
     const achievementsData = detailedAnalysis.achievements || {};
     const achievementsScore = componentScores.achievements || 0;
+    const quantifiableAchievementsScore = analyzeQuantifiableAchievements(resumeText);
+    console.log('🔄 REPLACED CATEGORY - Quantifiable Achievements (was Quantity Impact):', {
+        score: quantifiableAchievementsScore,
+        maxScore: 10,
+        percentage: Math.round((quantifiableAchievementsScore / 10) * 100) + '%',
+        analysis: 'Searches for quantified achievements and measurable results'
+    });
     categories.push({
-        name: 'Quantity Impact',
-        score: analyzeQuantityImpact(resumeText),
+        name: 'Quantifiable Achievements',
+        score: quantifiableAchievementsScore,
         issue: 'Add more quantified achievements with specific numbers',
         impact: 'IMPACT'
     });
+    const actionVerbsScore = analyzeActionVerbs(resumeText);
+    console.log('🔄 REPLACED CATEGORY - Action Verbs (was Weak Verbs):', {
+        score: actionVerbsScore,
+        maxScore: 10,
+        percentage: Math.round((actionVerbsScore / 10) * 100) + '%',
+        analysis: 'Analyzes use of strong action verbs instead of weak verbs'
+    });
     categories.push({
-        name: 'Weak Verbs',
-        score: analyzeWeakVerbs(resumeText),
-        issue: 'Replace weak verbs with stronger action words',
+        name: 'Action Verbs',
+        score: actionVerbsScore,
+        issue: 'Use more strong action verbs to start bullet points',
         impact: 'IMPACT'
     });
     categories.push({
@@ -1366,8 +1432,43 @@ function generateComprehensiveATSScores(data) {
         issue: 'Show initiative and self-motivation examples',
         impact: 'ALL'
     });
+    const certificationsScore = analyzeCertifications(resumeText);
+    console.log('🔍 NEW CATEGORY - Certifications:', {
+        score: certificationsScore,
+        maxScore: 10,
+        percentage: Math.round((certificationsScore / 10) * 100) + '%',
+        analysis: 'Checks for professional certifications and credentials'
+    });
+    categories.push({
+        name: 'Certifications',
+        score: certificationsScore,
+        issue: 'Add relevant certifications and professional credentials',
+        impact: 'ALL'
+    });
     
     console.log('Generated categories with real scores:', categories);
+    
+    // Summary log for new categories verification
+    console.log('🎯 NEW CATEGORIES SUMMARY - Verification Log:', {
+        totalCategories: categories.length,
+        newCategories: [
+            'Personal Pronouns',
+            'Dates', 
+            'Grammar (LLM-powered)',
+            'Spelling (LLM-powered)',
+            'Certifications'
+        ],
+        replacedCategories: [
+            'Quantifiable Achievements (was Quantity Impact)',
+            'Action Verbs (was Weak Verbs)'
+        ],
+        allCategoryScores: categories.map(cat => ({
+            name: cat.name,
+            score: cat.score,
+            percentage: Math.round((cat.score / 10) * 100) + '%'
+        }))
+    });
+    
     return categories;
 }
 
