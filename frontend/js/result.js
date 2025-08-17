@@ -1164,10 +1164,17 @@ function displaySidebarCategories(data) {
     updateSummaryStats(topFixes, needFixes, completed, allCategories.length);
     
     // Display HIGH PRIORITY FIXES (score < 6)
+    console.log('🔍 DEBUG: Processing topFixes:', topFixes.length, topFixes.map(cat => cat.name));
     topFixes.forEach(category => {
         // Skip categories with invalid data
-        if (!category.name || category.name.trim() === '') {
-            console.warn('⚠️ Skipping category with missing name:', category);
+        if (!category.name || typeof category.name !== 'string' || category.name.trim() === '') {
+            console.warn('⚠️ Skipping category with missing/invalid name:', {
+                name: category.name,
+                nameType: typeof category.name,
+                score: category.score,
+                issue: category.issue,
+                impact: category.impact
+            });
             return;
         }
         
@@ -1194,10 +1201,17 @@ function displaySidebarCategories(data) {
     });
     
     // Display NEED FIXES (score 6-8) - also go to TOP FIXES section
+    console.log('🔍 DEBUG: Processing needFixes:', needFixes.length, needFixes.map(cat => cat.name));
     needFixes.forEach(category => {
         // Skip categories with invalid data
-        if (!category.name || category.name.trim() === '') {
-            console.warn('⚠️ Skipping category with missing name:', category);
+        if (!category.name || typeof category.name !== 'string' || category.name.trim() === '') {
+            console.warn('⚠️ Skipping category with missing/invalid name:', {
+                name: category.name,
+                nameType: typeof category.name,
+                score: category.score,
+                issue: category.issue,
+                impact: category.impact
+            });
             return;
         }
         
@@ -1226,8 +1240,14 @@ function displaySidebarCategories(data) {
     // Display COMPLETED sections (score 9-10)
     completed.forEach(category => {
         // Skip categories with invalid data
-        if (!category.name || category.name.trim() === '') {
-            console.warn('⚠️ Skipping category with missing name:', category);
+        if (!category.name || typeof category.name !== 'string' || category.name.trim() === '') {
+            console.warn('⚠️ Skipping category with missing/invalid name:', {
+                name: category.name,
+                nameType: typeof category.name,
+                score: category.score,
+                issue: category.issue,
+                impact: category.impact
+            });
             return;
         }
         
@@ -1337,12 +1357,7 @@ function generateComprehensiveATSScores(data) {
         issue: 'Improve bullet point structure and formatting',
         impact: 'STYLE'
     });
-    categories.push({
-        name: 'Spelling & Consistency',
-        score: analyzeSpellingConsistency(resumeText),
-        issue: 'Fix spelling errors and maintain consistency',
-        impact: 'BREVITY'
-    });
+    // Removed 'Spelling & Consistency' as we now have dedicated LLM-powered 'Spelling' category
     const grammarScore = analyzeGrammar(resumeText);
     console.log('🔍 NEW CATEGORY - Grammar (LLM-powered):', {
         score: grammarScore,
@@ -1497,7 +1512,7 @@ function generateComprehensiveATSScores(data) {
         impact: 'ALL'
     });
     
-    console.log('Generated categories with real scores:', categories);
+    console.log('🔍 DEBUG: Generated categories with real scores:', categories.length, 'total');
     
     // Summary log for new categories verification
     console.log('🎯 NEW CATEGORIES SUMMARY - Verification Log:', {
@@ -3815,7 +3830,14 @@ function displayMainIssuesList(data, categoryData = null) {
     issuesNeedingFix.forEach((issue, index) => {
         // Skip issues with invalid data first
         if (!issue.title || issue.title.trim() === '' || issue.title === 'Unknown Issue') {
-            console.warn('⚠️ Skipping issue with missing/invalid title:', issue);
+            console.warn('⚠️ Skipping issue with missing/invalid title:', {
+                title: issue.title,
+                description: issue.description,
+                score: issue.score,
+                category: issue.category,
+                severity: issue.severity,
+                impact: issue.impact
+            });
             return;
         }
         
