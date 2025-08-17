@@ -1085,12 +1085,13 @@ function displayOverallScore(data) {
     });
     
     const categorySum = validScores.reduce((sum, score) => sum + score, 0);
-    const calculatedScore = Math.round((categorySum / 260) * 100); // 26 categories * 10 max each = 260, scale to 100
+    const maxPossibleScore = categories.length * 10; // Dynamic calculation based on actual category count
+    const calculatedScore = Math.round((categorySum / maxPossibleScore) * 100); // Scale to 100
     let score = calculatedScore;
     
     console.log(`🔍 DEBUG: Valid scores:`, validScores);
-    console.log(`🔍 DEBUG: Category sum: ${categorySum}/260`);
-    console.log(`🔍 DEBUG: Calculated overall score from 26 categories: ${calculatedScore}`);
+    console.log(`🔍 DEBUG: Category sum: ${categorySum}/${maxPossibleScore}`);
+    console.log(`🔍 DEBUG: Calculated overall score from ${categories.length} categories: ${calculatedScore}`);
     
     // Ensure final score is valid
     if (isNaN(score) || typeof score !== 'number') {
@@ -1241,9 +1242,9 @@ function displaySidebarCategories(data) {
         completedList.appendChild(item);
     });
     
-    // Update the counter to show all categories (we now have 26 total)
+    // Update the counter to show all categories (dynamic count)
     if (markedAsDone) {
-        markedAsDone.textContent = `${completed.length} COMPLETED OF 26`;
+        markedAsDone.textContent = `${completed.length} COMPLETED OF ${allCategories.length}`;
     }
     
     // Return the category data for use by other functions
@@ -3797,6 +3798,8 @@ function displayMainIssuesList(data, categoryData = null) {
         completed = allIssues.filter(i => i.score >= 9);
     }
     
+    console.log('🔍 DEBUG: Issues needing fix:', issuesNeedingFix.length, issuesNeedingFix);
+    
     if (issuesNeedingFix.length === 0) {
         issuesList.innerHTML = `
             <div class="text-center py-8">
@@ -3810,14 +3813,14 @@ function displayMainIssuesList(data, categoryData = null) {
     
     // Create issue cards with scoring information
     issuesNeedingFix.forEach((issue, index) => {
-        const card = document.createElement('div');
-        card.className = `issue-card severity-${issue.severity}`;
-        
-        // Skip issues with invalid data
+        // Skip issues with invalid data first
         if (!issue.title || issue.title.trim() === '' || issue.title === 'Unknown Issue') {
             console.warn('⚠️ Skipping issue with missing/invalid title:', issue);
             return;
         }
+        
+        const card = document.createElement('div');
+        card.className = `issue-card severity-${issue.severity || 'medium'}`;
         
         // Validate issue data
         const safeDescription = issue.description || 'Needs improvement';
