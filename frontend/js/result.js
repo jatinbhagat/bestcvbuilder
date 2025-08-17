@@ -1072,12 +1072,33 @@ function displayOverallScore(data) {
     
     // Calculate overall score from our 26 categories (sum / 260 * 100) 
     const categories = generateComprehensiveATSScores(data); // 26 categories total
-    const categorySum = categories.reduce((sum, cat) => sum + cat.score, 0);
+    console.log('🔍 DEBUG: All category scores:', categories.map(cat => ({ name: cat.name, score: cat.score })));
+    
+    // Filter out undefined/NaN scores and handle them gracefully
+    const validScores = categories.map(cat => {
+        const score = cat.score;
+        if (typeof score !== 'number' || isNaN(score)) {
+            console.warn(`⚠️ WARNING: Invalid score for category ${cat.name}:`, score, 'Using fallback score of 7');
+            return 7; // Fallback score for categories with API failures
+        }
+        return Math.max(0, Math.min(10, score)); // Ensure score is between 0-10
+    });
+    
+    const categorySum = validScores.reduce((sum, score) => sum + score, 0);
     const calculatedScore = Math.round((categorySum / 260) * 100); // 26 categories * 10 max each = 260, scale to 100
     let score = calculatedScore;
-    console.log(`Calculated overall score from 26 categories: ${calculatedScore} (sum: ${categorySum}/260)`);
     
-    console.log(`Using ATS score: ${score}`);
+    console.log(`🔍 DEBUG: Valid scores:`, validScores);
+    console.log(`🔍 DEBUG: Category sum: ${categorySum}/260`);
+    console.log(`🔍 DEBUG: Calculated overall score from 26 categories: ${calculatedScore}`);
+    
+    // Ensure final score is valid
+    if (isNaN(score) || typeof score !== 'number') {
+        console.error('❌ ERROR: Final score is invalid:', score, 'Using fallback score of 75');
+        score = 75; // Fallback score
+    }
+    
+    console.log(`🔍 DEBUG: Final ATS score: ${score}`);
     
     atsScore.textContent = Math.round(score);
     
@@ -1140,60 +1161,74 @@ function displaySidebarCategories(data) {
     
     // Display HIGH PRIORITY FIXES (score < 6)
     topFixes.forEach(category => {
+        // Validate category data to prevent undefined values
+        const safeName = category.name || 'Unknown Category';
+        const safeIssue = category.issue || 'Needs improvement';
+        const safeScore = (typeof category.score === 'number' && !isNaN(category.score)) ? category.score : 0;
+        
         const item = document.createElement('div');
         item.className = 'sidebar-item';
         item.innerHTML = `
-            <span class="text-sm text-gray-700">${category.name}</span>
-            <span class="text-sm font-bold text-red-600">${category.score}/10</span>
+            <span class="text-sm text-gray-700">${safeName}</span>
+            <span class="text-sm font-bold text-red-600">${safeScore}/10</span>
         `;
         topFixesList.appendChild(item);
         
         // Add to allIssues for main display
         allIssues.push({
-            title: category.name,
-            description: category.issue,
-            score: category.score,
+            title: safeName,
+            description: safeIssue,
+            score: safeScore,
             category: 'High Priority',
             severity: 'high',
-            impact: category.impact
+            impact: category.impact || 'IMPROVEMENT'
         });
     });
     
     // Display NEED FIXES (score 6-8) - also go to TOP FIXES section
     needFixes.forEach(category => {
+        // Validate category data to prevent undefined values
+        const safeName = category.name || 'Unknown Category';
+        const safeIssue = category.issue || 'Needs improvement';
+        const safeScore = (typeof category.score === 'number' && !isNaN(category.score)) ? category.score : 6;
+        
         const item = document.createElement('div');
         item.className = 'sidebar-item';
         item.innerHTML = `
-            <span class="text-sm text-gray-700">${category.name}</span>
-            <span class="text-sm font-bold text-orange-600">${category.score}/10</span>
+            <span class="text-sm text-gray-700">${safeName}</span>
+            <span class="text-sm font-bold text-orange-600">${safeScore}/10</span>
         `;
         topFixesList.appendChild(item);
         
         // Add to allIssues for main display
         allIssues.push({
-            title: category.name,
-            description: category.issue,
-            score: category.score,
+            title: safeName,
+            description: safeIssue,
+            score: safeScore,
             category: 'Need Fixes',
             severity: 'medium',
-            impact: category.impact
+            impact: category.impact || 'IMPROVEMENT'
         });
     });
     
     // Display COMPLETED sections (score 9-10)
     completed.forEach(category => {
+        // Validate category data to prevent undefined values
+        const safeName = category.name || 'Unknown Category';
+        const safeScore = (typeof category.score === 'number' && !isNaN(category.score)) ? category.score : 10;
+        
         const item = document.createElement('div');
         item.className = 'sidebar-item';
         item.innerHTML = `
-            <span class="text-sm text-gray-700">${category.name}</span>
-            <span class="text-sm font-bold text-green-600">${category.score}/10</span>
+            <span class="text-sm text-gray-700">${safeName}</span>
+            <span class="text-sm font-bold text-green-600">${safeScore}/10</span>
         `;
         completedList.appendChild(item);
     });
     
-    // Update the counter to show all categories
+    // Update the counter to show all categories (we now have 26 total)
     if (markedAsDone) {
-        markedAsDone.textContent = `${completed.length} COMPLETED OF 21`;
+        markedAsDone.textContent = `${completed.length} COMPLETED OF 26`;
     }
     
     // Return the category data for use by other functions
@@ -2232,16 +2267,31 @@ async function analyzeLLMGrammar(resumeText) {
         console.log('🔍 GRAMMAR LLM: API response status:', response.status, response.statusText);
         
         if (response.ok) {
-            const result = await response.json();
-            console.log('🔍 GRAMMAR LLM: API response data:', result);
+            const responseText = await response.text();
+            console.log('🔍 GRAMMAR LLM: API raw response:', responseText);
             
-            const score = Math.max(Math.min(result.grammar_score || 8, 10), 0);
-            console.log('🔍 GRAMMAR LLM: Calculated final score:', score);
-            return score;
+            if (!responseText.trim()) {
+                console.error('❌ GRAMMAR LLM: Empty response from API');
+                throw new Error('Empty response from grammar API');
+            }
+            
+            try {
+                const result = JSON.parse(responseText);
+                console.log('🔍 GRAMMAR LLM: API response data:', result);
+                
+                const score = Math.max(Math.min(result.grammar_score || 8, 10), 0);
+                console.log('🔍 GRAMMAR LLM: Calculated final score:', score);
+                return score;
+            } catch (parseError) {
+                console.error('❌ GRAMMAR LLM: Failed to parse JSON response:', parseError);
+                console.error('❌ GRAMMAR LLM: Response text was:', responseText);
+                throw new Error('Invalid JSON response from grammar API');
+            }
         } else {
             console.error('❌ GRAMMAR LLM: API request failed with status:', response.status);
             const errorText = await response.text();
             console.error('❌ GRAMMAR LLM: Error response:', errorText);
+            throw new Error(`Grammar API failed with status ${response.status}`);
         }
     } catch (error) {
         console.error('❌ GRAMMAR LLM: LLM grammar check failed:', error);
@@ -3748,27 +3798,34 @@ function displayMainIssuesList(data, categoryData = null) {
         const card = document.createElement('div');
         card.className = `issue-card severity-${issue.severity}`;
         
+        // Validate issue data to prevent undefined values
+        const safeTitle = issue.title || 'Unknown Issue';
+        const safeDescription = issue.description || 'Needs improvement';
+        const safeScore = (typeof issue.score === 'number' && !isNaN(issue.score)) ? issue.score : 0;
+        const safeSeverity = issue.severity || 'medium';
+        const safeImpact = issue.impact || 'IMPROVEMENT';
+        
         // Get score color
-        const scoreColor = issue.score >= 8 ? 'text-yellow-600' : 
-                          issue.score >= 6 ? 'text-orange-600' : 'text-red-600';
+        const scoreColor = safeScore >= 8 ? 'text-yellow-600' : 
+                          safeScore >= 6 ? 'text-orange-600' : 'text-red-600';
         
         card.innerHTML = `
             <div class="flex-1">
                 <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-lg font-semibold text-gray-900">${issue.title}</h3>
-                    <div class="text-sm font-bold ${scoreColor}">${issue.score}/10</div>
+                    <h3 class="text-lg font-semibold text-gray-900">${safeTitle}</h3>
+                    <div class="text-sm font-bold ${scoreColor}">${safeScore}/10</div>
                 </div>
-                <p class="text-gray-600 mb-3">${issue.description}</p>
+                <p class="text-gray-600 mb-3">${safeDescription}</p>
                 <div class="flex items-center justify-between">
                     <div class="impact-badge">
-                        ${getImpactIcon(issue.impact)} ${getImpactLabel(issue.impact)}
+                        ${getImpactIcon(safeImpact)} ${getImpactLabel(safeImpact)}
                     </div>
                     <div class="text-xs text-gray-500">
-                        ${getSeverityText(issue.severity)}
+                        ${getSeverityText(safeSeverity)}
                     </div>
                 </div>
             </div>
-            <button class="fix-button" onclick="handleFixIssue('${issue.title}', ${index})">
+            <button class="fix-button" onclick="handleFixIssue('${safeTitle.replace(/'/g, "\\'")}', ${index})">
                 FIX →
             </button>
         `;
