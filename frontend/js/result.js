@@ -1159,24 +1159,31 @@ function displaySidebarCategories(data) {
     console.log('🔍 Completed (9-10):', completed.length, completed);
     console.log('🔍 Total categories:', allCategories.length);
     
+    // Update summary stats in the main content area
+    updateSummaryStats(topFixes, needFixes, completed, allCategories.length);
+    
     // Display HIGH PRIORITY FIXES (score < 6)
     topFixes.forEach(category => {
-        // Validate category data to prevent undefined values
-        const safeName = category.name || 'Unknown Category';
+        // Skip categories with invalid data
+        if (!category.name || category.name.trim() === '') {
+            console.warn('⚠️ Skipping category with missing name:', category);
+            return;
+        }
+        
         const safeIssue = category.issue || 'Needs improvement';
         const safeScore = (typeof category.score === 'number' && !isNaN(category.score)) ? category.score : 0;
         
         const item = document.createElement('div');
         item.className = 'sidebar-item';
         item.innerHTML = `
-            <span class="text-sm text-gray-700">${safeName}</span>
+            <span class="text-sm text-gray-700">${category.name}</span>
             <span class="text-sm font-bold text-red-600">${safeScore}/10</span>
         `;
         topFixesList.appendChild(item);
         
         // Add to allIssues for main display
         allIssues.push({
-            title: safeName,
+            title: category.name,
             description: safeIssue,
             score: safeScore,
             category: 'High Priority',
@@ -1187,22 +1194,26 @@ function displaySidebarCategories(data) {
     
     // Display NEED FIXES (score 6-8) - also go to TOP FIXES section
     needFixes.forEach(category => {
-        // Validate category data to prevent undefined values
-        const safeName = category.name || 'Unknown Category';
+        // Skip categories with invalid data
+        if (!category.name || category.name.trim() === '') {
+            console.warn('⚠️ Skipping category with missing name:', category);
+            return;
+        }
+        
         const safeIssue = category.issue || 'Needs improvement';
         const safeScore = (typeof category.score === 'number' && !isNaN(category.score)) ? category.score : 6;
         
         const item = document.createElement('div');
         item.className = 'sidebar-item';
         item.innerHTML = `
-            <span class="text-sm text-gray-700">${safeName}</span>
+            <span class="text-sm text-gray-700">${category.name}</span>
             <span class="text-sm font-bold text-orange-600">${safeScore}/10</span>
         `;
         topFixesList.appendChild(item);
         
         // Add to allIssues for main display
         allIssues.push({
-            title: safeName,
+            title: category.name,
             description: safeIssue,
             score: safeScore,
             category: 'Need Fixes',
@@ -1213,14 +1224,18 @@ function displaySidebarCategories(data) {
     
     // Display COMPLETED sections (score 9-10)
     completed.forEach(category => {
-        // Validate category data to prevent undefined values
-        const safeName = category.name || 'Unknown Category';
+        // Skip categories with invalid data
+        if (!category.name || category.name.trim() === '') {
+            console.warn('⚠️ Skipping category with missing name:', category);
+            return;
+        }
+        
         const safeScore = (typeof category.score === 'number' && !isNaN(category.score)) ? category.score : 10;
         
         const item = document.createElement('div');
         item.className = 'sidebar-item';
         item.innerHTML = `
-            <span class="text-sm text-gray-700">${safeName}</span>
+            <span class="text-sm text-gray-700">${category.name}</span>
             <span class="text-sm font-bold text-green-600">${safeScore}/10</span>
         `;
         completedList.appendChild(item);
@@ -3798,8 +3813,13 @@ function displayMainIssuesList(data, categoryData = null) {
         const card = document.createElement('div');
         card.className = `issue-card severity-${issue.severity}`;
         
-        // Validate issue data to prevent undefined values
-        const safeTitle = issue.title || 'Unknown Issue';
+        // Skip issues with invalid data
+        if (!issue.title || issue.title.trim() === '' || issue.title === 'Unknown Issue') {
+            console.warn('⚠️ Skipping issue with missing/invalid title:', issue);
+            return;
+        }
+        
+        // Validate issue data
         const safeDescription = issue.description || 'Needs improvement';
         const safeScore = (typeof issue.score === 'number' && !isNaN(issue.score)) ? issue.score : 0;
         const safeSeverity = issue.severity || 'medium';
@@ -3812,7 +3832,7 @@ function displayMainIssuesList(data, categoryData = null) {
         card.innerHTML = `
             <div class="flex-1">
                 <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-lg font-semibold text-gray-900">${safeTitle}</h3>
+                    <h3 class="text-lg font-semibold text-gray-900">${issue.title}</h3>
                     <div class="text-sm font-bold ${scoreColor}">${safeScore}/10</div>
                 </div>
                 <p class="text-gray-600 mb-3">${safeDescription}</p>
@@ -3825,44 +3845,14 @@ function displayMainIssuesList(data, categoryData = null) {
                     </div>
                 </div>
             </div>
-            <button class="fix-button" onclick="handleFixIssue('${safeTitle.replace(/'/g, "\\'")}', ${index})">
+            <button class="fix-button" onclick="handleFixIssue('${issue.title.replace(/'/g, "\\'")}', ${index})">
                 FIX →
             </button>
         `;
         issuesList.appendChild(card);
     });
     
-    // Add summary at the top
-    const summaryCard = document.createElement('div');
-    summaryCard.className = 'bg-blue-50 border border-blue-200 rounded-12 p-6 mb-6';
-    summaryCard.innerHTML = `
-        <div class="flex items-center mb-3">
-            <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center mr-4">
-                <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
-                </svg>
-            </div>
-            <div>
-                <h3 class="text-lg font-semibold text-gray-900">ATS Analysis Summary</h3>
-                <p class="text-sm text-gray-600">${issuesNeedingFix.length} areas need improvement out of 21 categories analyzed</p>
-            </div>
-        </div>
-        <div class="grid grid-cols-3 gap-4 text-center">
-            <div>
-                <div class="text-2xl font-bold text-red-600">${topFixes.length}</div>
-                <div class="text-xs text-gray-600 uppercase">High Priority</div>
-            </div>
-            <div>
-                <div class="text-2xl font-bold text-yellow-600">${needFixes.length}</div>
-                <div class="text-xs text-gray-600 uppercase">Need Fixes</div>
-            </div>
-            <div>
-                <div class="text-2xl font-bold text-green-600">${completed.length}</div>
-                <div class="text-xs text-gray-600 uppercase">Completed</div>
-            </div>
-        </div>
-    `;
-    issuesList.insertBefore(summaryCard, issuesList.firstChild);
+    // Summary is now handled in the main content area above, no need for duplicate here
 }
 
 /**
@@ -4374,6 +4364,57 @@ function setupEventHandlers() {
             
             // Navigate to payment page
             window.location.href = './payment.html';
+        });
+    }
+    
+    // Setup issues toggle functionality
+    setupIssuesToggle();
+}
+
+/**
+ * Update summary stats in the main content area
+ */
+function updateSummaryStats(topFixes, needFixes, completed, totalCategories) {
+    // Update summary text
+    const summaryText = document.getElementById('summaryText');
+    if (summaryText) {
+        const issuesCount = topFixes.length + needFixes.length;
+        summaryText.textContent = `${issuesCount} areas need improvement out of ${totalCategories} categories analyzed`;
+    }
+    
+    // Update stat numbers
+    const highPriorityCount = document.getElementById('highPriorityCount');
+    const needFixesCount = document.getElementById('needFixesCount');
+    const completedCount = document.getElementById('completedCount');
+    
+    if (highPriorityCount) highPriorityCount.textContent = topFixes.length;
+    if (needFixesCount) needFixesCount.textContent = needFixes.length;
+    if (completedCount) completedCount.textContent = completed.length;
+}
+
+/**
+ * Setup toggle functionality for issues section
+ */
+function setupIssuesToggle() {
+    const toggleBtn = document.getElementById('toggleIssuesBtn');
+    const issuesList = document.getElementById('issuesList');
+    const toggleIcon = document.getElementById('toggleIcon');
+    
+    if (toggleBtn && issuesList && toggleIcon) {
+        toggleBtn.addEventListener('click', () => {
+            const isHidden = issuesList.classList.contains('hidden');
+            
+            if (isHidden) {
+                issuesList.classList.remove('hidden');
+                toggleIcon.style.transform = 'rotate(180deg)';
+                toggleBtn.querySelector('h3').textContent = 'Hide Detailed Issues';
+                toggleBtn.querySelector('p').textContent = 'Collapse the detailed issues list';
+            } else {
+                issuesList.classList.add('hidden');
+                toggleIcon.style.transform = 'rotate(0deg)';
+                toggleBtn.querySelector('h3').textContent = 'View Detailed Issues';
+                toggleBtn.querySelector('p').textContent = 'See exactly what needs to be fixed in your resume';
+            }
         });
     }
 }

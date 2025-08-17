@@ -160,7 +160,7 @@
         }
 
         .content-wrapper {
-            padding-bottom: 200px;
+            padding-bottom: 50px;
             min-height: calc(100vh - 80px);
         }
 
@@ -415,57 +415,23 @@
             border: 1px solid var(--gray-200);
         }
 
-        /* Fixed CTA - Enhanced */
-        .fixed-cta {
-            position: sticky;
-            bottom: 0;
-            background: linear-gradient(to top, rgba(248, 250, 252, 0.98) 80%, transparent);
-            padding: 24px 0;
-            -webkit-backdrop-filter: blur(12px);
-                    backdrop-filter: blur(12px);
-            z-index: 10;
-        }
-
-        .cta-content {
-            background: linear-gradient(135deg, #7c3aed 0%, var(--primary-color) 100%);
-            border-radius: 20px;
-            padding: 32px;
-            text-align: center;
-            box-shadow: var(--shadow-lg);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .cta-content h3 {
-            margin: 0 0 12px 0;
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
-
-        .cta-content p {
-            margin: 0 0 24px 0;
-            opacity: 0.9;
-            font-size: 1rem;
-        }
-
-        #upgradeBtn {
-            background: rgba(255, 255, 255, 0.95);
-            color: #7c3aed;
-            font-weight: 700;
-            padding: 16px 32px;
-            border-radius: 12px;
-            font-size: 1rem;
-            border: none;
-            cursor: pointer;
+        /* Upgrade CTA Card */
+        .upgrade-cta-card {
             transition: all 0.3s ease;
-            box-shadow: var(--shadow);
-            -webkit-backdrop-filter: blur(10px);
-                    backdrop-filter: blur(10px);
         }
 
-        #upgradeBtn:hover {
-            background: white;
+        .upgrade-cta-card:hover {
             transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
+        }
+
+        /* Issues Section Toggle */
+        .issues-section button {
+            transition: all 0.2s ease;
+        }
+
+        .issues-section button:hover {
+            border-color: var(--gray-300);
+            box-shadow: var(--shadow-sm);
         }
 
         /* Responsive Design */
@@ -553,7 +519,7 @@
             outline-offset: 2px;
         }
     </style>
-  <script type="module" crossorigin src="/assets/result-DuT45eWo-v2.js"></script>
+  <script type="module" crossorigin src="/assets/result-CapFAkj0-v2.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/supabase-DQ_B3N6C-v2.js">
   <link rel="modulepreload" crossorigin href="/assets/atsAnalysis-CFcDtclU-v2.js">
   <link rel="stylesheet" crossorigin href="/assets/supabase-BQoH_Vvs-v2.css">
@@ -617,30 +583,71 @@
         <!-- Main Content Area -->
         <div class="main-content flex-1 p-8" style="width: calc(100% - 320px);">
             <div class="content-wrapper">
-                <!-- Issues List -->
-                <div class="mb-12" id="issuesList">
-                    <!-- Will be populated by JavaScript -->
+                <!-- Analysis Summary Card -->
+                <div class="summary-card mb-8">
+                    <div class="summary-header">
+                        <div class="summary-icon">📊</div>
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-900 mb-1">ATS Analysis Summary</h2>
+                            <p class="text-gray-600 text-sm" id="summaryText">18 areas need improvement out of 26 categories analyzed</p>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-stats">
+                        <div class="stat-item">
+                            <span class="stat-number high" id="highPriorityCount">10</span>
+                            <span class="stat-label">High Priority</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number medium" id="needFixesCount">8</span>
+                            <span class="stat-label">Need Fixes</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number completed" id="completedCount">6</span>
+                            <span class="stat-label">Completed</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upgrade CTA - Primary Position -->
+                <div class="upgrade-cta-card mb-8">
+                    <div class="bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-2xl p-6 text-center">
+                        <h3 class="text-xl font-bold mb-2">🚀 Fix All Issues Instantly</h3>
+                        <p class="text-sm mb-4 opacity-90">Get your ATS-optimized resume in under 2 minutes</p>
+                        <button id="upgradeBtn" class="bg-white text-purple-600 font-bold py-3 px-6 rounded-xl hover:bg-gray-100 transition-colors">
+                            Fix My Resume Now - FREE
+                        </button>
+                        <p class="text-xs mt-3 opacity-75">All issues automatically fixed</p>
+                    </div>
+                </div>
+
+                <!-- Issues Details - Hidden by Default -->
+                <div class="issues-section mb-8">
+                    <button id="toggleIssuesBtn" class="w-full bg-white border border-gray-200 rounded-xl p-4 text-left hover:border-gray-300 transition-colors">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-semibold text-gray-900">View Detailed Issues</h3>
+                                <p class="text-sm text-gray-600">See exactly what needs to be fixed in your resume</p>
+                            </div>
+                            <svg id="toggleIcon" class="w-5 h-5 text-gray-400 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                    </button>
+                    
+                    <!-- Issues List - Initially Hidden -->
+                    <div id="issuesList" class="hidden mt-4">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
                 </div>
 
                 <!-- Strengths Section -->
-                <div class="bg-white rounded-16 p-8 mb-8 shadow-sm border" id="strengthsSection">
+                <div class="strengths-section" id="strengthsSection">
                     <h2 class="text-2xl font-bold text-gray-900 mb-4">What you did well</h2>
                     <p class="text-lg text-gray-600 mb-8">We ran comprehensive checks on your resume. Here are the areas where you excelled – well done!</p>
                     <div id="strengthsList">
                         <!-- Will be populated by JavaScript -->
                     </div>
-                </div>
-            </div>
-
-            <!-- Fixed Upgrade CTA -->
-            <div class="fixed-cta">
-                <div class="cta-content">
-                    <h3 class="text-white">Ready to Fix All Issues?</h3>
-                    <p class="text-white">Get your interview-ready resume in minutes with AI-powered fixes</p>
-                    <button id="upgradeBtn">
-                        🚀 Fix My Resume Now - FREE
-                    </button>
-                    <p class="text-white text-sm mt-4 opacity-80">All issues will be automatically fixed</p>
                 </div>
             </div>
         </div>
