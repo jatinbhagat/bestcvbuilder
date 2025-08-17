@@ -325,13 +325,7 @@ function generateAll23Categories(data) {
         impact: 'CREDIBILITY'
     });
     
-    // 16. Dates & Duration
-    categories.push({
-        name: 'Dates & Duration',
-        score: analyzeDates(resumeText),
-        issue: 'Consistent date formatting',
-        impact: 'FORMAT'
-    });
+    // 16. Dates & Duration - REMOVED (now handled by backend)
     
     // 17. Certifications
     categories.push({
@@ -386,26 +380,7 @@ function generateAll23Categories(data) {
         });
     }
     
-    // 22. Dates Format & Chronology
-    try {
-        console.log('🏗️ DEBUG: Analyzing Dates...');
-        const datesScore = analyzeDates(resumeText);
-        console.log('🏗️ DEBUG: Dates score:', datesScore);
-        categories.push({
-            name: 'Dates Format & Chronology',
-            score: datesScore,
-            issue: 'Consistent date formats and reverse chronological order',
-            impact: 'STRUCTURE'
-        });
-    } catch (error) {
-        console.error('❌ DEBUG: Error in Dates analysis:', error);
-        categories.push({
-            name: 'Dates Format & Chronology',
-            score: 5, // fallback score
-            issue: 'Consistent date formats and reverse chronological order',
-            impact: 'STRUCTURE'
-        });
-    }
+    // 22. Dates Format & Chronology - REMOVED (now handled by backend)
     
     // 23. Action Verb Repetition
     try {
@@ -1322,13 +1297,6 @@ function generateComprehensiveATSScores(data) {
     
     // 4-6. KEYWORD OPTIMIZATION (from backend 'keywords' component)
     const keywordsData = detailedAnalysis.keywords || {};
-    const keywordScore = componentScores.keywords || 0;
-    categories.push({
-        name: 'Job Fit',
-        score: Math.round(keywordScore / 20 * 10), // Backend gives 0-20, scale to 0-10
-        issue: 'Better align experience with target role requirements',
-        impact: 'ALL'
-    });
     categories.push({
         name: 'Analytical',
         score: analyzeAnalyticalSkills(resumeText, keywordsData),
@@ -1403,19 +1371,8 @@ function generateComprehensiveATSScores(data) {
         issue: 'Remove first-person pronouns like "I", "me", "my"',
         impact: 'BREVITY'
     });
-    const datesScore = analyzeDates(resumeText);
-    console.log('🔍 NEW CATEGORY - Dates:', {
-        score: datesScore,
-        maxScore: 10,
-        percentage: Math.round((datesScore / 10) * 100) + '%',
-        analysis: 'Checks date format consistency and chronological order'
-    });
-    categories.push({
-        name: 'Dates',
-        score: datesScore,
-        issue: 'Improve date formatting and chronological consistency',
-        impact: 'STYLE'
-    });
+    // Dates scoring removed - now handled by backend
+    console.log('🔍 NEW CATEGORY - Dates: Now handled by backend');
     
     // 12-16. ACHIEVEMENTS & CONTENT (from backend 'achievements' component)
     const achievementsData = detailedAnalysis.achievements || {};
@@ -2862,106 +2819,7 @@ function analyzeSummarySection(resumeText) {
 /**
  * Analyze date format consistency and chronological order
  */
-function analyzeDates(resumeText) {
-    console.log('🔍 DATES: Starting date analysis...');
-    let score = 10; // Start with perfect score
-    
-    // Extract all dates from the resume
-    const datePatterns = [
-        /\b(0[1-9]|1[0-2])\/\d{4}\b/g,           // MM/YYYY format
-        /\b(0[1-9]|1[0-2])-\d{4}\b/g,            // MM-YYYY format  
-        /\b\d{1,2}\/\d{4}\b/g,                    // M/YYYY format
-        /\b\d{1,2}-\d{4}\b/g,                     // M-YYYY format
-        /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}\b/gi, // Month YYYY
-        /\b\d{4}\s*[-–]\s*\d{4}\b/g,             // YYYY - YYYY
-        /\b\d{4}\s*[-–]\s*(Present|Ongoing|Current)\b/gi, // YYYY - Present
-        /\b(Present|Ongoing|Current)\b/gi         // Present/Ongoing/Current
-    ];
-    
-    const allDates = [];
-    const formatTypes = [];
-    
-    // Extract dates and their formats
-    datePatterns.forEach((pattern, index) => {
-        const matches = resumeText.match(pattern) || [];
-        matches.forEach(match => {
-            allDates.push(match.trim());
-            formatTypes.push(index); // Track which format was used
-        });
-    });
-    
-    console.log('🔍 DATES: Found dates:', allDates);
-    console.log('🔍 DATES: Format types:', formatTypes);
-    
-    // Check date format consistency
-    const uniqueFormats = [...new Set(formatTypes)];
-    if (uniqueFormats.length > 1) {
-        const inconsistencies = formatTypes.length - formatTypes.filter(f => f === formatTypes[0]).length;
-        const penalty = Math.min(inconsistencies * 2, 8); // Max 8 points penalty
-        score -= penalty;
-        console.log('🔍 DATES: Date format inconsistencies found:', inconsistencies, 'Penalty:', penalty);
-    } else {
-        console.log('🔍 DATES: Date formats are consistent');
-    }
-    
-    // Check chronological order in experience section
-    const chronologyPenalty = checkChronologicalOrder(resumeText);
-    score -= chronologyPenalty;
-    
-    const finalScore = Math.max(score, 0);
-    console.log('🔍 DATES: Final date score:', finalScore);
-    return finalScore;
-}
-
-/**
- * Check if experience section is in reverse chronological order
- */
-function checkChronologicalOrder(resumeText) {
-    console.log('🔍 DATES CHRONO: Checking chronological order...');
-    
-    // Extract experience section
-    const experienceSection = extractExperienceSection(resumeText);
-    if (!experienceSection) {
-        console.log('🔍 DATES CHRONO: No experience section found');
-        return 0;
-    }
-    
-    // Find year patterns in experience section
-    const yearPattern = /\b(19|20)\d{2}\b/g;
-    const years = [];
-    let match;
-    
-    while ((match = yearPattern.exec(experienceSection)) !== null) {
-        const year = parseInt(match[0]);
-        if (year >= 1990 && year <= new Date().getFullYear() + 1) { // Reasonable year range
-            years.push(year);
-        }
-    }
-    
-    console.log('🔍 DATES CHRONO: Extracted years from experience:', years);
-    
-    if (years.length < 2) {
-        console.log('🔍 DATES CHRONO: Not enough years to check order');
-        return 0; // Not enough data to verify order
-    }
-    
-    // Check if years are in reverse chronological order (most recent first)
-    let isReverseChronological = true;
-    for (let i = 0; i < years.length - 1; i++) {
-        if (years[i] < years[i + 1]) {
-            isReverseChronological = false;
-            break;
-        }
-    }
-    
-    if (!isReverseChronological) {
-        console.log('🔍 DATES CHRONO: Experience is NOT in reverse chronological order - applying 5 point penalty');
-        return 5;
-    }
-    
-    console.log('🔍 DATES CHRONO: Experience is in correct reverse chronological order');
-    return 0;
-}
+// Date analysis functions removed - now handled by backend
 
 
 /**

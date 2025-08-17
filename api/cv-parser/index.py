@@ -1273,6 +1273,142 @@ def analyze_readability_and_length(content: str) -> Dict[str, Any]:
         'readability_level': 'Excellent' if scaled_score >= 8.5 else 'Good' if scaled_score >= 6.5 else 'Needs Improvement'
     }
 
+def analyze_date_formatting(content: str) -> Dict[str, Any]:
+    """
+    Analyze date formatting consistency 
+    Returns score out of 10 points
+    """
+    score = 10  # Start with perfect score
+    issues = []
+    
+    # Date patterns to look for
+    date_patterns = [
+        r'\b(0[1-9]|1[0-2])\/\d{4}\b',           # MM/YYYY format
+        r'\b\d{1,2}\/\d{4}\b',                    # M/YYYY format  
+        r'\b(0[1-9]|1[0-2])-\d{4}\b',            # MM-YYYY format
+        r'\b\d{1,2}-\d{4}\b',                     # M-YYYY format
+        r'\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}\b',  # Month YYYY
+        r'\b\d{4}\s*[-–]\s*(Present|Ongoing|Current)\b',  # YYYY - Present
+    ]
+    
+    # Find all dates and track which format they use
+    all_dates = []
+    format_types = []
+    
+    for i, pattern in enumerate(date_patterns):
+        matches = re.findall(pattern, content, re.IGNORECASE)
+        for match in matches:
+            all_dates.append(match.strip())
+            format_types.append(i)
+    
+    # Check for format consistency
+    unique_formats = set(format_types)
+    if len(unique_formats) > 1:
+        # Penalty for mixed formats
+        inconsistencies = len(format_types) - format_types.count(format_types[0]) if format_types else 0
+        penalty = min(inconsistencies * 2, 8)  # Max 8 points penalty
+        score -= penalty
+        issues.append(f"Mixed date formats detected ({inconsistencies} inconsistencies)")
+    
+    # Basic validation - ensure work experience has dates
+    if not all_dates:
+        score -= 5
+        issues.append("No dates found in resume")
+    elif len(all_dates) < 2:
+        score -= 2
+        issues.append("Insufficient date information")
+    
+    return {
+        'score': max(score, 0),
+        'total_dates_found': len(all_dates),
+        'unique_formats': len(unique_formats),
+        'issues': issues
+    }
+
+def analyze_bullet_lengths(content: str) -> Dict[str, Any]:
+    """
+    Analyze bullet point length optimization
+    Returns score out of 10 points
+    """
+    score = 10  # Start with perfect score
+    issues = []
+    
+    # Split content into sections
+    lines = content.split('\n')
+    in_summary_section = False
+    all_bullets = []
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+            
+        # Check if we're entering/leaving summary section
+        line_lower = line.lower()
+        if any(keyword in line_lower for keyword in ['professional summary', 'summary', 'executive summary', 'career summary', 'objective', 'profile']):
+            in_summary_section = True
+            continue
+        elif any(keyword in line_lower for keyword in ['experience', 'employment', 'work history', 'education', 'skills', 'certifications']):
+            in_summary_section = False
+            continue
+            
+        # If not in summary section, treat as bullet point
+        if not in_summary_section and line:
+            # Remove bullet symbols if present
+            clean_line = re.sub(r'^\s*[•\-\*o▪→]\s*', '', line)
+            if clean_line.strip():
+                all_bullets.append(clean_line.strip())
+    
+    if not all_bullets:
+        return {
+            'score': 5,  # Neutral score if no bullets found
+            'total_bullets': 0,
+            'issues': ['No bullet points detected outside summary section']
+        }
+    
+    # Analyze each bullet point
+    non_optimal_count = 0
+    too_short = 0    # < 10 words
+    optimal = 0      # 10-30 words  
+    too_long = 0     # > 30 words
+    
+    for bullet in all_bullets:
+        # Clean bullet text and count words
+        clean_bullet = re.sub(r'[^\w\s]', ' ', bullet)
+        word_count = len([word for word in clean_bullet.split() if word.strip()])
+        
+        if word_count < 10:
+            too_short += 1
+            non_optimal_count += 1
+        elif word_count <= 30:
+            optimal += 1
+        else:
+            too_long += 1
+            non_optimal_count += 1
+    
+    total_bullets = len(all_bullets)
+    
+    # Deduct 1.5 points per non-optimal bullet
+    penalty = non_optimal_count * 1.5
+    score = max(score - penalty, 0)  # Don't go below 0
+    
+    # Generate issues
+    if too_short > 0:
+        issues.append(f"{too_short} bullets too short (< 10 words)")
+    if too_long > 0:
+        issues.append(f"{too_long} bullets too long (> 30 words)")
+        
+    return {
+        'score': round(score, 1),
+        'total_bullets': total_bullets,
+        'optimal_bullets': optimal,
+        'too_short': too_short,
+        'too_long': too_long,
+        'non_optimal_count': non_optimal_count,
+        'penalty_applied': round(penalty, 1),
+        'issues': issues
+    }
+
 def calculate_comprehensive_ats_score(content: str, job_posting: str = None, knockout_questions: List[Dict] = None) -> Dict[str, Any]:
     """Calculate comprehensive ATS compatibility score with penalty system"""
     
@@ -1286,20 +1422,26 @@ def calculate_comprehensive_ats_score(content: str, job_posting: str = None, kno
     # 1. Content Structure Analysis (25 points)
     components['structure'] = analyze_content_structure(content)
     
-    # 2. Keyword Optimization (20 points) - CORRECTED from 30
+    # 2. Keyword Optimization (20 points)
     components['keywords'] = analyze_keyword_optimization(content, industry)
     
     # 3. Contact Information (15 points)
     components['contact'] = analyze_contact_information(content)
     
-    # 4. Formatting Quality (20 points)
+    # 4. Formatting Quality (10 points) - REDUCED from 15
     components['formatting'] = analyze_formatting_quality(content)
     
     # 5. Quantified Achievements (10 points)
     components['achievements'] = analyze_quantified_achievements(content)
     
-    # 6. Readability and Length (10 points) - CORRECTED from 15
+    # 6. Readability and Length (10 points)
     components['readability'] = analyze_readability_and_length(content)
+    
+    # 7. Date Formatting (5 points)
+    components['dates'] = analyze_date_formatting(content)
+    
+    # 8. Bullet Lengths (5 points) - NEW
+    components['bullet_lengths'] = analyze_bullet_lengths(content)
     
     # Calculate base score from components
     base_score = sum(comp['score'] for comp in components.values())
