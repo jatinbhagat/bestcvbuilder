@@ -56,7 +56,7 @@
     "product": [
       "JTBD", "OKRs", "PRD", "roadmap", "discovery", "prioritization", "experimentation", "activation", "retention",
       "north star metric", "user research", "usability testing", "product-market fit", "MVP", "user stories",
-      "backlog management", "feature flags", "customer feedback", "product analytics", "growth metrics"
+      "backlog management", "feature flags", "customer feedback", "product analytics", "growth metrics", "A/B Testing"
     ],
     "healthcare": [
       "HIPAA", "EMR", "EHR", "HL7", "ICD-10", "claims", "payer", "provider", "clinical trials", "telehealth",

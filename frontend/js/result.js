@@ -1035,10 +1035,6 @@ function analyzeCompanyNames(resumeText) {
     return hasCompanies ? 9 : 6;
 }
 
-function analyzeDates(resumeText) {
-    const hasDates = /\d{4}|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec/i.test(resumeText);
-    return hasDates ? 9 : 4;
-}
 
 function analyzeCertifications(resumeText) {
     const certs = ['certified', 'certification', 'license', 'credential'];
@@ -2785,44 +2781,6 @@ function checkChronologicalOrder(resumeText) {
     return 0;
 }
 
-/**
- * Analyze action verb repetition
- */
-function analyzeRepetition(resumeText) {
-    console.log('🔍 REPETITION: Starting repetition analysis...');
-    let score = 10; // Start with perfect score
-    
-    // Extract all action verbs from the resume
-    const foundVerbs = extractActionVerbsFromText(resumeText);
-    console.log('🔍 REPETITION: Found action verbs:', foundVerbs);
-    
-    // Count occurrences of each verb
-    const verbCounts = {};
-    foundVerbs.forEach(verb => {
-        const lowerVerb = verb.toLowerCase();
-        verbCounts[lowerVerb] = (verbCounts[lowerVerb] || 0) + 1;
-    });
-    
-    console.log('🔍 REPETITION: Verb counts:', verbCounts);
-    
-    // Apply penalty for repetitions (beyond first use)
-    let totalRepetitions = 0;
-    Object.values(verbCounts).forEach(count => {
-        if (count > 1) {
-            totalRepetitions += (count - 1); // Count repetitions beyond first use
-        }
-    });
-    
-    const penalty = Math.min(totalRepetitions * 2, 10); // Max 10 points penalty
-    score -= penalty;
-    
-    console.log('🔍 REPETITION: Total repetitions found:', totalRepetitions);
-    console.log('🔍 REPETITION: Penalty applied:', penalty);
-    
-    const finalScore = Math.max(score, 0);
-    console.log('🔍 REPETITION: Final repetition score:', finalScore);
-    return finalScore;
-}
 
 /**
  * Extract summary/objective section from resume
