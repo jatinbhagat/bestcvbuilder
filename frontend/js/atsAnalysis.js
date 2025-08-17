@@ -228,8 +228,8 @@ function processAnalysisResult(rawResult, fileUrl) {
     console.log('🔍 PROCESSING: rawResult.detailed_analysis keys:', rawResult.detailed_analysis ? Object.keys(rawResult.detailed_analysis).length : 'NONE');
     
     return {
-        score: rawResult.ats_score || 0,
-        scoreCategory: getScoreCategory(rawResult.ats_score),
+        score: rawResult.score || rawResult.ats_score || 0,
+        scoreCategory: getScoreCategory(rawResult.score || rawResult.ats_score),
         strengths: rawResult.strengths || [],
         improvements: rawResult.improvements || [],
         detailedAnalysis: rawResult.detailedAnalysis || rawResult.detailed_analysis || {},

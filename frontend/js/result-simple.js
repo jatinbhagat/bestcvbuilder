@@ -89,7 +89,12 @@ function displayOverallScore() {
     const finalScore = Math.round(analysisData.score || analysisData.ats_score || 0);
     atsScore.textContent = finalScore;
     
-    console.log('📊 Displaying score:', finalScore, 'from data:', { score: analysisData.score, ats_score: analysisData.ats_score });
+    console.log('📊 SCORE DEBUG: Received scores from backend:', { 
+        score: analysisData.score, 
+        ats_score: analysisData.ats_score,
+        finalUsed: finalScore,
+        whichFieldUsed: analysisData.score ? 'score' : 'ats_score'
+    });
     
     // Update color based on score
     if (scoreCircle) {
