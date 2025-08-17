@@ -452,47 +452,838 @@ function showIssueModal(categoryName) {
  */
 function generateSpecificIssues(categoryName) {
     // Get the original resume content if available
-    const resumeContent = analysisData.content || "Your resume content here...";
-    const lines = resumeContent.split('\n').filter(line => line.trim().length > 0);
+    const resumeContent = analysisData.content || "";
+    if (!resumeContent) {
+        return [{ description: 'Resume content not available for detailed analysis', cvLine: 'Please re-upload your resume', lineNumber: 0 }];
+    }
     
-    // Generate category-specific issues with actual CV lines
-    const issueTemplates = {
-        'Grammar': [
-            { description: 'Missing comma before coordinating conjunction', cvLine: 'Managed projects and led teams effectively', lineNumber: 12 },
-            { description: 'Incorrect verb tense consistency', cvLine: 'Develop new features and optimized performance', lineNumber: 18 },
-            { description: 'Run-on sentence needs restructuring', cvLine: 'Created marketing campaigns that increased brand awareness and improved customer engagement leading to higher sales', lineNumber: 25 }
-        ],
-        'Spelling': [
-            { description: 'Misspelled word detected', cvLine: 'Responsible for managment of team projects', lineNumber: 8 },
-            { description: 'Incorrect word usage', cvLine: 'Lead a team of 5 developpers', lineNumber: 15 },
-            { description: 'Typo in technical term', cvLine: 'Proficient in Javascirpt and Python', lineNumber: 22 }
-        ],
-        'Action Verbs': [
-            { description: 'Weak action verb - replace with stronger alternative', cvLine: 'Did marketing analysis for the company', lineNumber: 10 },
-            { description: 'Passive voice - convert to active voice', cvLine: 'Reports were generated on a weekly basis', lineNumber: 16 },
-            { description: 'Generic verb - use more specific action word', cvLine: 'Worked on various software projects', lineNumber: 21 }
-        ],
-        'Personal Pronouns': [
-            { description: 'First-person pronoun should be removed', cvLine: 'I managed a team of 8 developers', lineNumber: 5 },
-            { description: 'Unnecessary personal reference', cvLine: 'My role involved client communication', lineNumber: 13 },
-            { description: 'Remove personal pronoun for professional tone', cvLine: 'I was responsible for budget planning', lineNumber: 19 }
-        ],
-        'Contact Details': [
-            { description: 'Missing professional email format', cvLine: 'Email: cooluser123@gmail.com', lineNumber: 2 },
-            { description: 'Phone number format needs improvement', cvLine: 'Phone: 555.123.4567', lineNumber: 3 },
-            { description: 'LinkedIn profile URL should be included', cvLine: 'LinkedIn: Not provided', lineNumber: 4 }
-        ]
+    const lines = resumeContent.split('\n').filter(line => line.trim().length > 5);
+    
+    // Find actual issues in the CV content based on category
+    let issues = [];
+    
+    switch (categoryName) {
+        case 'Personal Pronouns':
+            issues = findPersonalPronounIssues(lines);
+            break;
+        case 'Grammar':
+            issues = findGrammarIssues(lines);
+            break;
+        case 'Spelling':
+            issues = findSpellingIssues(lines);
+            break;
+        case 'Action Verbs':
+            issues = findActionVerbIssues(lines);
+            break;
+        case 'Contact Details':
+            issues = findContactIssues(lines);
+            break;
+        case 'Education Section':
+            issues = findEducationIssues(lines);
+            break;
+        case 'Skills Section':
+            issues = findSkillsIssues(lines);
+            break;
+        case 'Use Of Bullets':
+            issues = findBulletIssues(lines);
+            break;
+        case 'Quantifiable Achievements':
+            issues = findQuantifiableIssues(lines);
+            break;
+        case 'Summary':
+            issues = findSummaryIssues(lines);
+            break;
+        case 'Repetition':
+            issues = findRepetitionIssues(lines);
+            break;
+        case 'Verbosity':
+            issues = findVerbosityIssues(lines);
+            break;
+        case 'Verb Tenses':
+            issues = findVerbTenseIssues(lines);
+            break;
+        case 'Active Voice':
+            issues = findActiveVoiceIssues(lines);
+            break;
+        case 'Page Density':
+            issues = findPageDensityIssues(lines);
+            break;
+        case 'Unnecessary Sections':
+            issues = findUnnecessarySectionIssues(lines);
+            break;
+        case 'Growth Signals':
+            issues = findGrowthSignalIssues(lines);
+            break;
+        case 'Drive':
+            issues = findDriveIssues(lines);
+            break;
+        case 'Leadership':
+            issues = findLeadershipIssues(lines);
+            break;
+        case 'Teamwork':
+            issues = findTeamworkIssues(lines);
+            break;
+        case 'Analytical':
+            issues = findAnalyticalIssues(lines);
+            break;
+        case 'Certifications':
+            issues = findCertificationIssues(lines);
+            break;
+        default:
+            issues = findGenericIssues(lines, categoryName);
+            break;
+    }
+    
+    // Return max 3 issues
+    return issues.slice(0, 3);
+}
+
+/**
+ * Find actual personal pronoun issues in CV lines
+ */
+function findPersonalPronounIssues(lines) {
+    const issues = [];
+    const pronouns = ['I ', ' I ', 'My ', 'Me ', 'Myself', 'Mine'];
+    
+    lines.forEach((line, index) => {
+        const pronounFound = pronouns.find(pronoun => line.includes(pronoun));
+        if (pronounFound) {
+            issues.push({
+                description: `Remove personal pronoun "${pronounFound.trim()}" for professional tone`,
+                cvLine: line.trim(),
+                lineNumber: index + 1
+            });
+        }
+    });
+    
+    if (issues.length === 0) {
+        issues.push({
+            description: 'Personal pronouns detected in resume content',
+            cvLine: 'No specific examples found in current analysis',
+            lineNumber: 0
+        });
+    }
+    
+    return issues;
+}
+
+/**
+ * Find grammar issues in CV lines
+ */
+function findGrammarIssues(lines) {
+    const issues = [];
+    
+    lines.forEach((line, index) => {
+        // Check for common grammar issues
+        if (line.includes(' and ') && !line.includes(',') && line.length > 50) {
+            issues.push({
+                description: 'Consider adding comma before coordinating conjunction',
+                cvLine: line.trim(),
+                lineNumber: index + 1
+            });
+        } else if (line.match(/\b(develop|create|manage)\b.*\b(developed|created|managed)\b/i)) {
+            issues.push({
+                description: 'Inconsistent verb tense in same sentence',
+                cvLine: line.trim(),
+                lineNumber: index + 1
+            });
+        }
+    });
+    
+    if (issues.length === 0) {
+        issues.push({
+            description: 'Grammar improvements suggested for this section',
+            cvLine: lines[0] || 'No content available',
+            lineNumber: 1
+        });
+    }
+    
+    return issues;
+}
+
+/**
+ * Find spelling issues in CV lines
+ */
+function findSpellingIssues(lines) {
+    const issues = [];
+    const commonMisspellings = {
+        'managment': 'management',
+        'developement': 'development',
+        'responsable': 'responsible',
+        'sucessful': 'successful',
+        'comunication': 'communication'
     };
     
-    // Get issues for this category, or generate generic ones
-    let issues = issueTemplates[categoryName] || [
-        { description: 'Issue detected in this section', cvLine: lines[Math.floor(Math.random() * Math.min(lines.length, 10))] || 'Sample resume line', lineNumber: Math.floor(Math.random() * 20) + 1 },
-        { description: 'Improvement needed for ATS compatibility', cvLine: lines[Math.floor(Math.random() * Math.min(lines.length, 15))] || 'Another resume line', lineNumber: Math.floor(Math.random() * 20) + 5 },
-        { description: 'Optimization required for better scoring', cvLine: lines[Math.floor(Math.random() * Math.min(lines.length, 20))] || 'Third resume line', lineNumber: Math.floor(Math.random() * 20) + 10 }
-    ];
+    lines.forEach((line, index) => {
+        Object.keys(commonMisspellings).forEach(misspelling => {
+            if (line.toLowerCase().includes(misspelling)) {
+                issues.push({
+                    description: `Misspelled word: "${misspelling}" should be "${commonMisspellings[misspelling]}"`,
+                    cvLine: line.trim(),
+                    lineNumber: index + 1
+                });
+            }
+        });
+    });
     
-    // Return only first 3 issues to keep modal manageable
-    return issues.slice(0, 3);
+    if (issues.length === 0) {
+        issues.push({
+            description: 'Spelling optimization suggested for better ATS compatibility',
+            cvLine: lines[0] || 'No content available',
+            lineNumber: 1
+        });
+    }
+    
+    return issues;
+}
+
+/**
+ * Find action verb issues in CV lines
+ */
+function findActionVerbIssues(lines) {
+    const issues = [];
+    const weakVerbs = ['did', 'worked on', 'was responsible', 'helped with', 'involved in'];
+    
+    lines.forEach((line, index) => {
+        const weakVerb = weakVerbs.find(verb => line.toLowerCase().includes(verb));
+        if (weakVerb) {
+            issues.push({
+                description: `Replace weak verb phrase "${weakVerb}" with stronger action verb`,
+                cvLine: line.trim(),
+                lineNumber: index + 1
+            });
+        }
+    });
+    
+    if (issues.length === 0) {
+        issues.push({
+            description: 'Action verb strength can be improved',
+            cvLine: lines[0] || 'No content available',
+            lineNumber: 1
+        });
+    }
+    
+    return issues;
+}
+
+/**
+ * Find contact detail issues
+ */
+function findContactIssues(lines) {
+    const issues = [];
+    const firstFewLines = lines.slice(0, 10);
+    
+    const hasEmail = firstFewLines.some(line => line.includes('@'));
+    const hasPhone = firstFewLines.some(line => /\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/.test(line));
+    const hasLinkedIn = firstFewLines.some(line => line.toLowerCase().includes('linkedin'));
+    
+    if (!hasEmail) {
+        issues.push({
+            description: 'Professional email address should be prominently displayed',
+            cvLine: firstFewLines[0] || 'Header section',
+            lineNumber: 1
+        });
+    }
+    
+    if (!hasPhone) {
+        issues.push({
+            description: 'Phone number should be included in contact information',
+            cvLine: firstFewLines[0] || 'Header section',
+            lineNumber: 1
+        });
+    }
+    
+    if (!hasLinkedIn) {
+        issues.push({
+            description: 'LinkedIn profile URL should be included',
+            cvLine: firstFewLines[0] || 'Header section',
+            lineNumber: 1
+        });
+    }
+    
+    return issues;
+}
+
+/**
+ * Find education section issues
+ */
+function findEducationIssues(lines) {
+    const issues = [];
+    const educationKeywords = ['education', 'degree', 'university', 'college', 'bachelor', 'master', 'phd', 'graduated'];
+    
+    const hasEducationSection = lines.some(line => 
+        educationKeywords.some(keyword => line.toLowerCase().includes(keyword))
+    );
+    
+    if (!hasEducationSection) {
+        issues.push({
+            description: 'Education section not clearly identified',
+            cvLine: 'Add clear education section with degree details',
+            lineNumber: 0
+        });
+    }
+    
+    // Check for missing graduation years
+    const educationLines = lines.filter(line => 
+        educationKeywords.some(keyword => line.toLowerCase().includes(keyword))
+    );
+    
+    educationLines.forEach((line, index) => {
+        if (!line.match(/\b(19|20)\d{2}\b/) && !line.match(/\b\d{4}\b/)) {
+            issues.push({
+                description: 'Missing graduation year in education entry',
+                cvLine: line.trim(),
+                lineNumber: lines.indexOf(line) + 1
+            });
+        }
+    });
+    
+    if (issues.length === 0) {
+        issues.push({
+            description: 'Education section format can be optimized',
+            cvLine: educationLines[0] || 'Education section',
+            lineNumber: 1
+        });
+    }
+    
+    return issues;
+}
+
+/**
+ * Find skills section issues
+ */
+function findSkillsIssues(lines) {
+    const issues = [];
+    const skillsKeywords = ['skills', 'technical skills', 'core competencies', 'technologies'];
+    
+    const skillsSectionLine = lines.find(line => 
+        skillsKeywords.some(keyword => line.toLowerCase().includes(keyword))
+    );
+    
+    if (!skillsSectionLine) {
+        issues.push({
+            description: 'Skills section not clearly labeled',
+            cvLine: 'Add dedicated skills or technical competencies section',
+            lineNumber: 0
+        });
+    }
+    
+    // Check for comma-separated vs bullet format
+    lines.forEach((line, index) => {
+        if (line.includes(',') && line.split(',').length > 5) {
+            issues.push({
+                description: 'Long comma-separated list - consider bullet points',
+                cvLine: line.trim(),
+                lineNumber: index + 1
+            });
+        }
+    });
+    
+    if (issues.length === 0) {
+        issues.push({
+            description: 'Skills presentation can be enhanced for ATS parsing',
+            cvLine: skillsSectionLine || lines[0],
+            lineNumber: 1
+        });
+    }
+    
+    return issues;
+}
+
+/**
+ * Find bullet point issues
+ */
+function findBulletIssues(lines) {
+    const issues = [];
+    
+    lines.forEach((line, index) => {
+        const trimmed = line.trim();
+        // Check for lines that should be bullets but aren't
+        if (trimmed.match(/^(managed|led|developed|created|implemented|achieved)/i) && !trimmed.startsWith('•') && !trimmed.startsWith('-')) {
+            issues.push({
+                description: 'Achievement statement should use bullet points',
+                cvLine: trimmed,
+                lineNumber: index + 1
+            });
+        }
+        
+        // Check bullet length
+        if ((trimmed.startsWith('•') || trimmed.startsWith('-')) && trimmed.length > 150) {
+            issues.push({
+                description: 'Bullet point too long - keep under 150 characters',
+                cvLine: trimmed,
+                lineNumber: index + 1
+            });
+        }
+    });
+    
+    if (issues.length === 0) {
+        issues.push({
+            description: 'Bullet point formatting is optimized',
+            cvLine: 'No specific improvements needed',
+            lineNumber: 0
+        });
+    }
+    
+    return issues;
+}
+
+/**
+ * Find quantifiable achievement issues
+ */
+function findQuantifiableIssues(lines) {
+    const issues = [];
+    
+    lines.forEach((line, index) => {
+        // Look for achievement lines without numbers
+        if (line.match(/\b(increased|improved|reduced|achieved|grew|saved|generated)\b/i)) {
+            if (!line.match(/\d+/) && !line.includes('%')) {
+                issues.push({
+                    description: 'Add specific numbers or percentages to quantify achievement',
+                    cvLine: line.trim(),
+                    lineNumber: index + 1
+                });
+            }
+        }
+        
+        // Look for vague terms that need quantification
+        if (line.match(/\b(many|several|various|multiple|significant)\b/i)) {
+            issues.push({
+                description: 'Replace vague terms with specific numbers',
+                cvLine: line.trim(),
+                lineNumber: index + 1
+            });
+        }
+    });
+    
+    if (issues.length === 0) {
+        issues.push({
+            description: 'Add more quantified achievements with specific metrics',
+            cvLine: 'Include numbers, percentages, and measurable results',
+            lineNumber: 0
+        });
+    }
+    
+    return issues;
+}
+
+/**
+ * Find summary section issues
+ */
+function findSummaryIssues(lines) {
+    const issues = [];
+    const summaryKeywords = ['summary', 'profile', 'objective', 'about'];
+    
+    const summaryLine = lines.find(line => 
+        summaryKeywords.some(keyword => line.toLowerCase().includes(keyword))
+    );
+    
+    if (!summaryLine) {
+        issues.push({
+            description: 'Professional summary section missing',
+            cvLine: 'Add professional summary at the top of resume',
+            lineNumber: 1
+        });
+    }
+    
+    // Check first few lines for summary content
+    const firstFewLines = lines.slice(0, 5);
+    firstFewLines.forEach((line, index) => {
+        if (line.length > 200) {
+            issues.push({
+                description: 'Summary statement too long - keep under 200 characters',
+                cvLine: line.trim(),
+                lineNumber: index + 1
+            });
+        }
+    });
+    
+    if (issues.length === 0) {
+        issues.push({
+            description: 'Summary section can be optimized for impact',
+            cvLine: summaryLine || firstFewLines[0],
+            lineNumber: 1
+        });
+    }
+    
+    return issues;
+}
+
+/**
+ * Find repetition issues
+ */
+function findRepetitionIssues(lines) {
+    const issues = [];
+    const wordCounts = {};
+    
+    // Count word frequency
+    lines.forEach(line => {
+        const words = line.toLowerCase().split(/\s+/).filter(word => word.length > 4);
+        words.forEach(word => {
+            wordCounts[word] = (wordCounts[word] || 0) + 1;
+        });
+    });
+    
+    // Find overused words
+    const overusedWords = Object.entries(wordCounts).filter(([word, count]) => count > 5);
+    
+    overusedWords.forEach(([word, count]) => {
+        const lineWithWord = lines.find(line => line.toLowerCase().includes(word));
+        if (lineWithWord) {
+            issues.push({
+                description: `Word "${word}" used ${count} times - consider synonyms`,
+                cvLine: lineWithWord.trim(),
+                lineNumber: lines.indexOf(lineWithWord) + 1
+            });
+        }
+    });
+    
+    if (issues.length === 0) {
+        issues.push({
+            description: 'Word variety is good - no excessive repetition detected',
+            cvLine: 'Content shows good vocabulary diversity',
+            lineNumber: 0
+        });
+    }
+    
+    return issues;
+}
+
+/**
+ * Find verbosity issues
+ */
+function findVerbosityIssues(lines) {
+    const issues = [];
+    
+    lines.forEach((line, index) => {
+        if (line.length > 120 && !line.includes('•') && !line.includes('-')) {
+            issues.push({
+                description: 'Line too long - break into shorter, clearer statements',
+                cvLine: line.trim(),
+                lineNumber: index + 1
+            });
+        }
+        
+        // Check for wordy phrases
+        const wordyPhrases = ['in order to', 'due to the fact that', 'with regard to', 'for the purpose of'];
+        wordyPhrases.forEach(phrase => {
+            if (line.toLowerCase().includes(phrase)) {
+                issues.push({
+                    description: `Replace wordy phrase "${phrase}" with simpler alternative`,
+                    cvLine: line.trim(),
+                    lineNumber: index + 1
+                });
+            }
+        });
+    });
+    
+    if (issues.length === 0) {
+        issues.push({
+            description: 'Content is appropriately concise',
+            cvLine: 'Good balance of detail and brevity',
+            lineNumber: 0
+        });
+    }
+    
+    return issues;
+}
+
+/**
+ * Find verb tense issues
+ */
+function findVerbTenseIssues(lines) {
+    const issues = [];
+    
+    lines.forEach((line, index) => {
+        // Check for mixed tenses in same line
+        if (line.match(/\b(manage|develop|create)\b.*\b(managed|developed|created)\b/i)) {
+            issues.push({
+                description: 'Mixed verb tenses in same statement - use consistent tense',
+                cvLine: line.trim(),
+                lineNumber: index + 1
+            });
+        }
+        
+        // Check for present tense in past roles
+        if (line.match(/\b(currently|presently)\b/i) && line.match(/\b(managed|developed|created)\b/i)) {
+            issues.push({
+                description: 'Use present tense for current role, past tense for previous roles',
+                cvLine: line.trim(),
+                lineNumber: index + 1
+            });
+        }
+    });
+    
+    if (issues.length === 0) {
+        issues.push({
+            description: 'Verb tense consistency can be improved',
+            cvLine: 'Review tense usage throughout resume',
+            lineNumber: 0
+        });
+    }
+    
+    return issues;
+}
+
+/**
+ * Find active voice issues
+ */
+function findActiveVoiceIssues(lines) {
+    const issues = [];
+    const passiveIndicators = ['was responsible', 'were responsible', 'was tasked', 'were given', 'was assigned'];
+    
+    lines.forEach((line, index) => {
+        passiveIndicators.forEach(indicator => {
+            if (line.toLowerCase().includes(indicator)) {
+                issues.push({
+                    description: `Convert passive voice "${indicator}" to active voice`,
+                    cvLine: line.trim(),
+                    lineNumber: index + 1
+                });
+            }
+        });
+    });
+    
+    if (issues.length === 0) {
+        issues.push({
+            description: 'Active voice usage is strong throughout resume',
+            cvLine: 'Good use of action-oriented language',
+            lineNumber: 0
+        });
+    }
+    
+    return issues;
+}
+
+/**
+ * Find page density issues
+ */
+function findPageDensityIssues(lines) {
+    const issues = [];
+    const totalLines = lines.length;
+    const avgLineLength = lines.reduce((sum, line) => sum + line.length, 0) / totalLines;
+    
+    if (totalLines < 20) {
+        issues.push({
+            description: 'Resume appears too sparse - add more relevant content',
+            cvLine: `Total content: ${totalLines} lines`,
+            lineNumber: 0
+        });
+    } else if (totalLines > 60) {
+        issues.push({
+            description: 'Resume appears too dense - consider condensing content',
+            cvLine: `Total content: ${totalLines} lines`,
+            lineNumber: 0
+        });
+    }
+    
+    if (avgLineLength > 100) {
+        issues.push({
+            description: 'Average line length too long - use more white space',
+            cvLine: `Average line length: ${Math.round(avgLineLength)} characters`,
+            lineNumber: 0
+        });
+    }
+    
+    if (issues.length === 0) {
+        issues.push({
+            description: 'Page density is well-balanced',
+            cvLine: 'Good use of white space and content distribution',
+            lineNumber: 0
+        });
+    }
+    
+    return issues;
+}
+
+/**
+ * Find unnecessary sections issues
+ */
+function findUnnecessarySectionIssues(lines) {
+    const issues = [];
+    const unnecessarySections = ['references', 'hobbies', 'interests', 'personal information'];
+    
+    lines.forEach((line, index) => {
+        unnecessarySections.forEach(section => {
+            if (line.toLowerCase().includes(section)) {
+                issues.push({
+                    description: `Consider removing "${section}" section - not ATS-friendly`,
+                    cvLine: line.trim(),
+                    lineNumber: index + 1
+                });
+            }
+        });
+    });
+    
+    if (issues.length === 0) {
+        issues.push({
+            description: 'All sections appear relevant and necessary',
+            cvLine: 'Good focus on professional content',
+            lineNumber: 0
+        });
+    }
+    
+    return issues;
+}
+
+/**
+ * Find growth signals issues
+ */
+function findGrowthSignalIssues(lines) {
+    const issues = [];
+    const growthKeywords = ['promoted', 'advanced', 'progressed', 'increased responsibility', 'leadership role'];
+    
+    const hasGrowthSignals = lines.some(line => 
+        growthKeywords.some(keyword => line.toLowerCase().includes(keyword))
+    );
+    
+    if (!hasGrowthSignals) {
+        issues.push({
+            description: 'Add evidence of career progression and growth',
+            cvLine: 'Include promotions, increased responsibilities, or skill development',
+            lineNumber: 0
+        });
+    }
+    
+    // Look for years to show progression
+    const yearsFound = [];
+    lines.forEach(line => {
+        const yearMatches = line.match(/\b(19|20)\d{2}\b/g);
+        if (yearMatches) {
+            yearsFound.push(...yearMatches);
+        }
+    });
+    
+    if (yearsFound.length < 2) {
+        issues.push({
+            description: 'Include dates to show career timeline and progression',
+            cvLine: 'Add employment dates to demonstrate growth over time',
+            lineNumber: 0
+        });
+    }
+    
+    return issues;
+}
+
+/**
+ * Find drive and initiative issues
+ */
+function findDriveIssues(lines) {
+    const issues = [];
+    const driveKeywords = ['initiated', 'pioneered', 'launched', 'established', 'founded', 'created', 'innovated'];
+    
+    const hasDriveSignals = lines.some(line => 
+        driveKeywords.some(keyword => line.toLowerCase().includes(keyword))
+    );
+    
+    if (!hasDriveSignals) {
+        issues.push({
+            description: 'Add examples of initiative and self-motivation',
+            cvLine: 'Include projects you initiated or innovative solutions you created',
+            lineNumber: 0
+        });
+    }
+    
+    return issues;
+}
+
+/**
+ * Find leadership issues
+ */
+function findLeadershipIssues(lines) {
+    const issues = [];
+    const leadershipKeywords = ['led', 'managed', 'supervised', 'directed', 'coordinated', 'team', 'leadership'];
+    
+    const hasLeadershipSignals = lines.some(line => 
+        leadershipKeywords.some(keyword => line.toLowerCase().includes(keyword))
+    );
+    
+    if (!hasLeadershipSignals) {
+        issues.push({
+            description: 'Add leadership experiences and team management examples',
+            cvLine: 'Include team leadership, project management, or mentoring experience',
+            lineNumber: 0
+        });
+    }
+    
+    return issues;
+}
+
+/**
+ * Find teamwork issues
+ */
+function findTeamworkIssues(lines) {
+    const issues = [];
+    const teamworkKeywords = ['collaborated', 'partnered', 'worked with', 'cross-functional', 'team member'];
+    
+    const hasTeamworkSignals = lines.some(line => 
+        teamworkKeywords.some(keyword => line.toLowerCase().includes(keyword))
+    );
+    
+    if (!hasTeamworkSignals) {
+        issues.push({
+            description: 'Add examples of collaboration and teamwork',
+            cvLine: 'Include cross-functional projects or collaborative achievements',
+            lineNumber: 0
+        });
+    }
+    
+    return issues;
+}
+
+/**
+ * Find analytical skills issues
+ */
+function findAnalyticalIssues(lines) {
+    const issues = [];
+    const analyticalKeywords = ['analyzed', 'evaluated', 'assessed', 'researched', 'investigated', 'data', 'metrics'];
+    
+    const hasAnalyticalSignals = lines.some(line => 
+        analyticalKeywords.some(keyword => line.toLowerCase().includes(keyword))
+    );
+    
+    if (!hasAnalyticalSignals) {
+        issues.push({
+            description: 'Add examples of analytical and problem-solving skills',
+            cvLine: 'Include data analysis, research, or problem-solving achievements',
+            lineNumber: 0
+        });
+    }
+    
+    return issues;
+}
+
+/**
+ * Find certification issues
+ */
+function findCertificationIssues(lines) {
+    const issues = [];
+    const certKeywords = ['certified', 'certification', 'license', 'credential', 'certificate'];
+    
+    const hasCertifications = lines.some(line => 
+        certKeywords.some(keyword => line.toLowerCase().includes(keyword))
+    );
+    
+    if (!hasCertifications) {
+        issues.push({
+            description: 'Add relevant professional certifications and credentials',
+            cvLine: 'Include industry certifications, licenses, or training certificates',
+            lineNumber: 0
+        });
+    }
+    
+    return issues;
+}
+
+/**
+ * Find generic issues for other categories
+ */
+function findGenericIssues(lines, categoryName) {
+    return [{
+        description: `Optimization needed for ${categoryName} section`,
+        cvLine: lines[0] || 'Content analysis in progress',
+        lineNumber: 1
+    }];
 }
 
 /**
