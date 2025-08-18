@@ -45,13 +45,25 @@
             box-sizing: border-box;
         }
 
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            max-width: 100vw;
+            overflow-x: hidden;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
             background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            margin: 0;
-            padding: 0;
             line-height: 1.6;
             color: var(--gray-800);
+        }
+
+        .desktop-layout {
+            width: 100%;
+            max-width: 100vw;
+            overflow-x: hidden;
         }
 
         /* Header Improvements */
@@ -139,6 +151,7 @@
             background: transparent;
             scrollbar-width: thin;
             scrollbar-color: var(--gray-300) transparent;
+            min-width: 0; /* Prevent flex item overflow */
         }
 
         .main-content::-webkit-scrollbar {
@@ -160,7 +173,8 @@
 
         .content-wrapper {
             padding-bottom: 50px;
-            min-height: calc(100vh - 80px);
+            max-width: 100%;
+            overflow-x: hidden;
         }
 
         /* Summary Card - New Modern Design */
@@ -444,16 +458,20 @@
                 margin-bottom: 20px;
                 border-right: none;
                 border-bottom: 1px solid var(--gray-200);
+                flex-shrink: 0;
             }
             
             .main-content {
                 width: 100% !important;
                 height: auto;
                 max-height: none;
+                overflow-y: visible;
             }
             
             .content-wrapper {
                 padding-bottom: 120px;
+                max-width: 100%;
+                overflow-x: hidden;
             }
 
             .summary-stats {
@@ -538,9 +556,9 @@
     </header>
 
     <!-- Main Layout -->
-    <div class="desktop-layout flex min-h-screen">
+    <div class="desktop-layout flex">
         <!-- Left Sidebar -->
-        <div class="sidebar w-80 bg-white border-r border-gray-200 p-6" style="width: 320px;">
+        <div class="sidebar bg-white border-r border-gray-200 p-6" style="width: 320px; flex-shrink: 0;">
             <!-- Overall Score -->
             <div class="text-center mb-8">
                 <div class="score-circle mx-auto mb-4" id="scoreCircle">
@@ -576,7 +594,7 @@
         </div>
 
         <!-- Main Content Area -->
-        <div class="main-content flex-1 p-8" style="width: calc(100% - 320px);">
+        <div class="main-content flex-1 p-8">
             <div class="content-wrapper">
                 <!-- Analysis Summary Card -->
                 <div class="summary-card mb-8">
