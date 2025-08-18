@@ -2803,11 +2803,199 @@ def calculate_cv_readability_score(resume_text: str, filename: str = None) -> fl
     
     return round(final_score, 1)
 
+def get_enhanced_issue_description(category_name: str, score: int, resume_text: str = "") -> dict:
+    """
+    Generate enhanced issue descriptions with scoring criteria and specific guidance
+    """
+    
+    # Enhanced category definitions with scoring criteria and unique issues
+    category_enhancements = {
+        'Contact Details': {
+            'understanding': 'Measures completeness and professionalism of contact information for ATS systems',
+            'high_score_criteria': [
+                'Professional email address with proper domain',
+                'Complete phone number with country code',
+                'LinkedIn profile URL included and professional'
+            ],
+            'low_score_issues': [
+                'Missing essential contact information (email, phone)',
+                'Unprofessional email addresses (e.g., partyguy@email.com)',
+                'No LinkedIn profile or social media presence'
+            ],
+            'specific_issues': {
+                'high': ['Add professional LinkedIn profile URL', 'Include complete address with city and state', 'Verify email address is professional'],
+                'medium': ['Update phone number format for ATS compatibility', 'Add GitHub profile if technical role', 'Include portfolio website if relevant'],
+                'low': ['Replace unprofessional email with firstname.lastname format', 'Add missing contact information immediately', 'Create professional LinkedIn profile']
+            }
+        },
+        
+        'Skills Section': {
+            'understanding': 'Evaluates technical and soft skills presentation, relevance, and ATS keyword optimization',
+            'high_score_criteria': [
+                'Role-specific technical skills clearly listed',
+                'Mix of hard and soft skills relevant to target position',
+                'Skills organized in logical categories or priority order'
+            ],
+            'low_score_issues': [
+                'Generic skills that apply to any role',
+                'Missing industry-specific technologies and tools',
+                'Outdated software or programming languages'
+            ],
+            'specific_issues': {
+                'high': ['Add specific software proficiency levels (Expert, Advanced, Intermediate)', 'Include emerging technologies relevant to your field', 'Highlight cross-functional collaboration skills'],
+                'medium': ['Organize skills by categories (Technical, Leadership, Industry-specific)', 'Add cloud platforms and modern development tools', 'Include data analysis and visualization tools'],
+                'low': ['Replace generic skills with specific technical competencies', 'Add industry-relevant programming languages and frameworks', 'Include modern software tools and platforms used in your field']
+            }
+        },
+        
+        'Analytical': {
+            'understanding': 'Assesses demonstration of analytical thinking, data-driven decision making, and problem-solving abilities',
+            'high_score_criteria': [
+                'Specific examples of data analysis and insights generated',
+                'Quantified impact of analytical work with metrics',
+                'Clear problem-solving methodologies mentioned'
+            ],
+            'low_score_issues': [
+                'No quantified examples of analytical work',
+                'Missing data-driven achievements and insights',
+                'Generic statements without specific analytical methods'
+            ],
+            'specific_issues': {
+                'high': ['Add specific data analysis tools used (SQL, Python, Tableau, etc.)', 'Include examples of insights that drove business decisions', 'Highlight statistical methods or frameworks applied'],
+                'medium': ['Quantify analytical impact with percentages and metrics', 'Show progression from analysis to implementation', 'Include cross-functional analytical projects'],
+                'low': ['Add concrete examples of data analysis you\'ve performed', 'Include specific metrics and outcomes from your analytical work', 'Mention analytical tools and methodologies you\'ve used']
+            }
+        },
+        
+        'Repetition': {
+            'understanding': 'Detects overuse of words and phrases while excluding legitimate repetitions like location names',
+            'high_score_criteria': [
+                'Varied vocabulary with diverse action verbs',
+                'Natural language flow without repetitive patterns',
+                'Strategic repetition only for key achievements'
+            ],
+            'low_score_issues': [
+                'Overuse of basic action verbs (managed, worked, handled)',
+                'Repetitive sentence structure and phrasing',
+                'Excessive use of filler words and buzzwords'
+            ],
+            'specific_issues': {
+                'high': ['Vary sentence structure to create dynamic flow', 'Use advanced action verbs for different types of achievements', 'Replace common buzzwords with specific accomplishments'],
+                'medium': ['Substitute repetitive action verbs with more specific alternatives', 'Diversify adjectives and descriptive language', 'Eliminate redundant phrases across bullet points'],
+                'low': ['Replace overused action verbs with powerful alternatives', 'Eliminate repetitive phrases and restructure similar bullet points', 'Remove filler words and generic business buzzwords']
+            }
+        },
+        
+        'Certifications': {
+            'understanding': 'Measures presence, relevance, and currency of professional certifications and credentials',
+            'high_score_criteria': [
+                'Industry-relevant professional certifications listed',
+                'Multiple current certifications from recognized bodies',
+                'Certification dates and renewal status included'
+            ],
+            'low_score_issues': [
+                'No professional certifications mentioned',
+                'Outdated or expired certifications only',
+                'Irrelevant certifications for target role'
+            ],
+            'specific_issues': {
+                'high': ['Add renewal dates for current certifications', 'Include specialized micro-credentials and digital badges', 'Highlight certifications that differentiate you from competitors'],
+                'medium': ['Pursue industry-standard certifications relevant to your field', 'Add professional development courses from recognized platforms', 'Include vendor-specific certifications (AWS, Microsoft, Google, etc.)'],
+                'low': ['Obtain fundamental industry certifications immediately', 'Add any completed training programs or courses', 'Include professional licenses and credentials']
+            }
+        },
+        
+        'Leadership': {
+            'understanding': 'Evaluates demonstration of leadership capabilities, team management, and influence',
+            'high_score_criteria': [
+                'Specific examples of team leadership with team sizes',
+                'Cross-functional leadership and collaboration examples',
+                'Quantified leadership impact and results'
+            ],
+            'low_score_issues': [
+                'No clear leadership examples or team management',
+                'Missing cross-functional collaboration evidence',
+                'Lack of quantified leadership outcomes'
+            ],
+            'specific_issues': {
+                'high': ['Highlight mentorship and coaching of junior team members', 'Include examples of leading through organizational change', 'Show leadership impact across different stakeholder groups'],
+                'medium': ['Add specific team sizes managed and project scope', 'Include cross-departmental leadership initiatives', 'Quantify team performance improvements under your leadership'],
+                'low': ['Add any team leadership experience, even informal roles', 'Include examples of training or mentoring others', 'Highlight initiative-taking and project ownership']
+            }
+        },
+        
+        'Growth Signals': {
+            'understanding': 'Detects career progression through promotions, expanding responsibilities, and skill development',
+            'high_score_criteria': [
+                'Clear promotion progression within organizations',
+                'Expanding scope of responsibility over time',
+                'Cross-company career advancement patterns'
+            ],
+            'low_score_issues': [
+                'No visible career progression or promotions',
+                'Static role responsibilities without growth',
+                'Missing demonstration of increasing impact'
+            ],
+            'specific_issues': {
+                'high': ['Highlight rapid career progression and early promotions', 'Show expanding team and budget responsibilities', 'Include geographic expansion or new market leadership'],
+                'medium': ['Emphasize increasing project complexity and scope', 'Add examples of expanded role responsibilities', 'Include skill development and new domain expertise'],
+                'low': ['Highlight any promotion or role expansion you\'ve had', 'Show increasing responsibility even in the same role', 'Include skill development and learning achievements']
+            }
+        },
+        
+        'Dates': {
+            'understanding': 'Evaluates consistency and professional formatting of dates across experience, education, and projects',
+            'high_score_criteria': [
+                'Consistent date format throughout resume (MM/YYYY or MM-YYYY)',
+                'All relevant positions include both start and end dates',
+                'Chronological order with clear employment timeline'
+            ],
+            'low_score_issues': [
+                'Inconsistent date formats mixing different styles',
+                'Missing dates on significant positions or education',
+                'Date ranges that create timeline gaps or overlaps'
+            ],
+            'specific_issues': {
+                'high': ['Ensure all dates follow exact same format pattern', 'Add specific month/year for all positions and education', 'Verify chronological order is maintained throughout'],
+                'medium': ['Standardize date format to MM/YYYY across all sections', 'Add missing dates for education and certifications', 'Fix any mixed date formatting patterns'],
+                'low': ['Add missing employment and education dates immediately', 'Choose one consistent date format and apply throughout', 'Fix major date inconsistencies and formatting errors']
+            }
+        }
+    }
+    
+    # Get category-specific enhancement or use default
+    enhancement = category_enhancements.get(category_name, {
+        'understanding': f'Evaluates {category_name.lower()} aspects of your resume for ATS optimization',
+        'high_score_criteria': ['Professional presentation', 'Relevant content', 'Clear structure'],
+        'low_score_issues': ['Missing key elements', 'Poor presentation', 'Lack of specificity'],
+        'specific_issues': {
+            'high': [f'Optimize {category_name.lower()} for maximum impact'],
+            'medium': [f'Improve {category_name.lower()} presentation and content'],
+            'low': [f'Add essential {category_name.lower()} elements to your resume']
+        }
+    })
+    
+    # Select appropriate specific issues based on score
+    if score >= 8:
+        specific_issues = enhancement['specific_issues']['high']
+    elif score >= 5:
+        specific_issues = enhancement['specific_issues']['medium']
+    else:
+        specific_issues = enhancement['specific_issues']['low']
+    
+    return {
+        'understanding': enhancement['understanding'],
+        'high_score_criteria': enhancement['high_score_criteria'],
+        'low_score_issues': enhancement['low_score_issues'],
+        'specific_issues': specific_issues[:3],  # Limit to 3 unique issues
+        'issue': specific_issues[0] if specific_issues else f'Improve {category_name.lower()} presentation'
+    }
+
 def generate_comprehensive_ats_scores_frontend(content: str, component_scores: dict = None, detailed_analysis: dict = None, filename: str = None) -> List[dict]:
     """
-    Generate comprehensive ATS scores for all 23+ categories - COPIED EXACTLY FROM FRONTEND
+    Generate comprehensive ATS scores for all 23+ categories - ENHANCED WITH SPECIFIC GUIDANCE
     """
-    logger.info('🏗️ Generating comprehensive ATS scores with frontend logic')
+    logger.info('🏗️ Generating comprehensive ATS scores with enhanced guidance')
     
     # Extract data (keeping backend compatibility)
     resume_text = content
@@ -2816,10 +3004,16 @@ def generate_comprehensive_ats_scores_frontend(content: str, component_scores: d
     categories = []
     
     # 1. CONTACT INFORMATION
+    contact_score = analyze_contact_details_frontend(resume_text)
+    contact_enhancement = get_enhanced_issue_description('Contact Details', contact_score, resume_text)
     categories.append({
         'name': 'Contact Details',
-        'score': analyze_contact_details_frontend(resume_text),
-        'issue': 'Ensure all contact information is complete and professional',
+        'score': contact_score,
+        'issue': contact_enhancement['issue'],
+        'understanding': contact_enhancement['understanding'],
+        'high_score_criteria': contact_enhancement['high_score_criteria'],
+        'low_score_issues': contact_enhancement['low_score_issues'],
+        'specific_issues': contact_enhancement['specific_issues'],
         'impact': 'SECTIONS'
     })
     
@@ -2830,24 +3024,44 @@ def generate_comprehensive_ats_scores_frontend(content: str, component_scores: d
         'issue': 'Optimize education section format and content',
         'impact': 'SECTIONS'
     })
+    
+    skills_score = analyze_skills_section_frontend(resume_text)
+    skills_enhancement = get_enhanced_issue_description('Skills Section', skills_score, resume_text)
     categories.append({
         'name': 'Skills Section', 
-        'score': analyze_skills_section_frontend(resume_text),
-        'issue': 'Improve skills presentation and relevance',
+        'score': skills_score,
+        'issue': skills_enhancement['issue'],
+        'understanding': skills_enhancement['understanding'],
+        'high_score_criteria': skills_enhancement['high_score_criteria'],
+        'low_score_issues': skills_enhancement['low_score_issues'],
+        'specific_issues': skills_enhancement['specific_issues'],
         'impact': 'SECTIONS'
     })
     
     # 4-5. KEYWORD OPTIMIZATION
+    analytical_score = analyze_analytical_skills_frontend(resume_text)
+    analytical_enhancement = get_enhanced_issue_description('Analytical', analytical_score, resume_text)
     categories.append({
         'name': 'Analytical',
-        'score': analyze_analytical_skills_frontend(resume_text),
-        'issue': 'Highlight analytical and problem-solving skills',
+        'score': analytical_score,
+        'issue': analytical_enhancement['issue'],
+        'understanding': analytical_enhancement['understanding'],
+        'high_score_criteria': analytical_enhancement['high_score_criteria'],
+        'low_score_issues': analytical_enhancement['low_score_issues'],
+        'specific_issues': analytical_enhancement['specific_issues'],
         'impact': 'ALL'
     })
+    
+    leadership_score = analyze_leadership_skills_frontend(resume_text)
+    leadership_enhancement = get_enhanced_issue_description('Leadership', leadership_score, resume_text)
     categories.append({
         'name': 'Leadership',
-        'score': analyze_leadership_skills_frontend(resume_text),
-        'issue': 'Emphasize leadership experiences and impact',
+        'score': leadership_score,
+        'issue': leadership_enhancement['issue'],
+        'understanding': leadership_enhancement['understanding'],
+        'high_score_criteria': leadership_enhancement['high_score_criteria'],
+        'low_score_issues': leadership_enhancement['low_score_issues'],
+        'specific_issues': leadership_enhancement['specific_issues'],
         'impact': 'ALL'
     })
     
@@ -2928,10 +3142,16 @@ def generate_comprehensive_ats_scores_frontend(content: str, component_scores: d
         'issue': 'Reduce wordiness for better readability',
         'impact': 'BREVITY'
     })
+    repetition_score = analyze_repetition_frontend(resume_text)
+    repetition_enhancement = get_enhanced_issue_description('Repetition', repetition_score, resume_text)
     categories.append({
         'name': 'Repetition',
-        'score': analyze_repetition_frontend(resume_text),
-        'issue': 'Eliminate repetitive phrases and content',
+        'score': repetition_score,
+        'issue': repetition_enhancement['issue'],
+        'understanding': repetition_enhancement['understanding'],
+        'high_score_criteria': repetition_enhancement['high_score_criteria'],
+        'low_score_issues': repetition_enhancement['low_score_issues'],
+        'specific_issues': repetition_enhancement['specific_issues'],
         'impact': 'BREVITY'
     })
     categories.append({
@@ -2940,10 +3160,16 @@ def generate_comprehensive_ats_scores_frontend(content: str, component_scores: d
         'issue': 'Remove outdated sections like References, Objective, and high school education when you have higher qualifications',
         'impact': 'SECTIONS'
     })
+    growth_signals_score = analyze_growth_signals_frontend(resume_text)
+    growth_signals_enhancement = get_enhanced_issue_description('Growth Signals', growth_signals_score, resume_text)
     categories.append({
         'name': 'Growth Signals',
-        'score': analyze_growth_signals_frontend(resume_text),
-        'issue': 'Demonstrate career progression and learning',
+        'score': growth_signals_score,
+        'issue': growth_signals_enhancement['issue'],
+        'understanding': growth_signals_enhancement['understanding'],
+        'high_score_criteria': growth_signals_enhancement['high_score_criteria'],
+        'low_score_issues': growth_signals_enhancement['low_score_issues'],
+        'specific_issues': growth_signals_enhancement['specific_issues'],
         'impact': 'ALL'
     })
     categories.append({
@@ -2954,14 +3180,34 @@ def generate_comprehensive_ats_scores_frontend(content: str, component_scores: d
     })
     
     # 22-23. ADDITIONAL CATEGORIES
+    certifications_score = analyze_certifications_frontend(resume_text)
+    certifications_enhancement = get_enhanced_issue_description('Certifications', certifications_score, resume_text)
     categories.append({
         'name': 'Certifications',
-        'score': analyze_certifications_frontend(resume_text),
-        'issue': 'Add relevant certifications and professional credentials',
+        'score': certifications_score,
+        'issue': certifications_enhancement['issue'],
+        'understanding': certifications_enhancement['understanding'],
+        'high_score_criteria': certifications_enhancement['high_score_criteria'],
+        'low_score_issues': certifications_enhancement['low_score_issues'],
+        'specific_issues': certifications_enhancement['specific_issues'],
         'impact': 'ALL'
     })
     
-    # 24. CV READABILITY SCORE (WEIGHTED)
+    # 24. DATE FORMATTING
+    dates_score = analyze_date_formatting(resume_text)['score']
+    dates_enhancement = get_enhanced_issue_description('Dates', dates_score, resume_text)
+    categories.append({
+        'name': 'Dates',
+        'score': dates_score,
+        'issue': dates_enhancement['issue'],
+        'understanding': dates_enhancement['understanding'],
+        'high_score_criteria': dates_enhancement['high_score_criteria'],
+        'low_score_issues': dates_enhancement['low_score_issues'],
+        'specific_issues': dates_enhancement['specific_issues'],
+        'impact': 'STYLE'
+    })
+    
+    # 25. CV READABILITY SCORE (WEIGHTED)
     categories.append({
         'name': 'CV Readability Score',
         'score': calculate_cv_readability_score(resume_text, filename),
