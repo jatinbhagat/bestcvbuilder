@@ -1291,7 +1291,9 @@ def analyze_date_formatting(content: str) -> Dict[str, Any]:
         (r'\b(0[1-9]|1[0-2])-(19[9-9][0-9]|20[0-3][0-9])\b', 'MM-YYYY'),           # MM-YYYY format
         (r'\b([1-9])-(19[9-9][0-9]|20[0-3][0-9])\b', 'M-YYYY'),                     # M-YYYY format
         (r'\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(19[9-9][0-9]|20[0-3][0-9])\b', 'Month YYYY'),  # Month YYYY
+        (r'\b(19[9-9][0-9]|20[0-3][0-9])\s*[-–]\s*(19[9-9][0-9]|20[0-3][0-9])\b', 'YYYY-YYYY'),  # YYYY-YYYY format
         (r'\b(19[9-9][0-9]|20[0-3][0-9])\s*[-–]\s*(Present|Ongoing|Current)\b', 'YYYY-Present'),  # YYYY - Present
+        (r'\b(19[9-9][0-9]|20[0-3][0-9])\s+(to|through)\s+(19[9-9][0-9]|20[0-3][0-9])\b', 'YYYY to YYYY'),  # YYYY to YYYY
     ]
     
     # Find all dates and track which format they use
@@ -1319,31 +1321,67 @@ def analyze_date_formatting(content: str) -> Dict[str, Any]:
     for date, fmt in zip(all_dates, format_names):
         logger.info(f"🗓️ Date: '{date}' -> Format: {fmt}")
     
-    # Check for format consistency
+    # AGGRESSIVE SCORING: Count all types of inconsistencies
+    total_inconsistencies = 0
+    
+    # 1. Format inconsistencies - count each unique format beyond the first as an inconsistency
     unique_formats = set(format_types)
     if len(unique_formats) > 1:
-        # More balanced penalty for mixed formats
-        total_dates = len(format_types)
-        most_common_format = max(set(format_types), key=format_types.count) if format_types else 0
-        inconsistencies = total_dates - format_types.count(most_common_format)
-        
-        # Progressive penalty: 1 point per 2 inconsistencies, max 6 points
-        penalty = min((inconsistencies + 1) // 2, 6)
-        score -= penalty
-        issues.append(f"Mixed date formats detected ({inconsistencies} inconsistencies across {len(unique_formats)} formats)")
+        # Each additional format beyond the most common one is an inconsistency
+        format_inconsistencies = len(unique_formats) - 1  # -1 because one format is the "standard"
+        total_inconsistencies += format_inconsistencies
+        issues.append(f"Mixed date formats: {format_inconsistencies} different non-standard date formats found ({len(unique_formats)} total formats)")
     
-    # Basic validation - ensure work experience has dates
+    # 2. Missing dates inconsistency - if some positions have dates but others don't
+    position_entries = extract_position_entries(relevant_content)
+    positions_with_dates = 0
+    total_positions = len(position_entries)
+    
+    for entry in position_entries:
+        entry_has_date = any(date in entry for date in all_dates)
+        if entry_has_date:
+            positions_with_dates += 1
+    
+    if total_positions > 0 and positions_with_dates < total_positions:
+        missing_date_inconsistencies = total_positions - positions_with_dates
+        total_inconsistencies += missing_date_inconsistencies
+        issues.append(f"Missing dates: {missing_date_inconsistencies} positions/entries lack proper dates")
+    
+    # 3. Incomplete date inconsistencies - mix of year-only vs month-year formats
+    year_only_count = 0
+    full_date_count = 0
+    
+    for date, fmt in zip(all_dates, format_names):
+        if fmt in ['Month YYYY', 'MM/YYYY', 'M/YYYY', 'MM-YYYY', 'M-YYYY']:
+            full_date_count += 1
+        elif len(date) == 4 and date.isdigit():  # Year only like "2022"
+            year_only_count += 1
+    
+    if year_only_count > 0 and full_date_count > 0:
+        # Count year-only dates as inconsistencies if we have full dates elsewhere
+        total_inconsistencies += year_only_count
+        issues.append(f"Incomplete dates: {year_only_count} dates are year-only while others include months")
+    
+    # AGGRESSIVE PENALTY: 2 points per inconsistency
+    penalty = total_inconsistencies * 2
+    score -= penalty
+    
+    # Additional penalty for completely missing dates
     if not all_dates:
-        score -= 4
+        score -= 6  # Heavy penalty for no dates at all
         issues.append("No employment dates found in experience section")
+        total_inconsistencies += 3  # Count as 3 inconsistencies
     elif len(all_dates) < 2:
-        score -= 2
+        score -= 4  # Penalty for very limited dates
         issues.append("Limited date information in work experience")
+        total_inconsistencies += 2  # Count as 2 inconsistencies
     
     return {
         'score': max(score, 0),
         'total_dates_found': len(all_dates),
         'unique_formats': len(unique_formats),
+        'total_inconsistencies': total_inconsistencies,
+        'penalty_applied': penalty,
         'detected_dates': all_dates[:10],  # Show first 10 for debugging
         'issues': issues
     }
@@ -1426,6 +1464,47 @@ def is_valid_employment_date(date_str: str, context: str) -> bool:
             return False
     
     return True
+
+def extract_position_entries(content: str) -> List[str]:
+    """
+    Extract individual position/job entries to check for missing dates
+    """
+    entries = []
+    lines = content.split('\n')
+    current_entry = []
+    
+    # Common patterns that indicate a new position/entry
+    position_indicators = [
+        r'^[A-Z][A-Za-z\s&,.-]+\|',  # Job Title | Company
+        r'^[A-Z][A-Za-z\s&,.-]+\s*-\s*[A-Z]',  # Job Title - Company
+        r'^[A-Z][A-Za-z\s&,.-]+\s*,\s*[A-Z]',  # Job Title, Company
+        r'^\s*•\s*[A-Z]',  # Bullet point start
+        r'^\s*-\s*[A-Z]',  # Dash bullet point
+    ]
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+            
+        # Check if this line starts a new position entry
+        is_new_position = any(re.match(pattern, line) for pattern in position_indicators[:3])
+        
+        if is_new_position and current_entry:
+            # Save previous entry and start new one
+            entries.append('\n'.join(current_entry))
+            current_entry = [line]
+        else:
+            current_entry.append(line)
+    
+    # Add the last entry
+    if current_entry:
+        entries.append('\n'.join(current_entry))
+    
+    # Filter out very short entries (likely not real positions)
+    meaningful_entries = [entry for entry in entries if len(entry.split()) > 3]
+    
+    return meaningful_entries
 
 def analyze_bullet_lengths(content: str) -> Dict[str, Any]:
     """
@@ -2042,57 +2121,249 @@ def analyze_teamwork_skills_frontend(resume_text: str) -> int:
         return 3
 
 def analyze_repetition_frontend(resume_text: str) -> int:
-    """Analyzes repetition while excluding legitimate repeated terms"""
+    """
+    NEW CORRECT LOGIC: Analyzes verb repetition only
+    - Start with 10 points
+    - Deduct 2 points per repeated verb occurrence
+    - Minimum score: 0, Maximum score: 10
+    """
+    import re
+    from collections import Counter
+    
+    # Common action verbs that appear in resumes (base forms and common variations)
+    action_verbs_patterns = [
+        # Base forms and their variations
+        r'\b(manage[ds]?|managing)\b',
+        r'\b(develop[eds]?|developing)\b', 
+        r'\b(creat[ed]?|creating)\b',
+        r'\b(implement[eds]?|implementing)\b',
+        r'\b(lead[s]?|leading|led)\b',
+        r'\b(design[eds]?|designing)\b',
+        r'\b(execut[ed]?|executing)\b',
+        r'\b(deliver[eds]?|delivering)\b',
+        r'\b(achiev[ed]?|achieving)\b',
+        r'\b(establish[eds]?|establishing)\b',
+        r'\b(coordinat[ed]?|coordinating)\b',
+        r'\b(supervis[ed]?|supervising)\b',
+        r'\b(direct[eds]?|directing)\b',
+        r'\b(operat[ed]?|operating)\b',
+        r'\b(maintain[eds]?|maintaining)\b',
+        r'\b(analyz[ed]?|analyzing|analys[ed]?|analysing)\b',
+        r'\b(evaluat[ed]?|evaluating)\b',
+        r'\b(assess[eds]?|assessing)\b',
+        r'\b(review[eds]?|reviewing)\b',
+        r'\b(monitor[eds]?|monitoring)\b',
+        r'\b(track[eds]?|tracking)\b',
+        r'\b(optimiz[ed]?|optimizing|optimis[ed]?|optimising)\b',
+        r'\b(improv[ed]?|improving)\b',
+        r'\b(enhanc[ed]?|enhancing)\b',
+        r'\b(reduc[ed]?|reducing)\b',
+        r'\b(increas[ed]?|increasing)\b',
+        r'\b(build[ings]?|built)\b',
+        r'\b(train[eds]?|training)\b',
+        r'\b(teach[ings]?|taught)\b',
+        r'\b(mentor[eds]?|mentoring)\b',
+        r'\b(coach[eds]?|coaching)\b',
+        r'\b(facilitat[ed]?|facilitating)\b',
+        r'\b(present[eds]?|presenting)\b',
+        r'\b(communicat[ed]?|communicating)\b',
+        r'\b(collaborat[ed]?|collaborating)\b',
+        r'\b(negotiat[ed]?|negotiating)\b',
+        r'\b(organiz[ed]?|organizing|organis[ed]?|organising)\b',
+        r'\b(plan[s]?|planning|planned)\b',
+        r'\b(strateg[ys]?|strategizing|strategized)\b',
+        r'\b(research[eds]?|researching)\b',
+        r'\b(test[eds]?|testing)\b',
+        r'\b(debug[s]?|debugging|debugged)\b',
+        r'\b(troubleshoot[ings]?|troubleshooting|troubleshot)\b',
+        r'\b(deploy[eds]?|deploying)\b',
+        r'\b(integrat[ed]?|integrating)\b',
+        r'\b(configur[ed]?|configuring)\b',
+        r'\b(instal[ls]?|installing|installed)\b',
+        r'\b(maintain[eds]?|maintaining)\b',
+        r'\b(updat[ed]?|updating)\b',
+        r'\b(upgrad[ed]?|upgrading)\b',
+        r'\b(migrat[ed]?|migrating)\b',
+        r'\b(automat[ed]?|automating)\b',
+        r'\b(streamlin[ed]?|streamlining)\b',
+        r'\b(ensur[ed]?|ensuring)\b',
+        r'\b(secur[ed]?|securing)\b',
+        r'\b(protec[ts]?|protecting|protected)\b',
+        r'\b(compil[ed]?|compiling)\b',
+        r'\b(document[eds]?|documenting)\b',
+        r'\b(report[eds]?|reporting)\b',
+        r'\b(audit[eds]?|auditing)\b',
+        r'\b(compl[ys]?|complying|complied)\b',
+        r'\b(adher[ed]?|adhering)\b',
+        r'\b(follow[eds]?|following)\b',
+        r'\b(assist[eds]?|assisting)\b',
+        r'\b(support[eds]?|supporting)\b',
+        r'\b(help[eds]?|helping)\b',
+        r'\b(guid[ed]?|guiding)\b',
+        r'\b(advic[ed]?|advising)\b',
+        r'\b(consult[eds]?|consulting)\b',
+        r'\b(recommend[eds]?|recommending)\b',
+        r'\b(suggest[eds]?|suggesting)\b',
+        r'\b(propos[ed]?|proposing)\b',
+        r'\b(initiat[ed]?|initiating)\b',
+        r'\b(launch[eds]?|launching)\b',
+        r'\b(start[eds]?|starting)\b',
+        r'\b(begin[s]?|beginning|began)\b',
+        r'\b(finish[eds]?|finishing)\b',
+        r'\b(complet[ed]?|completing)\b',
+        r'\b(conclud[ed]?|concluding)\b',
+        r'\b(resolv[ed]?|resolving)\b',
+        r'\b(fix[eds]?|fixing)\b',
+        r'\b(solv[ed]?|solving)\b',
+        r'\b(address[eds]?|addressing)\b',
+        r'\b(handl[ed]?|handling)\b',
+        r'\b(process[eds]?|processing)\b',
+        r'\b(perform[eds]?|performing)\b',
+        r'\b(execut[ed]?|executing)\b',
+        r'\b(conduct[eds]?|conducting)\b',
+        r'\b(carri[ed]?|carrying)\b',
+        r'\b(undertook|undertaking)\b',
+        r'\b(oversee[ings]?|overseeing|oversaw)\b',
+        r'\b(mobiliz[ed]?|mobilizing|mobilis[ed]?|mobilising)\b',
+        r'\b(identif[ys]?|identifying|identified)\b',
+        r'\b(recogniz[ed]?|recognizing|recognis[ed]?|recognising)\b',
+        r'\b(discover[eds]?|discovering)\b',
+        r'\b(detect[eds]?|detecting)\b',
+        r'\b(find[ings]?|finding|found)\b',
+        r'\b(locat[ed]?|locating)\b',
+        r'\b(search[eds]?|searching)\b',
+        r'\b(investig[ats]?|investigating|investigated)\b',
+        r'\b(explor[ed]?|exploring)\b',
+        r'\b(examin[ed]?|examining)\b',
+        r'\b(inspect[eds]?|inspecting)\b',
+        r'\b(check[eds]?|checking)\b',
+        r'\b(verif[ys]?|verifying|verified)\b',
+        r'\b(validat[ed]?|validating)\b',
+        r'\b(confirm[eds]?|confirming)\b'
+    ]
+    
+    # Find all verb occurrences in the resume
+    verb_counts = {}
+    text_lower = resume_text.lower()
+    
+    for pattern in action_verbs_patterns:
+        matches = re.findall(pattern, text_lower)
+        if matches:
+            # Extract the base verb from the pattern for grouping
+            base_verb = pattern.split('(')[1].split('[')[0] if '[' in pattern else pattern.split('(')[1].split('|')[0]
+            base_verb = base_verb.replace('\\b', '').replace('?', '')
+            
+            total_occurrences = len(matches)
+            if total_occurrences > 0:
+                verb_counts[base_verb] = total_occurrences
+    
+    # Calculate score: Start with 10, deduct 2 points per repetition (occurrence beyond first)
+    score = 10
+    total_repetitions = 0
+    repeated_verbs = []
+    
+    for verb, count in verb_counts.items():
+        if count > 1:  # More than 1 occurrence = repetition
+            repetitions = count - 1  # First occurrence doesn't count as repetition
+            total_repetitions += repetitions
+            repeated_verbs.append(f"{verb}: {count} times ({repetitions} repetitions)")
+    
+    # Deduct 2 points per repetition
+    penalty = total_repetitions * 2
+    score = max(0, score - penalty)  # Minimum score is 0
+    
+    # Debug logging for transparency
+    if repeated_verbs:
+        logger.info(f"🔄 Verb Repetitions Found:")
+        for verb_info in repeated_verbs:
+            logger.info(f"   • {verb_info}")
+        logger.info(f"🔄 Total repetitions: {total_repetitions}, Penalty: {penalty} points, Final score: {score}/10")
+    else:
+        logger.info(f"🔄 No verb repetitions found, Score: {score}/10")
+    
+    return score
+
+def get_repetition_detailed_analysis(resume_text: str) -> dict:
+    """
+    Provides detailed analysis of verb repetitions for CTA modal reasoning
+    Returns specific repeated verbs with counts and alternatives
+    """
     import re
     
-    # Whitelist of terms that are legitimately repeated and should not be penalized
-    whitelist_terms = {
-        # Location names (Indian cities and international)
-        'mumbai', 'delhi', 'bangalore', 'bengaluru', 'hyderabad', 'chennai', 'pune', 
-        'gurugram', 'gurgaon', 'noida', 'kolkata', 'ahmedabad', 'surat', 'jaipur',
-        'lucknow', 'kanpur', 'nagpur', 'indore', 'bhopal', 'visakhapatnam', 'patna',
-        'vadodara', 'ludhiana', 'coimbatore', 'kochi', 'kozhikode', 'thrissur',
-        'london', 'newyork', 'singapore', 'dubai', 'toronto', 'sydney', 'tokyo',
-        'berlin', 'paris', 'amsterdam', 'stockholm', 'zurich', 'vancouver',
-        
-        # Professional disciplines and roles
-        'product', 'software', 'engineering', 'development', 'management', 'marketing',
-        'design', 'technology', 'business', 'strategy', 'operations', 'finance',
-        'sales', 'analytics', 'research', 'consulting', 'architecture', 'security',
-        'quality', 'testing', 'analysis', 'planning', 'leadership', 'project',
-        'program', 'digital', 'mobile', 'cloud', 'platform', 'systems', 'network',
-        'database', 'infrastructure', 'service', 'support', 'customer', 'client',
-        
-        # Common technology terms
-        'python', 'javascript', 'react', 'angular', 'nodejs', 'docker', 'kubernetes',
-        'microservices', 'machine', 'learning', 'artificial', 'intelligence',
-        'blockchain', 'devops', 'agile', 'scrum', 'framework', 'library',
-        
-        # Common resume terms that naturally repeat
-        'experience', 'skills', 'education', 'certification', 'training', 'course',
-        'project', 'achievement', 'responsibility', 'requirement', 'implementation',
-        'collaboration', 'communication', 'problem', 'solution', 'improvement',
-        'optimization', 'performance', 'efficiency', 'innovation', 'creativity'
+    # Same patterns as main analysis function
+    action_verbs_patterns = [
+        r'\b(manage[ds]?|managing)\b', r'\b(develop[eds]?|developing)\b', r'\b(creat[ed]?|creating)\b',
+        r'\b(implement[eds]?|implementing)\b', r'\b(lead[s]?|leading|led)\b', r'\b(design[eds]?|designing)\b',
+        r'\b(execut[ed]?|executing)\b', r'\b(deliver[eds]?|delivering)\b', r'\b(achiev[ed]?|achieving)\b',
+        r'\b(establish[eds]?|establishing)\b', r'\b(coordinat[ed]?|coordinating)\b', r'\b(supervis[ed]?|supervising)\b',
+        r'\b(direct[eds]?|directing)\b', r'\b(operat[ed]?|operating)\b', r'\b(maintain[eds]?|maintaining)\b',
+        r'\b(analyz[ed]?|analyzing|analys[ed]?|analysing)\b', r'\b(evaluat[ed]?|evaluating)\b',
+        r'\b(assess[eds]?|assessing)\b', r'\b(review[eds]?|reviewing)\b', r'\b(monitor[eds]?|monitoring)\b',
+        r'\b(track[eds]?|tracking)\b', r'\b(optimiz[ed]?|optimizing|optimis[ed]?|optimising)\b',
+        r'\b(improv[ed]?|improving)\b', r'\b(enhanc[ed]?|enhancing)\b', r'\b(reduc[ed]?|reducing)\b',
+        r'\b(increas[ed]?|increasing)\b', r'\b(build[ings]?|built)\b', r'\b(train[eds]?|training)\b',
+        r'\b(negotiat[ed]?|negotiating)\b', r'\b(ensur[ed]?|ensuring)\b', r'\b(secur[ed]?|securing)\b',
+        r'\b(streamlin[ed]?|streamlining)\b', r'\b(assist[eds]?|assisting)\b', r'\b(support[eds]?|supporting)\b',
+        r'\b(identif[ys]?|identifying|identified)\b', r'\b(conduct[eds]?|conducting)\b'
+    ]
+    
+    # Verb alternatives for suggestions
+    verb_alternatives = {
+        'manage': ['oversee', 'supervise', 'administer', 'govern', 'coordinate', 'helm'],
+        'develop': ['create', 'build', 'construct', 'formulate', 'establish', 'craft'],
+        'lead': ['spearhead', 'direct', 'guide', 'champion', 'pioneer', 'orchestrate'],
+        'implement': ['execute', 'deploy', 'launch', 'integrate', 'operationalize', 'roll out'],
+        'deliver': ['provide', 'supply', 'produce', 'generate', 'yield', 'fulfill'],
+        'ensure': ['guarantee', 'secure', 'maintain', 'verify', 'confirm', 'establish'],
+        'create': ['develop', 'design', 'formulate', 'establish', 'generate', 'craft'],
+        'conduct': ['perform', 'execute', 'carry out', 'undertake', 'facilitate', 'administer'],
+        'support': ['assist', 'aid', 'facilitate', 'enable', 'bolster', 'reinforce'],
+        'identify': ['recognize', 'pinpoint', 'discover', 'detect', 'locate', 'uncover'],
+        'negotiate': ['broker', 'mediate', 'arrange', 'secure', 'facilitate', 'orchestrate']
     }
     
-    # Clean and split text
-    words = re.findall(r'\b[a-zA-Z]{5,}\b', resume_text.lower())  # Only words 5+ chars, alphabetic only
-    word_freq = {}
+    # Find all verb occurrences
+    verb_counts = {}
+    text_lower = resume_text.lower()
     
-    for word in words:
-        # Skip whitelisted terms
-        if word not in whitelist_terms:
-            word_freq[word] = word_freq.get(word, 0) + 1
+    for pattern in action_verbs_patterns:
+        matches = re.findall(pattern, text_lower)
+        if matches:
+            base_verb = pattern.split('(')[1].split('[')[0] if '[' in pattern else pattern.split('(')[1].split('|')[0]
+            base_verb = base_verb.replace('\\b', '').replace('?', '')
+            
+            total_occurrences = len(matches)
+            if total_occurrences > 1:  # Only include repeated verbs
+                verb_counts[base_verb] = total_occurrences
     
-    # Find words that appear too frequently (more than 5 times)
-    repetitive_words = [word for word, count in word_freq.items() if count > 5]
+    # Generate detailed analysis
+    repeated_verbs = []
+    total_repetitions = 0
     
-    if len(repetitive_words) == 0:
-        return 9
-    elif len(repetitive_words) <= 2:
-        return 7
-    else:
-        return 5
+    for verb, count in sorted(verb_counts.items(), key=lambda x: x[1], reverse=True):
+        repetitions = count - 1
+        total_repetitions += repetitions
+        
+        alternatives = verb_alternatives.get(verb, ['vary', 'diversify', 'alternate'])[:3]
+        
+        repeated_verbs.append({
+            'verb': verb.title(),
+            'count': count,
+            'repetitions': repetitions,
+            'penalty': repetitions * 2,
+            'alternatives': alternatives
+        })
+    
+    # Calculate final score
+    score = max(0, 10 - (total_repetitions * 2))
+    
+    return {
+        'score': score,
+        'total_repetitions': total_repetitions,
+        'total_penalty': total_repetitions * 2,
+        'repeated_verbs': repeated_verbs[:5],  # Top 5 most repeated verbs
+        'analysis_summary': f"Found {len(repeated_verbs)} repeated verbs with {total_repetitions} total repetitions, resulting in {total_repetitions * 2} penalty points."
+    }
 
 def analyze_unnecessary_sections_frontend(resume_text: str) -> int:
     """Analyzes unnecessary sections based on modern resume standards"""
@@ -2868,21 +3139,21 @@ def get_enhanced_issue_description(category_name: str, score: int, resume_text: 
         },
         
         'Repetition': {
-            'understanding': 'Detects overuse of words and phrases while excluding legitimate repetitions like location names',
+            'understanding': 'Analyzes repetitive use of action verbs throughout your resume. Each verb should appear only once to maintain variety and impact.',
             'high_score_criteria': [
-                'Varied vocabulary with diverse action verbs',
-                'Natural language flow without repetitive patterns',
-                'Strategic repetition only for key achievements'
+                'Each action verb used only once throughout the resume',
+                'Rich vocabulary with diverse verbs for different achievements',
+                'Strong, varied action words that avoid monotonous language'
             ],
             'low_score_issues': [
-                'Overuse of basic action verbs (managed, worked, handled)',
-                'Repetitive sentence structure and phrasing',
-                'Excessive use of filler words and buzzwords'
+                'Same action verbs repeated multiple times (managed, developed, created)',
+                'Limited vocabulary with overuse of basic verbs',
+                'Repetitive language that reduces resume impact and readability'
             ],
             'specific_issues': {
-                'high': ['Vary sentence structure to create dynamic flow', 'Use advanced action verbs for different types of achievements', 'Replace common buzzwords with specific accomplishments'],
-                'medium': ['Substitute repetitive action verbs with more specific alternatives', 'Diversify adjectives and descriptive language', 'Eliminate redundant phrases across bullet points'],
-                'low': ['Replace overused action verbs with powerful alternatives', 'Eliminate repetitive phrases and restructure similar bullet points', 'Remove filler words and generic business buzzwords']
+                'high': ['Replace 1-2 repeated verbs with powerful alternatives', 'Use more specific action verbs for different contexts', 'Enhance variety with industry-specific terminology'],
+                'medium': ['Substitute multiple repeated verbs with unique alternatives', 'Diversify language across different job experiences', 'Use stronger action verbs that better describe accomplishments'],
+                'low': ['Completely rewrite repetitive phrases with varied vocabulary', 'Replace all repeated verbs with unique alternatives', 'Transform basic verbs into impactful, specific action words']
             }
         },
         
