@@ -2071,36 +2071,176 @@ def analyze_active_voice_frontend(resume_text: str) -> int:
         return 4
 
 def analyze_summary_section_frontend(resume_text: str) -> int:
-    """Copied exactly from frontend analyzeSummarySection"""
-    summary_keywords = ['summary', 'profile', 'objective', 'about']
-    text_lower = resume_text.lower()
+    """
+    Updated Professional Summary scoring with strict penalty system
+    Starting Score: 10 points
+    Deductions:
+    - Word Count > 100: -1 point
+    - Vague Buzzwords: -2 points
+    - Personal Pronouns: -2 points  
+    - No Metrics: -2 points
+    """
+    import re
     
-    has_summary = any(keyword in text_lower for keyword in summary_keywords)
-    if not has_summary:
-        return 4
+    # Find summary section
+    summary_text = extract_summary_section(resume_text)
+    if not summary_text:
+        return 3  # No summary section found
     
-    # Check summary quality (length and content)
+    # Start with perfect score
+    score = 10
+    
+    # 1. Word count penalty (>100 words)
+    word_count = len(summary_text.split())
+    if word_count > 100:
+        score -= 1
+    
+    # 2. Vague buzzwords penalty (-2 points)
+    vague_buzzwords = [
+        'collaboration', 'problem-solving', 'communication', 'teamwork', 
+        'leadership', 'detail-oriented', 'hardworking', 'motivated', 
+        'dedicated', 'passionate', 'results-driven', 'dynamic', 
+        'innovative', 'creative', 'analytical', 'strategic',
+        'excellent', 'strong', 'effective', 'efficient',
+        'experienced', 'skilled', 'proven', 'successful'
+    ]
+    
+    summary_lower = summary_text.lower()
+    found_buzzwords = sum(1 for buzzword in vague_buzzwords if buzzword in summary_lower)
+    if found_buzzwords > 0:
+        score -= 2
+    
+    # 3. Personal pronouns penalty (-2 points)
+    personal_pronouns = [r'\bi\b', r'\bme\b', r'\bmy\b', r'\bmyself\b', r'\bwe\b', r'\bour\b', r'\bus\b']
+    found_pronouns = sum(1 for pronoun in personal_pronouns if re.search(pronoun, summary_lower))
+    if found_pronouns > 0:
+        score -= 2
+    
+    # 4. No metrics penalty (-2 points)
+    metric_patterns = [
+        r'\d+\+?\s*(years?|months?)',  # Experience: "5+ years", "6 months"
+        r'[\$₹€£¥]\s*\d+[kmb]?',       # Money: "$50K", "₹10M"
+        r'\d+[kmb]?\+?\s*[\$₹€£¥]',    # Money: "50K$", "10M+"
+        r'\d+\+?\s*%',                 # Percentages: "25%", "50%+"
+        r'\d+[kmb]?\+?',               # Large numbers: "100K+", "5M"
+        r'\d+\+?\s*(team|people|employees|staff)',  # Team size
+        r'\d+\+?\s*(projects?|clients?|accounts?)', # Volume metrics
+        r'managed?\s+[\$₹€£¥]?\d+',    # Management amounts
+        r'saved?\s+[\$₹€£¥]?\d+',      # Savings
+        r'increased?\s+\d+',           # Growth metrics
+        r'reduced?\s+\d+',             # Efficiency metrics
+    ]
+    
+    has_metrics = any(re.search(pattern, summary_text, re.IGNORECASE) for pattern in metric_patterns)
+    if not has_metrics:
+        score -= 2
+    
+    # Ensure score doesn't go below 0
+    return max(score, 0)
+
+def extract_summary_section(resume_text: str) -> str:
+    """Extract the professional summary/about section from resume"""
+    import re
+    
+    # Common summary section headers
+    summary_headers = [
+        r'professional\s+summary', r'about\s+me', r'summary', r'profile', 
+        r'objective', r'overview', r'introduction', r'career\s+summary',
+        r'personal\s+statement', r'career\s+objective'
+    ]
+    
     lines = resume_text.split('\n')
-    summary_lines = []
+    summary_content = []
     in_summary = False
     
+    # Section headers that indicate end of summary
+    end_headers = [
+        r'experience', r'work\s+history', r'employment', r'career\s+journey',
+        r'education', r'skills', r'competenc', r'qualifications',
+        r'projects', r'achievements', r'certifications'
+    ]
+    
     for line in lines:
-        line_lower = line.lower().strip()
-        if any(keyword in line_lower for keyword in summary_keywords):
+        line_clean = line.strip()
+        if not line_clean:
+            continue
+            
+        line_lower = line_clean.lower()
+        
+        # Check if we're starting a summary section
+        if any(re.search(header, line_lower) for header in summary_headers):
             in_summary = True
             continue
-        elif in_summary and (line_lower.startswith('experience') or line_lower.startswith('work')):
+        
+        # Check if we've reached a different section (end of summary)
+        if in_summary and any(re.search(header, line_lower) for header in end_headers):
             break
-        elif in_summary and line.strip():
-            summary_lines.append(line.strip())
+        
+        # Collect summary content
+        if in_summary and line_clean and not line_clean.startswith('-') and not line_clean.startswith('•'):
+            summary_content.append(line_clean)
     
-    summary_text = ' '.join(summary_lines)
-    if len(summary_text) > 100:
-        return 8
-    elif len(summary_text) > 50:
-        return 6
+    return ' '.join(summary_content)
+
+def get_summary_detailed_analysis(resume_text: str) -> str:
+    """Generate detailed analysis for Professional Summary CTA modal"""
+    import re
+    
+    summary_text = extract_summary_section(resume_text)
+    if not summary_text:
+        return "No professional summary section found. Add a compelling 2-3 sentence summary at the top of your resume highlighting your experience, key skills, and value proposition."
+    
+    issues = []
+    recommendations = []
+    
+    # Analyze word count
+    word_count = len(summary_text.split())
+    if word_count > 100:
+        issues.append(f"Summary is too long ({word_count} words)")
+        recommendations.append("Keep summary under 100 words for better readability")
+    
+    # Check for vague buzzwords
+    vague_buzzwords = [
+        'collaboration', 'problem-solving', 'communication', 'teamwork', 
+        'leadership', 'detail-oriented', 'hardworking', 'motivated', 
+        'dedicated', 'passionate', 'results-driven', 'dynamic'
+    ]
+    
+    found_buzzwords = [word for word in vague_buzzwords if word in summary_text.lower()]
+    if found_buzzwords:
+        issues.append(f"Contains vague buzzwords: {', '.join(found_buzzwords[:3])}{'...' if len(found_buzzwords) > 3 else ''}")
+        recommendations.append("Replace generic terms with specific skills and achievements")
+    
+    # Check for personal pronouns
+    pronouns_found = []
+    pronoun_patterns = [r'\bi\b', r'\bme\b', r'\bmy\b', r'\bmyself\b', r'\bwe\b', r'\bour\b', r'\bus\b']
+    for pattern in pronoun_patterns:
+        matches = re.findall(pattern, summary_text, re.IGNORECASE)
+        pronouns_found.extend(matches)
+    
+    if pronouns_found:
+        issues.append(f"Contains personal pronouns: {', '.join(set([p.lower() for p in pronouns_found]))}")
+        recommendations.append("Remove all personal pronouns (I, my, me, we, our)")
+    
+    # Check for metrics
+    metric_patterns = [
+        r'\d+\+?\s*(years?|months?)', r'[\$₹€£¥]\s*\d+[kmb]?', r'\d+\+?\s*%',
+        r'\d+[kmb]?\+?', r'\d+\+?\s*(team|people|employees)'
+    ]
+    
+    has_metrics = any(re.search(pattern, summary_text, re.IGNORECASE) for pattern in metric_patterns)
+    if not has_metrics:
+        issues.append("Missing quantifiable achievements or metrics")
+        recommendations.append("Add specific numbers: years of experience, budget size, team size, or achievements")
+    
+    # Generate response
+    if issues:
+        analysis = f"Issues found: {' | '.join(issues)}. "
+        analysis += f"Recommendations: {' | '.join(recommendations)}"
     else:
-        return 5
+        analysis = "Summary meets all criteria: appropriate length, specific content, no personal pronouns, includes metrics."
+    
+    return analysis
 
 def analyze_teamwork_skills_frontend(resume_text: str) -> int:
     """Copied exactly from frontend analyzeTeamworkSkills"""
@@ -3138,6 +3278,25 @@ def get_enhanced_issue_description(category_name: str, score: int, resume_text: 
             }
         },
         
+        'Summary': {
+            'understanding': 'Evaluates professional summary quality based on word count, specific content, metrics, and professional language',
+            'high_score_criteria': [
+                'Concise summary under 100 words with specific achievements',
+                'Quantifiable metrics and concrete numbers included',
+                'Professional language without personal pronouns or buzzwords'
+            ],
+            'low_score_issues': [
+                'Generic buzzwords like "results-driven", "passionate", "motivated"',
+                'Personal pronouns (I, my, me) making it sound unprofessional',
+                'Missing specific metrics, experience years, or quantifiable achievements'
+            ],
+            'specific_issues': {
+                'high': ['Add specific industry expertise and technical skills', 'Include leadership scope (team size, budget managed)', 'Highlight unique value proposition that differentiates you'],
+                'medium': ['Replace generic terms with specific accomplishments', 'Add quantifiable results and percentage improvements', 'Remove remaining buzzwords with concrete examples'],
+                'low': ['Rewrite entire summary removing all personal pronouns', 'Add specific metrics: years of experience, budget size, team size', 'Replace all vague buzzwords with measurable achievements']
+            }
+        },
+        
         'Repetition': {
             'understanding': 'Analyzes repetitive use of action verbs throughout your resume. Each verb should appear only once to maintain variety and impact.',
             'high_score_criteria': [
@@ -3393,11 +3552,15 @@ def generate_comprehensive_ats_scores_frontend(content: str, component_scores: d
         'issue': 'Convert passive voice to active voice for impact',
         'impact': 'IMPACT'
     })
+    summary_score = analyze_summary_section_frontend(resume_text)
+    summary_enhancement = get_enhanced_issue_description('Summary', summary_score, resume_text)
     categories.append({
         'name': 'Summary',
-        'score': analyze_summary_section_frontend(resume_text),
-        'issue': 'Professional summary needs improvement for better impact',
-        'impact': 'IMPACT'
+        'score': summary_score,
+        'issue': summary_enhancement['issue_description'],
+        'impact': 'IMPACT',
+        'detailed_analysis': get_summary_detailed_analysis(resume_text),
+        'enhancement': summary_enhancement
     })
     categories.append({
         'name': 'Teamwork',
