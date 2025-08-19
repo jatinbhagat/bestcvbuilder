@@ -2242,6 +2242,986 @@ def get_summary_detailed_analysis(resume_text: str) -> str:
     
     return analysis
 
+def generate_fix_this_modal_content(category_name: str, resume_text: str, score: int) -> dict:
+    """
+    Generate comprehensive modal content for 'Fix This' CTA
+    Combines generic explanation with specific examples from user's resume
+    """
+    import sys
+    import os
+    
+    # Import the modal config
+    sys.path.append(os.path.dirname(__file__))
+    from ats_modal_config import ATS_MODAL_CONFIG
+    
+    # Get generic explanation
+    generic_config = ATS_MODAL_CONFIG.get(category_name, {})
+    generic_title = generic_config.get('title', f'Why {category_name} Matters for ATS')
+    generic_explanation = generic_config.get('generic_explanation', f'{category_name} is important for ATS scoring and professional presentation.')
+    
+    # Generate dynamic examples based on category
+    dynamic_examples = generate_dynamic_examples(category_name, resume_text, score)
+    
+    return {
+        'category': category_name,
+        'score': score,
+        'generic_section': {
+            'title': generic_title,
+            'explanation': generic_explanation
+        },
+        'dynamic_section': {
+            'title': f'Issues Found in Your Resume',
+            'examples': dynamic_examples
+        },
+        'ctas': {
+            'close': {
+                'text': 'Close',
+                'action': 'close_modal'
+            },
+            'fix': {
+                'text': 'Fix This Now',
+                'action': 'redirect_to_payment'
+            }
+        }
+    }
+
+def generate_dynamic_examples(category_name: str, resume_text: str, score: int) -> list:
+    """Generate specific examples of issues found in the user's resume"""
+    
+    examples = []
+    
+    if category_name == 'Action Verbs':
+        examples = generate_action_verbs_examples(resume_text)
+    elif category_name == 'Repetition':
+        examples = generate_repetition_examples(resume_text)
+    elif category_name == 'Personal Pronouns':
+        examples = generate_pronouns_examples(resume_text)
+    elif category_name == 'Quantifiable Achievements':
+        examples = generate_quantifiable_examples(resume_text)
+    elif category_name == 'Summary':
+        examples = generate_summary_examples(resume_text)
+    elif category_name == 'Dates':
+        examples = generate_dates_examples(resume_text)
+    elif category_name == 'Grammar':
+        examples = generate_grammar_examples(resume_text)
+    elif category_name == 'Spelling':
+        examples = generate_spelling_examples(resume_text)
+    elif category_name == 'Contact Details':
+        examples = generate_contact_examples(resume_text)
+    elif category_name == 'Skills Section':
+        examples = generate_skills_examples(resume_text)
+    elif category_name == 'Analytical':
+        examples = generate_analytical_examples(resume_text)
+    elif category_name == 'Leadership':
+        examples = generate_leadership_examples(resume_text)
+    elif category_name == 'Certifications':
+        examples = generate_certifications_examples(resume_text)
+    elif category_name == 'Growth Signals':
+        examples = generate_growth_examples(resume_text)
+    elif category_name == 'Drive':
+        examples = generate_drive_examples(resume_text)
+    elif category_name == 'Active Voice':
+        examples = generate_active_voice_examples(resume_text)
+    elif category_name == 'Teamwork':
+        examples = generate_teamwork_examples(resume_text)
+    elif category_name == 'Education Section':
+        examples = generate_education_examples(resume_text)
+    elif category_name == 'Page Density':
+        examples = generate_page_density_examples(resume_text)
+    elif category_name == 'Use of Bullets':
+        examples = generate_bullets_examples(resume_text)
+    elif category_name == 'Verb Tenses':
+        examples = generate_verb_tenses_examples(resume_text)
+    elif category_name == 'Verbosity':
+        examples = generate_verbosity_examples(resume_text)
+    elif category_name == 'Unnecessary Sections':
+        examples = generate_unnecessary_sections_examples(resume_text)
+    elif category_name == 'CV Readability Score':
+        examples = generate_readability_examples(resume_text)
+    else:
+        # Generic fallback
+        examples = [
+            {
+                'issue': f'{category_name} needs improvement',
+                'example': 'Multiple areas in your resume could be enhanced',
+                'suggestion': f'Professional optimization will improve your {category_name} score'
+            },
+            {
+                'issue': 'ATS compatibility concerns',
+                'example': 'Current format may not parse correctly in ATS systems',
+                'suggestion': 'Restructuring will ensure proper ATS processing'
+            }
+        ]
+    
+    # Ensure we return exactly 2 examples
+    return examples[:2] if len(examples) >= 2 else examples + [examples[0]] if examples else []
+
+def generate_repetition_examples(resume_text: str) -> list:
+    """Generate specific repetition examples from the resume"""
+    import re
+    from collections import Counter
+    
+    # Find repeated verbs (using same logic as scoring function)
+    action_verbs_patterns = [
+        r'\b(manage[ds]?|managing)\b',
+        r'\b(develop[eds]?|developing)\b', 
+        r'\b(creat[ed]?|creating)\b',
+        r'\b(implement[eds]?|implementing)\b',
+        r'\b(lead[s]?|leading|led)\b',
+        r'\b(design[eds]?|designing)\b',
+        r'\b(execut[ed]?|executing)\b',
+        r'\b(deliver[eds]?|delivering)\b',
+        r'\b(coordinat[ed]?|coordinating)\b',
+        r'\b(establish[eds]?|establishing)\b'
+    ]
+    
+    verb_counts = Counter()
+    verb_examples = {}
+    
+    for pattern in action_verbs_patterns:
+        matches = re.findall(pattern, resume_text, re.IGNORECASE)
+        if matches:
+            # Get base verb form
+            base_verb = pattern.split('(')[1].split('[')[0]  # Extract base form
+            verb_counts[base_verb] = len(matches)
+            # Find actual context where verb appears
+            context_matches = re.finditer(pattern, resume_text, re.IGNORECASE)
+            contexts = []
+            for match in context_matches:
+                start = max(0, match.start() - 20)
+                end = min(len(resume_text), match.end() + 30)
+                context = resume_text[start:end].strip()
+                contexts.append(context)
+            verb_examples[base_verb] = contexts[:2]  # Max 2 examples
+    
+    # Find most repeated verbs
+    repeated_verbs = [(verb, count) for verb, count in verb_counts.items() if count > 1]
+    repeated_verbs.sort(key=lambda x: x[1], reverse=True)
+    
+    examples = []
+    for verb, count in repeated_verbs[:2]:  # Top 2 repeated verbs
+        contexts = verb_examples.get(verb, [])
+        examples.append({
+            'issue': f'"{verb.title()}" used {count} times',
+            'example': f'Found in: "{contexts[0][:50]}..."' if contexts else f'Repeated {count} times throughout resume',
+            'suggestion': f'Replace with alternatives like "orchestrated", "spearheaded", "championed"'
+        })
+    
+    # If no repetitions found, provide generic examples
+    if not examples:
+        examples = [
+            {
+                'issue': 'Limited verb variety detected',
+                'example': 'Multiple bullet points use similar action words',
+                'suggestion': 'Diversify with stronger verbs like "orchestrated", "pioneered", "revolutionized"'
+            },
+            {
+                'issue': 'Weak action verbs identified',
+                'example': 'Some accomplishments use passive or weak language',
+                'suggestion': 'Replace with impactful verbs that demonstrate leadership and results'
+            }
+        ]
+    
+    return examples
+
+def generate_summary_examples(resume_text: str) -> list:
+    """Generate specific summary examples"""
+    import re
+    
+    summary_text = extract_summary_section(resume_text)
+    examples = []
+    
+    if not summary_text:
+        return [
+            {
+                'issue': 'No professional summary found',
+                'example': 'Resume starts directly with experience section',
+                'suggestion': 'Add a compelling 2-3 sentence summary highlighting your value proposition'
+            },
+            {
+                'issue': 'Missing career positioning statement',
+                'example': 'No clear professional identity or specialization stated',
+                'suggestion': 'Include your role, experience level, and key achievements in opening summary'
+            }
+        ]
+    
+    # Check for buzzwords
+    buzzwords_found = []
+    vague_buzzwords = ['collaboration', 'problem-solving', 'communication', 'teamwork', 'results-driven', 'passionate', 'motivated']
+    for buzzword in vague_buzzwords:
+        if buzzword in summary_text.lower():
+            buzzwords_found.append(buzzword)
+    
+    # Check for pronouns
+    pronouns_found = []
+    pronouns = ['I ', 'my ', 'me ', 'we ', 'our ']
+    for pronoun in pronouns:
+        if pronoun.lower() in summary_text.lower():
+            pronouns_found.append(pronoun.strip())
+    
+    # Check for metrics
+    has_metrics = bool(re.search(r'\d+', summary_text))
+    
+    if buzzwords_found:
+        examples.append({
+            'issue': f'Vague buzzwords: {", ".join(buzzwords_found[:2])}',
+            'example': f'Found in your summary: "{summary_text[:60]}..."',
+            'suggestion': 'Replace with specific achievements like "managed $2M budget" or "led 15-person team"'
+        })
+    
+    if pronouns_found:
+        examples.append({
+            'issue': f'Personal pronouns: {", ".join(pronouns_found)}',
+            'example': f'Summary contains: "{summary_text[:60]}..."',
+            'suggestion': 'Rewrite in third person: "Procurement Lead with 6+ years managing $180M annual spend"'
+        })
+    
+    if not has_metrics and len(examples) < 2:
+        examples.append({
+            'issue': 'Missing quantifiable achievements',
+            'example': 'Summary lacks specific numbers, percentages, or metrics',
+            'suggestion': 'Add concrete metrics: "6+ years experience", "managed $180M spend", "achieved 30% cost savings"'
+        })
+    
+    # Ensure we have 2 examples
+    if len(examples) < 2:
+        examples.append({
+            'issue': 'Generic professional description',
+            'example': 'Summary reads like a job description rather than personal achievements',
+            'suggestion': 'Highlight your unique value: specific results, expertise, and career accomplishments'
+        })
+    
+    return examples[:2]
+
+def generate_pronouns_examples(resume_text: str) -> list:
+    """Generate specific personal pronouns examples"""
+    import re
+    
+    examples = []
+    
+    # Find pronouns with context
+    pronoun_patterns = [(r'\bi\b', 'I'), (r'\bmy\b', 'my'), (r'\bme\b', 'me'), (r'\bwe\b', 'we'), (r'\bour\b', 'our')]
+    
+    for pattern, pronoun in pronoun_patterns[:2]:  # Check first 2 patterns
+        matches = list(re.finditer(pattern, resume_text, re.IGNORECASE))
+        if matches:
+            # Get context for first match
+            match = matches[0]
+            start = max(0, match.start() - 25)
+            end = min(len(resume_text), match.end() + 35)
+            context = resume_text[start:end].strip()
+            
+            examples.append({
+                'issue': f'Personal pronoun "{pronoun}" detected',
+                'example': f'Found in: "{context}"',
+                'suggestion': f'Remove "{pronoun}" and rewrite: "Led team of 10" instead of "I led team of 10"'
+            })
+    
+    # If no pronouns found, provide generic examples
+    if not examples:
+        examples = [
+            {
+                'issue': 'Informal language detected',
+                'example': 'Some sections may contain casual or personal language',
+                'suggestion': 'Ensure all descriptions use professional, third-person format'
+            },
+            {
+                'issue': 'Professional formatting opportunities',
+                'example': 'Resume language could be more formal and objective',
+                'suggestion': 'Use action verbs without personal pronouns for stronger impact'
+            }
+        ]
+    
+    return examples[:2]
+
+def generate_quantifiable_examples(resume_text: str) -> list:
+    """Generate specific quantifiable achievements examples"""
+    import re
+    
+    # Find non-quantified achievements
+    bullet_points = re.findall(r'[•·\*\-]\s*(.+)', resume_text)
+    non_quantified = []
+    
+    for point in bullet_points[:10]:  # Check first 10 points
+        # Check if it lacks numbers
+        has_numbers = bool(re.search(r'\d+', point))
+        if not has_numbers and len(point) > 20:
+            non_quantified.append(point.strip())
+    
+    examples = []
+    for point in non_quantified[:2]:  # Take first 2
+        examples.append({
+            'issue': 'Missing quantifiable metrics',
+            'example': f'"{point[:60]}..."',
+            'suggestion': 'Add specific numbers: "increased efficiency by 25%" or "managed team of 8"'
+        })
+    
+    # If no bullet points or all quantified, provide generic examples
+    if not examples:
+        examples = [
+            {
+                'issue': 'Achievements lack specific metrics',
+                'example': 'Multiple accomplishments could include concrete numbers',
+                'suggestion': 'Add percentages, dollar amounts, time savings, or team sizes to quantify impact'
+            },
+            {
+                'issue': 'Vague impact statements',
+                'example': 'General statements like "improved processes" without specifics',
+                'suggestion': 'Specify results: "improved processes reducing cycle time by 30%"'
+            }
+        ]
+    
+    return examples[:2]
+
+def generate_action_verbs_examples(resume_text: str) -> list:
+    """Generate specific action verb examples"""
+    import re
+    
+    # Find weak verbs
+    weak_verbs = ['responsible', 'assisted', 'helped', 'worked', 'participated', 'involved', 'handled', 'dealt with']
+    weak_found = []
+    
+    for verb in weak_verbs:
+        matches = re.finditer(rf'\b{verb}\b', resume_text, re.IGNORECASE)
+        for match in matches:
+            start = max(0, match.start() - 20)
+            end = min(len(resume_text), match.end() + 40)
+            context = resume_text[start:end].strip()
+            weak_found.append({'verb': verb, 'context': context})
+            if len(weak_found) >= 2:
+                break
+        if len(weak_found) >= 2:
+            break
+    
+    examples = []
+    for item in weak_found[:2]:
+        examples.append({
+            'issue': f'Weak verb "{item["verb"]}" detected',
+            'example': f'Found in: "{item["context"][:55]}..."',
+            'suggestion': f'Replace with stronger verbs like "led", "spearheaded", "orchestrated", "delivered"'
+        })
+    
+    if not examples:
+        examples = [
+            {
+                'issue': 'Generic action verbs identified',
+                'example': 'Some bullet points use common, weak action words',
+                'suggestion': 'Use powerful verbs: "engineered", "pioneered", "revolutionized", "accelerated"'
+            },
+            {
+                'issue': 'Missed leadership opportunities',
+                'example': 'Accomplishments could demonstrate more ownership and initiative',
+                'suggestion': 'Start bullet points with impactful verbs showing leadership and results'
+            }
+        ]
+    
+    return examples[:2]
+
+def generate_contact_examples(resume_text: str) -> list:
+    """Generate specific contact details examples"""
+    import re
+    
+    issues = []
+    
+    # Check for email
+    has_email = bool(re.search(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', resume_text))
+    if not has_email:
+        issues.append('Missing professional email address')
+    
+    # Check for phone
+    has_phone = bool(re.search(r'\+?\d{1,4}[-.\s]?\d{3,4}[-.\s]?\d{3,4}[-.\s]?\d{3,4}', resume_text))
+    if not has_phone:
+        issues.append('Missing phone number')
+    
+    # Check for LinkedIn
+    has_linkedin = bool(re.search(r'linkedin', resume_text, re.IGNORECASE))
+    if not has_linkedin:
+        issues.append('Missing LinkedIn profile')
+    
+    examples = []
+    for issue in issues[:2]:
+        examples.append({
+            'issue': issue,
+            'example': 'Essential contact information not found in resume header',
+            'suggestion': 'Add complete contact details: email, phone, LinkedIn, and location'
+        })
+    
+    if not examples:
+        examples = [
+            {
+                'issue': 'Contact formatting could be improved',
+                'example': 'Contact information may not be ATS-optimized',
+                'suggestion': 'Ensure contact details are clearly formatted and easily parseable'
+            },
+            {
+                'issue': 'Professional presentation opportunities',
+                'example': 'Contact section could be more polished and complete',
+                'suggestion': 'Include all relevant professional contact channels and optimize layout'
+            }
+        ]
+    
+    return examples[:2]
+
+def generate_skills_examples(resume_text: str) -> list:
+    """Generate specific skills section examples"""
+    import re
+    
+    has_skills_section = bool(re.search(r'skills|competenc|technical|proficien', resume_text, re.IGNORECASE))
+    
+    if not has_skills_section:
+        return [
+            {
+                'issue': 'No dedicated skills section found',
+                'example': 'Resume lacks a clear "Technical Skills" or "Core Competencies" section',
+                'suggestion': 'Add a skills section with relevant technical and professional competencies'
+            },
+            {
+                'issue': 'Missing keyword optimization',
+                'example': 'Skills may be buried in job descriptions rather than highlighted',
+                'suggestion': 'Create dedicated skills section for better ATS keyword matching'
+            }
+        ]
+    
+    # Check for generic vs specific skills
+    generic_skills = ['communication', 'teamwork', 'leadership', 'problem-solving']
+    specific_skills = ['python', 'sql', 'tableau', 'excel', 'project management', 'salesforce']
+    
+    has_generic = any(skill in resume_text.lower() for skill in generic_skills)
+    has_specific = any(skill in resume_text.lower() for skill in specific_skills)
+    
+    examples = []
+    if has_generic and not has_specific:
+        examples.append({
+            'issue': 'Generic skills without technical specifics',
+            'example': 'Skills section contains broad terms like "communication" and "teamwork"',
+            'suggestion': 'Add specific technical skills, software, and tools relevant to your field'
+        })
+    
+    if len(examples) < 2:
+        examples.append({
+            'issue': 'Skills organization could be enhanced',
+            'example': 'Skills may not be categorized or prioritized effectively',
+            'suggestion': 'Group skills by category: Technical, Leadership, Industry-specific for better impact'
+        })
+    
+    return examples[:2]
+
+def generate_dates_examples(resume_text: str) -> list:
+    """Generate specific date formatting examples"""
+    import re
+    
+    # Find different date formats
+    date_patterns = [
+        r'\d{4}\s*-\s*\d{4}',  # 2020-2022
+        r'\d{1,2}/\d{4}',       # 12/2020
+        r'[A-Za-z]+\s+\d{4}',   # Jan 2020
+        r'\d{4}'                # 2020
+    ]
+    
+    found_formats = []
+    for pattern in date_patterns:
+        matches = re.findall(pattern, resume_text)
+        if matches:
+            found_formats.extend(matches[:2])
+    
+    if len(set([len(date) for date in found_formats])) > 1:  # Different lengths = inconsistent
+        return [
+            {
+                'issue': 'Inconsistent date formats detected',
+                'example': f'Found mixed formats: {", ".join(found_formats[:2])}',
+                'suggestion': 'Use consistent format: "Jan 2020 - Dec 2022" throughout resume'
+            },
+            {
+                'issue': 'Date formatting affects ATS parsing',
+                'example': 'Mixed date styles make it difficult for ATS to calculate experience',
+                'suggestion': 'Standardize all dates to Month Year format for optimal ATS processing'
+            }
+        ]
+    
+    return [
+        {
+            'issue': 'Date presentation could be optimized',
+            'example': 'Employment dates may not follow ATS best practices',
+            'suggestion': 'Ensure all dates use consistent "Month Year - Month Year" format'
+        },
+        {
+            'issue': 'Timeline clarity opportunities',
+            'example': 'Date ranges could be more clearly formatted for ATS systems',
+            'suggestion': 'Use standard date format: "Jan 2020 - Present" or "Mar 2018 - Dec 2021"'
+        }
+    ]
+
+# Generic fallback generators for remaining categories
+def generate_grammar_examples(resume_text: str) -> list:
+    return [
+        {
+            'issue': 'Grammar inconsistencies detected',
+            'example': 'Multiple sentences may have grammar or punctuation issues',
+            'suggestion': 'Professional grammar review will eliminate errors and improve readability'
+        },
+        {
+            'issue': 'Sentence structure optimization needed',
+            'example': 'Some descriptions could have clearer, more impactful grammar',
+            'suggestion': 'Refine sentence structure for professional presentation and ATS parsing'
+        }
+    ]
+
+def generate_spelling_examples(resume_text: str) -> list:
+    return [
+        {
+            'issue': 'Potential spelling inconsistencies',
+            'example': 'Technical terms or industry jargon may have spelling variations',
+            'suggestion': 'Comprehensive spell-check will ensure error-free professional presentation'
+        },
+        {
+            'issue': 'Professional proofreading needed',
+            'example': 'Multiple sections could benefit from detailed spelling review',
+            'suggestion': 'Eliminate all spelling errors for polished, professional appearance'
+        }
+    ]
+
+def generate_analytical_examples(resume_text: str) -> list:
+    return [
+        {
+            'issue': 'Missing analytical accomplishments',
+            'example': 'Limited examples of data-driven decision making or analysis',
+            'suggestion': 'Add specific examples: "analyzed data to identify 15% cost reduction opportunity"'
+        },
+        {
+            'issue': 'Quantified analytical impact needed',
+            'example': 'Analytical work lacks specific metrics and measurable outcomes',
+            'suggestion': 'Include analytical tools used and quantified results of your analysis'
+        }
+    ]
+
+def generate_leadership_examples(resume_text: str) -> list:
+    return [
+        {
+            'issue': 'Leadership scope unclear',
+            'example': 'Management responsibilities lack specific team size or budget details',
+            'suggestion': 'Specify leadership scope: "managed team of 12" or "oversaw $2M budget"'
+        },
+        {
+            'issue': 'Leadership outcomes not quantified',
+            'example': 'Leadership roles need measurable impact and specific achievements',
+            'suggestion': 'Add leadership results: "led team achieving 25% productivity increase"'
+        }
+    ]
+
+def generate_certifications_examples(resume_text: str) -> list:
+    return [
+        {
+            'issue': 'Missing industry certifications',
+            'example': 'No professional certifications or credentials mentioned',
+            'suggestion': 'Add relevant certifications: PMP, AWS, Google Analytics, or industry-specific credentials'
+        },
+        {
+            'issue': 'Certification currency unclear',
+            'example': 'Existing certifications may lack renewal dates or current status',
+            'suggestion': 'Include certification dates and renewal status for credibility'
+        }
+    ]
+
+def generate_growth_examples(resume_text: str) -> list:
+    return [
+        {
+            'issue': 'Career progression not highlighted',
+            'example': 'Limited evidence of promotions or role advancement',
+            'suggestion': 'Emphasize career growth: "promoted from Analyst to Senior Manager in 2 years"'
+        },
+        {
+            'issue': 'Skills development not demonstrated',
+            'example': 'Missing examples of continuous learning and skill advancement',
+            'suggestion': 'Show growth trajectory: expanded responsibilities, new skills, leadership roles'
+        }
+    ]
+
+def generate_drive_examples(resume_text: str) -> list:
+    return [
+        {
+            'issue': 'Initiative examples limited',
+            'example': 'Few examples of proactive problem-solving or self-directed projects',
+            'suggestion': 'Add initiative examples: "identified and resolved process inefficiency saving $50K annually"'
+        },
+        {
+            'issue': 'Ownership mentality not demonstrated',
+            'example': 'Accomplishments focus on assigned tasks rather than driven initiatives',
+            'suggestion': 'Highlight self-motivation: "pioneered new system" or "championed process improvement"'
+        }
+    ]
+
+def generate_active_voice_examples(resume_text: str) -> list:
+    return [
+        {
+            'issue': 'Passive voice detected in descriptions',
+            'example': 'Some accomplishments use weak passive language',
+            'suggestion': 'Convert to active voice: "Led project" instead of "was responsible for project"'
+        },
+        {
+            'issue': 'Weak action statements identified',
+            'example': 'Multiple bullet points lack strong, direct action language',
+            'suggestion': 'Use active verbs showing direct ownership and impact of your work'
+        }
+    ]
+
+def generate_teamwork_examples(resume_text: str) -> list:
+    return [
+        {
+            'issue': 'Collaboration scope unclear',
+            'example': 'Teamwork mentions lack specific cross-functional details',
+            'suggestion': 'Specify collaboration: "partnered with marketing, sales, and engineering teams"'
+        },
+        {
+            'issue': 'Team impact not quantified',
+            'example': 'Collaborative achievements need measurable team outcomes',
+            'suggestion': 'Add team results: "collaborated with 5 departments to deliver $1M project"'
+        }
+    ]
+
+def generate_education_examples(resume_text: str) -> list:
+    """Extract actual education issues from resume"""
+    import re
+    
+    # Look for education section
+    has_education_section = bool(re.search(r'education|academic|qualification', resume_text, re.IGNORECASE))
+    
+    if not has_education_section:
+        return [
+            {
+                'issue': 'No education section found',
+                'example': 'Resume lacks dedicated "Education" section',
+                'suggestion': 'Add education section with degree, institution, and graduation year'
+            },
+            {
+                'issue': 'Missing educational credentials',
+                'example': 'No degree or qualification information provided',
+                'suggestion': 'Include highest degree, major, and university/college name'
+            }
+        ]
+    
+    # Extract education section content
+    education_text = ''
+    lines = resume_text.split('\n')
+    in_education = False
+    
+    for line in lines:
+        if re.search(r'education|academic|qualification', line, re.IGNORECASE) and len(line.strip()) < 50:
+            in_education = True
+            continue
+        elif in_education and re.search(r'experience|work|skills|projects', line, re.IGNORECASE) and len(line.strip()) < 50:
+            break
+        elif in_education:
+            education_text += line + ' '
+    
+    examples = []
+    
+    # Check for missing degree
+    has_degree = bool(re.search(r'bachelor|master|phd|degree|diploma|b\.?[a-z]+|m\.?[a-z]+', education_text, re.IGNORECASE))
+    if not has_degree:
+        examples.append({
+            'issue': 'Missing degree information',
+            'example': f'Education section: "{education_text[:60]}..."',
+            'suggestion': 'Add specific degree: "Bachelor of Science in Computer Science"'
+        })
+    
+    # Check for missing institution
+    has_institution = bool(re.search(r'university|college|institute|school', education_text, re.IGNORECASE))
+    if not has_institution and len(examples) < 2:
+        examples.append({
+            'issue': 'Missing institution name',
+            'example': f'Education content: "{education_text[:60]}..."',
+            'suggestion': 'Include university/college name: "Stanford University" or "MIT"'
+        })
+    
+    # If education looks complete, check formatting
+    if len(examples) < 2:
+        examples.append({
+            'issue': 'Education formatting could be improved',
+            'example': 'Education section may lack proper structure or dates',
+            'suggestion': 'Format as: "Bachelor of Science, Computer Science | Stanford University | 2020"'
+        })
+    
+    return examples[:2]
+
+def generate_page_density_examples(resume_text: str) -> list:
+    """Extract page density issues from resume"""
+    import re
+    
+    # Calculate basic density metrics
+    total_chars = len(resume_text)
+    lines = resume_text.split('\n')
+    non_empty_lines = [line for line in lines if line.strip()]
+    avg_line_length = sum(len(line) for line in non_empty_lines) / max(len(non_empty_lines), 1)
+    
+    examples = []
+    
+    # Check for overcrowding
+    if avg_line_length > 80:
+        long_lines = [line[:60] + "..." for line in non_empty_lines if len(line) > 80][:2]
+        examples.append({
+            'issue': 'Lines too long - overcrowded content',
+            'example': f'Long line found: "{long_lines[0] if long_lines else "Multiple lines exceed 80 characters"}"',
+            'suggestion': 'Break long lines and add proper spacing between sections'
+        })
+    
+    # Check for too sparse (very short lines)
+    short_lines = [line for line in non_empty_lines if 5 < len(line.strip()) < 20]
+    if len(short_lines) > 5 and len(examples) < 2:
+        examples.append({
+            'issue': 'Too many short, sparse lines',
+            'example': f'Short line example: "{short_lines[0][:40]}..."',
+            'suggestion': 'Combine related information into well-structured bullet points'
+        })
+    
+    # Generic fallback
+    if len(examples) < 2:
+        examples.append({
+            'issue': 'Page density needs optimization',
+            'example': 'Text distribution could be more balanced for better readability',
+            'suggestion': 'Adjust spacing and line length for optimal visual presentation'
+        })
+    
+    return examples[:2]
+
+def generate_bullets_examples(resume_text: str) -> list:
+    """Extract bullet point usage issues from resume"""
+    import re
+    
+    # Find paragraph-style content in experience sections
+    lines = resume_text.split('\n')
+    paragraph_lines = []
+    bullet_lines = []
+    
+    for line in lines:
+        line_clean = line.strip()
+        if len(line_clean) > 30:  # Substantial content
+            if re.match(r'^[•·\*\-\+]\s', line_clean):
+                bullet_lines.append(line_clean)
+            elif not re.match(r'^[A-Z][A-Za-z\s&]+$', line_clean):  # Not a header
+                paragraph_lines.append(line_clean)
+    
+    examples = []
+    
+    # Check for paragraph-style descriptions instead of bullets
+    if paragraph_lines:
+        examples.append({
+            'issue': 'Paragraph format instead of bullet points',
+            'example': f'Found paragraph: "{paragraph_lines[0][:60]}..."',
+            'suggestion': 'Convert to bullet format: "• Led cross-functional team of 12..."'
+        })
+    
+    # Check bullet-to-paragraph ratio
+    total_content_lines = len(bullet_lines) + len(paragraph_lines)
+    if total_content_lines > 0:
+        bullet_ratio = len(bullet_lines) / total_content_lines
+        if bullet_ratio < 0.5 and len(examples) < 2:
+            examples.append({
+                'issue': f'Low bullet usage: {len(bullet_lines)} bullets vs {len(paragraph_lines)} paragraphs',
+                'example': 'Many achievements written as paragraphs instead of bullets',
+                'suggestion': 'Use bullets for all accomplishments and responsibilities'
+            })
+    
+    # Generic fallback
+    if len(examples) < 2:
+        examples.append({
+            'issue': 'Bullet point structure needs improvement',
+            'example': 'Some achievements could be better formatted as bullet points',
+            'suggestion': 'Use consistent bullet formatting: • Achievement with quantified result'
+        })
+    
+    return examples[:2]
+
+def generate_verb_tenses_examples(resume_text: str) -> list:
+    """Extract verb tense inconsistency issues"""
+    import re
+    
+    # Find mixed tenses in descriptions
+    past_tense_verbs = re.findall(r'\b(managed|developed|created|led|designed|implemented|achieved|delivered)\b', resume_text, re.IGNORECASE)
+    present_tense_verbs = re.findall(r'\b(manage|manages|develop|develops|create|creates|lead|leads|design|designs)\b', resume_text, re.IGNORECASE)
+    ing_verbs = re.findall(r'\b(managing|developing|creating|leading|designing|implementing)\b', resume_text, re.IGNORECASE)
+    
+    examples = []
+    
+    # Check for mixed tenses
+    if past_tense_verbs and present_tense_verbs:
+        examples.append({
+            'issue': 'Mixed verb tenses detected',
+            'example': f'Found both "{past_tense_verbs[0]}" and "{present_tense_verbs[0]}" in resume',
+            'suggestion': 'Use past tense for previous roles, present tense only for current position'
+        })
+    
+    # Check for -ing verbs (often incorrect)
+    if ing_verbs and len(examples) < 2:
+        examples.append({
+            'issue': 'Incorrect -ing verb forms found',
+            'example': f'Found "{ing_verbs[0]}" - avoid -ing forms in bullet points',
+            'suggestion': 'Use action verbs: "Managed" not "Managing", "Led" not "Leading"'
+        })
+    
+    # Generic fallback
+    if len(examples) < 2:
+        examples.append({
+            'issue': 'Verb tense consistency needs review',
+            'example': 'Some descriptions may have inconsistent verb tenses',
+            'suggestion': 'Ensure consistent tense: past for previous jobs, present for current role'
+        })
+    
+    return examples[:2]
+
+def generate_verbosity_examples(resume_text: str) -> list:
+    """Extract verbose/wordy content from resume"""
+    import re
+    
+    # Find overly long sentences or wordy phrases
+    sentences = re.split(r'[•·\*\-]\s*', resume_text)
+    verbose_sentences = []
+    
+    for sentence in sentences:
+        sentence_clean = sentence.strip()
+        if len(sentence_clean) > 150:  # Very long sentences
+            verbose_sentences.append(sentence_clean)
+    
+    # Find wordy phrases
+    wordy_phrases = [
+        'in order to', 'for the purpose of', 'with the goal of', 'in an effort to',
+        'it should be noted that', 'it is important to', 'with regard to'
+    ]
+    
+    found_wordy = []
+    for phrase in wordy_phrases:
+        if phrase in resume_text.lower():
+            # Find context
+            idx = resume_text.lower().find(phrase)
+            context = resume_text[max(0, idx-20):idx+len(phrase)+30]
+            found_wordy.append({'phrase': phrase, 'context': context})
+    
+    examples = []
+    
+    # Report verbose sentences
+    if verbose_sentences:
+        examples.append({
+            'issue': 'Overly long, verbose sentences',
+            'example': f'Long sentence: "{verbose_sentences[0][:80]}..."',
+            'suggestion': 'Break into concise bullet points with clear, direct language'
+        })
+    
+    # Report wordy phrases
+    if found_wordy and len(examples) < 2:
+        item = found_wordy[0]
+        examples.append({
+            'issue': f'Wordy phrase: "{item["phrase"]}"',
+            'example': f'Found in: "{item["context"][:60]}..."',
+            'suggestion': f'Replace "{item["phrase"]}" with simpler, direct language'
+        })
+    
+    # Generic fallback
+    if len(examples) < 2:
+        examples.append({
+            'issue': 'Content could be more concise',
+            'example': 'Some descriptions use unnecessary words that dilute impact',
+            'suggestion': 'Use concise, powerful language: "Led team" not "Was responsible for leading team"'
+        })
+    
+    return examples[:2]
+
+def generate_unnecessary_sections_examples(resume_text: str) -> list:
+    """Extract unnecessary/outdated sections from resume"""
+    import re
+    
+    # Find outdated sections
+    outdated_sections = [
+        ('references', 'References available upon request'),
+        ('objective', 'Career objective or goal statements'),  
+        ('high school', 'High school education when higher education exists'),
+        ('hobbies', 'Personal hobbies and interests'),
+        ('marital', 'Marital status or personal information')
+    ]
+    
+    found_sections = []
+    lines = resume_text.split('\n')
+    
+    for section_key, section_name in outdated_sections:
+        for line in lines:
+            if section_key in line.lower() and len(line.strip()) < 100:
+                found_sections.append({
+                    'section': section_name,
+                    'line': line.strip(),
+                    'key': section_key
+                })
+                break
+    
+    examples = []
+    
+    # Report found outdated sections
+    for item in found_sections[:2]:
+        examples.append({
+            'issue': f'Outdated section: {item["section"]}',
+            'example': f'Found: "{item["line"][:60]}..."',
+            'suggestion': f'Remove {item["section"]} - use space for relevant professional content'
+        })
+    
+    # Generic fallback
+    if len(examples) < 2:
+        examples.append({
+            'issue': 'Potential outdated content detected',
+            'example': 'Some sections may not add value to modern resume standards',
+            'suggestion': 'Focus on relevant professional experience, skills, and achievements'
+        })
+    
+    return examples[:2]
+
+def generate_readability_examples(resume_text: str) -> list:
+    """Extract overall readability issues"""
+    import re
+    
+    # Check for common readability issues
+    issues_found = []
+    
+    # Long words (>12 characters)
+    long_words = re.findall(r'\b\w{13,}\b', resume_text)
+    if long_words:
+        issues_found.append({
+            'issue': 'Complex vocabulary detected',
+            'example': f'Long words found: "{", ".join(long_words[:3])}"',
+            'suggestion': 'Use simpler, clearer language where possible'
+        })
+    
+    # Excessive jargon or acronyms
+    acronyms = re.findall(r'\b[A-Z]{3,}\b', resume_text)
+    if len(acronyms) > 10:
+        issues_found.append({
+            'issue': 'Too many acronyms may reduce clarity',
+            'example': f'Many acronyms found: "{", ".join(acronyms[:4])}"',
+            'suggestion': 'Spell out important acronyms: "Application Programming Interface (API)"'
+        })
+    
+    # Very long bullet points
+    bullets = re.findall(r'[•·\*\-]\s*(.+)', resume_text)
+    long_bullets = [bullet for bullet in bullets if len(bullet) > 120]
+    if long_bullets and len(issues_found) < 2:
+        issues_found.append({
+            'issue': 'Bullet points too long for easy scanning',
+            'example': f'Long bullet: "{long_bullets[0][:80]}..."',
+            'suggestion': 'Keep bullets under 120 characters for better readability'
+        })
+    
+    # Return found issues or generic fallback
+    if issues_found:
+        return issues_found[:2]
+    
+    return [
+        {
+            'issue': 'Overall readability could be enhanced',
+            'example': 'Document structure and language could be more accessible',
+            'suggestion': 'Optimize for clarity, conciseness, and professional presentation'
+        },
+        {
+            'issue': 'Content accessibility needs improvement',
+            'example': 'Some sections may be difficult for ATS systems and recruiters to parse',
+            'suggestion': 'Use clear formatting, simple language, and logical structure'
+        }
+    ]
+
 def analyze_teamwork_skills_frontend(resume_text: str) -> int:
     """Copied exactly from frontend analyzeTeamworkSkills"""
     teamwork_keywords = [
@@ -3554,13 +4534,15 @@ def generate_comprehensive_ats_scores_frontend(content: str, component_scores: d
     })
     summary_score = analyze_summary_section_frontend(resume_text)
     summary_enhancement = get_enhanced_issue_description('Summary', summary_score, resume_text)
+    summary_modal = generate_fix_this_modal_content('Summary', resume_text, summary_score)
     categories.append({
         'name': 'Summary',
         'score': summary_score,
         'issue': summary_enhancement['issue_description'],
         'impact': 'IMPACT',
         'detailed_analysis': get_summary_detailed_analysis(resume_text),
-        'enhancement': summary_enhancement
+        'enhancement': summary_enhancement,
+        'modal_content': summary_modal
     })
     categories.append({
         'name': 'Teamwork',
@@ -3578,6 +4560,7 @@ def generate_comprehensive_ats_scores_frontend(content: str, component_scores: d
     })
     repetition_score = analyze_repetition_frontend(resume_text)
     repetition_enhancement = get_enhanced_issue_description('Repetition', repetition_score, resume_text)
+    repetition_modal = generate_fix_this_modal_content('Repetition', resume_text, repetition_score)
     categories.append({
         'name': 'Repetition',
         'score': repetition_score,
@@ -3586,7 +4569,8 @@ def generate_comprehensive_ats_scores_frontend(content: str, component_scores: d
         'high_score_criteria': repetition_enhancement['high_score_criteria'],
         'low_score_issues': repetition_enhancement['low_score_issues'],
         'specific_issues': repetition_enhancement['specific_issues'],
-        'impact': 'BREVITY'
+        'impact': 'BREVITY',
+        'modal_content': repetition_modal
     })
     categories.append({
         'name': 'Unnecessary Sections',
@@ -3731,10 +4715,15 @@ def calculate_comprehensive_ats_score(content: str, job_posting: str = None, kno
     for category in comprehensive_categories:
         # Convert to backend format
         key = category['name'].lower().replace(' ', '_').replace('&', 'and')
+        
+        # Generate modal content for this category
+        modal_content = generate_fix_this_modal_content(key, content, category['score'])
+        
         comprehensive_analysis[key] = {
             'score': category['score'],
             'issues': [category['issue']],
-            'impact': category['impact']
+            'impact': category['impact'],
+            'modal_content': modal_content  # Add modal content for frontend
         }
     
     # Calculate new overall score from all comprehensive categories

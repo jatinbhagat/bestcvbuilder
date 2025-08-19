@@ -405,7 +405,7 @@ function handleFixIssue(issueName, index) {
 }
 
 /**
- * Show modal with specific issues for a category
+ * Show modal with specific issues for a category using backend modal content
  */
 function showIssueModal(categoryName) {
     const modal = document.getElementById('issueModal');
@@ -417,10 +417,134 @@ function showIssueModal(categoryName) {
         return;
     }
     
+    console.log('🔍 Looking for modal content for category:', categoryName);
+    
+    // Try to get modal content from existing analysis data
+    const modalContent = getModalContentFromAnalysis(categoryName);
+    
+    if (modalContent) {
+        console.log('✅ Found backend modal content:', modalContent);
+        displayBackendModalContent(modalContent, categoryName);
+    } else {
+        console.log('⚠️ No backend modal content found, using frontend fallback');
+        displayFrontendModalContent(categoryName);
+    }
+    
+    // Show modal
+    modal.classList.remove('hidden');
+}
+
+/**
+ * Get modal content from existing analysis data
+ */
+function getModalContentFromAnalysis(categoryName) {
+    try {
+        // Check if we have analysis data with detailed analysis
+        const detailedAnalysis = analysisData.detailedAnalysis || analysisData.detailed_analysis || {};
+        
+        if (!detailedAnalysis || Object.keys(detailedAnalysis).length === 0) {
+            console.warn('No detailed analysis data available');
+            return null;
+        }
+        
+        // Convert category name to backend format
+        const backendCategory = categoryName.toLowerCase()
+            .replace(/\s+/g, '_')
+            .replace(/&/g, 'and');
+        
+        console.log('🔍 Looking for backend category:', backendCategory);
+        console.log('🔍 Available categories:', Object.keys(detailedAnalysis));
+        
+        // Look for the category in detailed analysis
+        const categoryData = detailedAnalysis[backendCategory];
+        
+        if (categoryData && categoryData.modal_content) {
+            console.log('✅ Found modal content for', backendCategory, ':', categoryData.modal_content);
+            return categoryData.modal_content;
+        }
+        
+        console.warn(`No modal content found for category: ${backendCategory}`);
+        return null;
+        
+    } catch (error) {
+        console.error('Error extracting modal content from analysis data:', error);
+        return null;
+    }
+}
+
+/**
+ * Display modal content from backend response
+ */
+function displayBackendModalContent(modalContent, categoryName) {
+    const modalTitle = document.getElementById('modalTitle');
+    const modalIssuesList = document.getElementById('modalIssuesList');
+    
+    if (!modalTitle || !modalIssuesList) return;
+    
+    // Update modal title using backend title
+    modalTitle.textContent = modalContent.title || `${categoryName} Issues Found`;
+    
+    // Clear issues list
+    modalIssuesList.innerHTML = '';
+    
+    // Create generic section
+    if (modalContent.generic_explanation) {
+        const genericSection = document.createElement('div');
+        genericSection.className = 'bg-blue-50 border-l-4 border-blue-400 p-4 mb-6';
+        genericSection.innerHTML = `
+            <h3 class="text-lg font-semibold text-blue-900 mb-3">Why This Matters for ATS</h3>
+            <div class="text-sm text-blue-800 leading-relaxed whitespace-pre-line">${modalContent.generic_explanation}</div>
+        `;
+        modalIssuesList.appendChild(genericSection);
+    }
+    
+    // Create dynamic examples section
+    if (modalContent.dynamic_examples && modalContent.dynamic_examples.length > 0) {
+        const dynamicSection = document.createElement('div');
+        dynamicSection.className = 'bg-red-50 border-l-4 border-red-400 p-4 mb-4';
+        dynamicSection.innerHTML = `
+            <h3 class="text-lg font-semibold text-red-900 mb-3">Issues Found in Your Resume</h3>
+            <div class="space-y-3">
+                ${modalContent.dynamic_examples.map((example, index) => `
+                    <div class="bg-white border border-red-200 rounded-lg p-3">
+                        <div class="flex items-start gap-3">
+                            <div class="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-900 mb-2">${example.issue}</p>
+                                <div class="bg-gray-50 border border-gray-200 rounded p-2 font-mono text-xs text-gray-700 mb-1">
+                                    "${example.example}"
+                                </div>
+                                <p class="text-xs text-red-600 font-medium">${example.suggestion}</p>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        modalIssuesList.appendChild(dynamicSection);
+    }
+    
+    // Add call-to-action section
+    const ctaSection = document.createElement('div');
+    ctaSection.className = 'bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4 text-center';
+    ctaSection.innerHTML = `
+        <h4 class="text-lg font-bold text-purple-900 mb-2">Ready to Fix These Issues?</h4>
+        <p class="text-sm text-purple-700 mb-3">Our AI will automatically optimize all these issues to boost your ATS score</p>
+    `;
+    modalIssuesList.appendChild(ctaSection);
+}
+
+/**
+ * Fallback to display frontend-generated modal content
+ */
+function displayFrontendModalContent(categoryName) {
+    const modalTitle = document.getElementById('modalTitle');
+    const modalIssuesList = document.getElementById('modalIssuesList');
+    
     // Update modal title
     modalTitle.textContent = `${categoryName} Issues Found`;
     
-    // Generate specific issues for this category
+    // Generate specific issues for this category using existing frontend logic
     const specificIssues = generateSpecificIssues(categoryName);
     
     // Clear and populate issues list
@@ -442,13 +566,10 @@ function showIssueModal(categoryName) {
         `;
         modalIssuesList.appendChild(issueElement);
     });
-    
-    // Show modal
-    modal.classList.remove('hidden');
 }
 
 /**
- * Generate specific issues with CV line references for a category
+ * Generate specific issues with CV line references for a category (FALLBACK)
  */
 function generateSpecificIssues(categoryName) {
     // Get the original resume content if available
