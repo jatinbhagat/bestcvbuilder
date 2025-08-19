@@ -2250,9 +2250,13 @@ def generate_fix_this_modal_content(category_name: str, resume_text: str, score:
     import sys
     import os
     
-    # Import the modal config
-    sys.path.append(os.path.dirname(__file__))
-    from ats_modal_config import ATS_MODAL_CONFIG
+    # Import the modal config with error handling
+    try:
+        sys.path.append(os.path.dirname(__file__))
+        from ats_modal_config import ATS_MODAL_CONFIG
+    except ImportError as e:
+        logger.warning(f"Failed to import ATS_MODAL_CONFIG: {e}")
+        ATS_MODAL_CONFIG = {}
     
     # Get generic explanation
     generic_config = ATS_MODAL_CONFIG.get(category_name, {})
@@ -2265,24 +2269,9 @@ def generate_fix_this_modal_content(category_name: str, resume_text: str, score:
     return {
         'category': category_name,
         'score': score,
-        'generic_section': {
-            'title': generic_title,
-            'explanation': generic_explanation
-        },
-        'dynamic_section': {
-            'title': f'Issues Found in Your Resume',
-            'examples': dynamic_examples
-        },
-        'ctas': {
-            'close': {
-                'text': 'Close',
-                'action': 'close_modal'
-            },
-            'fix': {
-                'text': 'Fix This Now',
-                'action': 'redirect_to_payment'
-            }
-        }
+        'title': generic_title,
+        'generic_explanation': generic_explanation,
+        'dynamic_examples': dynamic_examples
     }
 
 def generate_dynamic_examples(category_name: str, resume_text: str, score: int) -> list:
@@ -4538,7 +4527,7 @@ def generate_comprehensive_ats_scores_frontend(content: str, component_scores: d
     categories.append({
         'name': 'Summary',
         'score': summary_score,
-        'issue': summary_enhancement['issue_description'],
+        'issue': summary_enhancement['issue'],
         'impact': 'IMPACT',
         'detailed_analysis': get_summary_detailed_analysis(resume_text),
         'enhancement': summary_enhancement,
@@ -4717,7 +4706,15 @@ def calculate_comprehensive_ats_score(content: str, job_posting: str = None, kno
         key = category['name'].lower().replace(' ', '_').replace('&', 'and')
         
         # Generate modal content for this category
-        modal_content = generate_fix_this_modal_content(key, content, category['score'])
+        try:
+            modal_content = generate_fix_this_modal_content(key, content, category['score'])
+        except Exception as e:
+            logger.warning(f"Failed to generate modal content for {key}: {e}")
+            modal_content = {
+                'title': f'Why {category["name"]} Matters for ATS',
+                'generic_explanation': f'{category["name"]} is important for ATS scoring and professional presentation.',
+                'dynamic_examples': []
+            }
         
         comprehensive_analysis[key] = {
             'score': category['score'],
