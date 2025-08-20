@@ -337,7 +337,7 @@ def cors_headers():
     """Return CORS headers for API responses"""
     return {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Methods": "POST, OPTIONS, HEAD, GET",
         "Access-Control-Allow-Headers": "Content-Type, Accept, Authorization",
         "Access-Control-Max-Age": "86400"
     }
@@ -6576,6 +6576,19 @@ class handler(BaseHTTPRequestHandler):
         except Exception as e:
             logger.error(f"Diagnostics error: {str(e)}")
             self.send_error_response({'error': 'Diagnostics failed'}, 500)
+    
+    def do_HEAD(self):
+        """Handle HEAD requests for connectivity testing"""
+        try:
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            for key, value in cors_headers().items():
+                self.send_header(key.replace('_', '-'), value)
+            self.end_headers()
+        except Exception as e:
+            logger.error(f"HEAD request error: {str(e)}")
+            self.send_response(500)
+            self.end_headers()
     
     def send_success_response(self, data):
         """Send successful JSON response"""

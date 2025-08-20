@@ -25,60 +25,27 @@ console.log('🔗 API Configuration v1.1.0:', { API_BASE_URL, CV_PARSER_ENDPOINT
 console.log('🚨 CRITICAL: Verify this shows correct URL - should NOT be bestcvbuilder-gamma!');
 
 /**
- * Test API connectivity before processing
+ * Test API connectivity before processing - SIMPLIFIED VERSION
  */
 async function testAPIConnectivity() {
     console.log('🔍 Testing API connectivity (non-blocking)...');
     
-    let healthOk = false;
-    let corsOk = false;
-    
-    // Test 1: Simple health check with timeout
+    // Simple connectivity test without AbortController to avoid signal abort issues
     try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-        
-        const healthResponse = await fetch('https://bestcvbuilder-api.onrender.com/health', {
-            method: 'GET',
+        const response = await fetch(CV_PARSER_ENDPOINT, {
+            method: 'HEAD',
             mode: 'cors',
-            cache: 'no-cache',
-            signal: controller.signal
+            cache: 'no-cache'
         });
         
-        clearTimeout(timeoutId);
-        healthOk = healthResponse.status === 200;
-        console.log(`${healthOk ? '✅' : '❌'} Health check: ${healthResponse.status}`);
+        const isOk = response.status === 200 || response.status === 405; // 405 is OK for HEAD requests
+        console.log(`${isOk ? '✅' : '⚠️'} API connectivity: ${response.status}`);
+        return isOk;
         
     } catch (error) {
-        console.log(`❌ Health check failed: ${error.message}`);
+        console.log(`⚠️ API connectivity test failed: ${error.message}`);
+        return false; // Don't block the process
     }
-    
-    // Test 2: CORS preflight with timeout
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
-        
-        const corsResponse = await fetch(CV_PARSER_ENDPOINT, {
-            method: 'OPTIONS',
-            mode: 'cors',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-        corsOk = corsResponse.status === 200;
-        console.log(`${corsOk ? '✅' : '❌'} CORS preflight: ${corsResponse.status}`);
-        
-    } catch (error) {
-        console.log(`❌ CORS test failed: ${error.message}`);
-    }
-    
-    const overallOk = healthOk || corsOk; // Consider it OK if any test passes
-    console.log(`📊 Connectivity summary: Health=${healthOk}, CORS=${corsOk}, Overall=${overallOk}`);
-    
-    return overallOk;
 }
 
 
@@ -92,10 +59,8 @@ export async function analyzeResume(fileUrl, userId = null) {
     try {
         console.log('Starting ATS analysis for file:', fileUrl);
         
-        // Optional connectivity diagnostic (non-blocking)
-        testAPIConnectivity().catch(error => {
-            console.warn('⚠️ Background connectivity test failed:', error.message);
-        });
+        // Skip connectivity test during analysis to avoid signal abort issues
+        console.log('📡 Skipping connectivity test during analysis to prevent conflicts');
         
         const requestBody = {
             file_url: fileUrl,
@@ -150,7 +115,22 @@ export async function analyzeResume(fileUrl, userId = null) {
         for (let i = 0; i < attempts.length; i++) {
             try {
                 console.log(`🔄 Attempt ${i + 1}/3 with configuration:`, attempts[i]);
-                response = await fetch(CV_PARSER_ENDPOINT, attempts[i]);
+                
+                // Add timeout to prevent infinite hanging (120 seconds for CV analysis)
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => {
+                    console.log(`⏰ Request ${i + 1} timed out after 120 seconds`);
+                    controller.abort();
+                }, 120000);
+                
+                // Add abort signal to attempt
+                const attemptWithTimeout = {
+                    ...attempts[i],
+                    signal: controller.signal
+                };
+                
+                response = await fetch(CV_PARSER_ENDPOINT, attemptWithTimeout);
+                clearTimeout(timeoutId);
                 console.log(`✅ Attempt ${i + 1} succeeded:`, response.status);
                 break;
             } catch (error) {
@@ -159,6 +139,8 @@ export async function analyzeResume(fileUrl, userId = null) {
                 if (i === attempts.length - 1) {
                     throw lastError;
                 }
+                // Small delay between attempts
+                await new Promise(resolve => setTimeout(resolve, 1000));
             }
         }
         
