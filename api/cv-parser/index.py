@@ -2607,49 +2607,65 @@ def generate_action_verbs_examples(resume_text: str) -> list:
     return examples[:2]
 
 def generate_contact_examples(resume_text: str) -> list:
-    """Generate specific contact details examples"""
+    """Generate specific contact details examples based on actual scoring logic"""
     import re
     
     issues = []
+    missing_elements = []
     
-    # Check for email
-    has_email = bool(re.search(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', resume_text))
-    if not has_email:
-        issues.append('Missing professional email address')
+    # Use the same scoring logic as analyze_contact_details_frontend
+    has_mobile = has_mobile_number(resume_text)
+    has_email = has_email_address(resume_text)
+    has_linkedin = has_linkedin_profile(resume_text)
+    has_location = has_location_info(resume_text)
     
-    # Check for phone
-    has_phone = bool(re.search(r'\+?\d{1,4}[-.\s]?\d{3,4}[-.\s]?\d{3,4}[-.\s]?\d{3,4}', resume_text))
-    if not has_phone:
-        issues.append('Missing phone number')
-    
-    # Check for LinkedIn
-    has_linkedin = bool(re.search(r'linkedin', resume_text, re.IGNORECASE))
-    if not has_linkedin:
-        issues.append('Missing LinkedIn profile')
-    
-    examples = []
-    for issue in issues[:2]:
-        examples.append({
-            'issue': issue,
-            'example': 'Essential contact information not found in resume header',
-            'suggestion': 'Add complete contact details: email, phone, LinkedIn, and location'
+    # Identify specific missing elements (-2.5 points each)
+    if not has_mobile:
+        missing_elements.append({
+            'issue': 'Missing mobile/phone number (-2.5 points)',
+            'example': 'No phone number found in contact section',
+            'suggestion': 'Add professional phone number: "(555) 123-4567" or "+1-555-123-4567"'
         })
     
-    if not examples:
-        examples = [
+    if not has_email:
+        missing_elements.append({
+            'issue': 'Missing professional email address (-2.5 points)',
+            'example': 'No email address found in resume header',
+            'suggestion': 'Add professional email: "firstname.lastname@email.com"'
+        })
+    
+    if not has_linkedin:
+        missing_elements.append({
+            'issue': 'Missing LinkedIn profile URL (-2.5 points)',
+            'example': 'No LinkedIn profile detected in contact information',
+            'suggestion': 'Add LinkedIn URL: "linkedin.com/in/yourname" or "LinkedIn: YourName"'
+        })
+    
+    if not has_location:
+        missing_elements.append({
+            'issue': 'Missing location information (-2.5 points)',
+            'example': 'No city, state, or location details found',
+            'suggestion': 'Add location: "New York, NY" or "San Francisco, CA" or "Remote"'
+        })
+    
+    # If no missing elements, provide optimization suggestions
+    if not missing_elements:
+        issues = [
             {
-                'issue': 'Contact formatting could be improved',
-                'example': 'Contact information may not be ATS-optimized',
-                'suggestion': 'Ensure contact details are clearly formatted and easily parseable'
+                'issue': 'Contact formatting optimization opportunity',
+                'example': 'All contact elements present but formatting could be enhanced',
+                'suggestion': 'Ensure contact details are prominently displayed at top of resume'
             },
             {
-                'issue': 'Professional presentation opportunities',
-                'example': 'Contact section could be more polished and complete',
-                'suggestion': 'Include all relevant professional contact channels and optimize layout'
+                'issue': 'ATS parsing enhancement possible',
+                'example': 'Contact information could be better structured for ATS systems',
+                'suggestion': 'Use standard labels: "Email:", "Phone:", "LinkedIn:", "Location:"'
             }
         ]
+        return issues[:2]
     
-    return examples[:2]
+    # Return the specific missing elements (max 2 for display)
+    return missing_elements[:2]
 
 def generate_skills_examples(resume_text: str) -> list:
     """Generate specific skills section examples"""
@@ -4382,6 +4398,13 @@ def get_enhanced_issue_description(category_name: str, score: int, resume_text: 
     else:
         specific_issues = enhancement['specific_issues']['low']
     
+    # Override with dynamic content for categories that have specific generators
+    if category_name == 'Contact Details' and resume_text:
+        dynamic_issues = generate_contact_examples(resume_text)
+        if dynamic_issues:
+            # Convert to the format expected by frontend
+            specific_issues = [item['issue'] + ': ' + item['example'] for item in dynamic_issues[:3]]
+    
     return {
         'understanding': enhancement['understanding'],
         'high_score_criteria': enhancement['high_score_criteria'],
@@ -4405,6 +4428,7 @@ def generate_comprehensive_ats_scores_frontend(content: str, component_scores: d
     # 1. CONTACT INFORMATION
     contact_score = analyze_contact_details_frontend(resume_text)
     contact_enhancement = get_enhanced_issue_description('Contact Details', contact_score, resume_text)
+    contact_modal = generate_fix_this_modal_content('Contact Details', resume_text, contact_score)
     categories.append({
         'name': 'Contact Details',
         'score': contact_score,
@@ -4413,7 +4437,8 @@ def generate_comprehensive_ats_scores_frontend(content: str, component_scores: d
         'high_score_criteria': contact_enhancement['high_score_criteria'],
         'low_score_issues': contact_enhancement['low_score_issues'],
         'specific_issues': contact_enhancement['specific_issues'],
-        'impact': 'SECTIONS'
+        'impact': 'SECTIONS',
+        'modal_content': contact_modal
     })
     
     # 2-3. STRUCTURE ANALYSIS

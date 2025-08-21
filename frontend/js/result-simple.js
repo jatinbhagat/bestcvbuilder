@@ -524,14 +524,23 @@ function displayBackendModalContent(modalContent, categoryName) {
         modalIssuesList.appendChild(dynamicSection);
     }
     
-    // Add call-to-action section
+    // Add enhanced call-to-action section with prominent styling
     const ctaSection = document.createElement('div');
-    ctaSection.className = 'bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4 text-center';
+    ctaSection.className = 'bg-gradient-to-r from-green-50 to-green-100 border-2 border-green-300 rounded-xl p-6 text-center mt-4';
     ctaSection.innerHTML = `
-        <h4 class="text-lg font-bold text-purple-900 mb-2">Ready to Fix These Issues?</h4>
-        <p class="text-sm text-purple-700 mb-3">Our AI will automatically optimize all these issues to boost your ATS score</p>
+        <div class="text-2xl mb-3">🚀</div>
+        <h4 class="text-xl font-black text-green-800 mb-3">Ready to Fix These Issues?</h4>
+        <p class="text-sm font-bold text-green-700 mb-2">Our AI will automatically optimize all these issues to boost your ATS score</p>
+        <p class="text-xs text-green-600">✓ Instant results • ✓ No credit card required • ✓ Professional quality</p>
     `;
     modalIssuesList.appendChild(ctaSection);
+    
+    // Update the modal button text to match "Fix for Free" branding
+    const modalFixBtn = document.getElementById('modalFixAllBtn');
+    if (modalFixBtn) {
+        modalFixBtn.innerHTML = '🚀 Fix for Free - Instant Results';
+        modalFixBtn.className = 'flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white font-black py-4 px-8 rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-300 transform hover:scale-105 shadow-lg border-2 border-green-400';
+    }
 }
 
 /**
@@ -566,6 +575,24 @@ function displayFrontendModalContent(categoryName) {
         `;
         modalIssuesList.appendChild(issueElement);
     });
+    
+    // Add the same enhanced CTA section for fallback modals
+    const ctaSection = document.createElement('div');
+    ctaSection.className = 'bg-gradient-to-r from-green-50 to-green-100 border-2 border-green-300 rounded-xl p-6 text-center mt-4';
+    ctaSection.innerHTML = `
+        <div class="text-2xl mb-3">🚀</div>
+        <h4 class="text-xl font-black text-green-800 mb-3">Ready to Fix These Issues?</h4>
+        <p class="text-sm font-bold text-green-700 mb-2">Our AI will automatically optimize all these issues to boost your ATS score</p>
+        <p class="text-xs text-green-600">✓ Instant results • ✓ No credit card required • ✓ Professional quality</p>
+    `;
+    modalIssuesList.appendChild(ctaSection);
+    
+    // Update the modal button text to match "Fix for Free" branding for fallback modals too
+    const modalFixBtn = document.getElementById('modalFixAllBtn');
+    if (modalFixBtn) {
+        modalFixBtn.innerHTML = '🚀 Fix for Free - Instant Results';
+        modalFixBtn.className = 'flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white font-black py-4 px-8 rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-300 transform hover:scale-105 shadow-lg border-2 border-green-400';
+    }
 }
 
 /**
