@@ -8,6 +8,20 @@ import os
 import requests
 from typing import Dict, Any, List
 import logging
+import sys
+
+# Add path for config imports
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'config'))
+
+# Import payment bypass configuration
+try:
+    from app_config import should_bypass_payment, is_free_mode_enabled
+except ImportError:
+    # Fallback if config not found
+    def should_bypass_payment():
+        return True  # Default to bypass for now
+    def is_free_mode_enabled():
+        return True
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -243,6 +257,14 @@ def handler(event, context):
         original_analysis = body.get('original_analysis', {})
         user_email = body.get('user_email')
         payment_id = body.get('payment_id')
+        bypass_payment = body.get('bypass_payment', False)  # Frontend can override
+        
+        # Check payment bypass configuration
+        payment_bypass_enabled = should_bypass_payment()
+        free_mode = is_free_mode_enabled()
+        
+        logger.info(f"🔧 Payment bypass config: {payment_bypass_enabled}, Free mode: {free_mode}")
+        logger.info(f"🔧 Request bypass flag: {bypass_payment}")
         
         if not user_email:
             return {
@@ -258,8 +280,29 @@ def handler(event, context):
                 'body': json.dumps({'error': 'original_analysis is required'})
             }
         
+        # Check payment requirement - skip if bypass is enabled
+        if not payment_bypass_enabled and not free_mode and not bypass_payment:
+            if not payment_id:
+                return {
+                    'statusCode': 402,  # Payment Required
+                    'headers': cors_headers(),
+                    'body': json.dumps({
+                        'error': 'Payment required',
+                        'message': 'This service requires payment. Please complete payment first.',
+                        'payment_required': True
+                    })
+                }
+            # In production, you would validate the payment_id with Stripe here
+            logger.info(f"Payment validated: {payment_id}")
+        else:
+            logger.info("🚀 Payment bypassed - processing free CV rewrite")
+        
         # Perform resume rewrite
         rewrite_result = rewrite_resume(original_analysis, user_email)
+        
+        # Add bypass information to response
+        rewrite_result['payment_bypassed'] = payment_bypass_enabled or free_mode or bypass_payment
+        rewrite_result['free_mode'] = free_mode
         
         # Send email notification
         send_email_notification(

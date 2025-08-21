@@ -19,6 +19,9 @@ const completedCount = document.getElementById('completedCount');
 
 // Get data from session storage
 let analysisData;
+
+// App configuration cache
+let appConfig = null;
 try {
     const rawData = sessionStorage.getItem('atsAnalysis');
     console.log('📊 Raw session data:', rawData);
@@ -346,14 +349,149 @@ function setupToggle() {
 }
 
 /**
+ * Fetch app configuration to check payment bypass settings
+ */
+async function fetchAppConfig() {
+    if (appConfig) return appConfig; // Return cached config
+    
+    try {
+        const response = await fetch('/api/config/', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Config fetch failed: ${response.status}`);
+        }
+        
+        appConfig = await response.json();
+        console.log('🔧 App config loaded:', appConfig);
+        return appConfig;
+    } catch (error) {
+        console.error('⚠️ Failed to fetch app config, using defaults:', error);
+        // Fallback configuration
+        appConfig = {
+            bypass_payment: true,
+            free_mode_enabled: true,
+            features: {
+                free_cv_rewrite: true,
+                payment_bypass: true
+            }
+        };
+        return appConfig;
+    }
+}
+
+/**
+ * Handle CV rewrite with payment bypass check
+ */
+async function handleCVRewrite(source = 'upgrade') {
+    console.log(`🚀 CV Rewrite clicked from: ${source}`);
+    
+    // Fetch configuration to check bypass
+    const config = await fetchAppConfig();
+    const shouldBypass = config.bypass_payment || config.free_mode_enabled;
+    
+    console.log(`🔧 Payment bypass enabled: ${shouldBypass}`);
+    
+    if (shouldBypass) {
+        // Bypass payment - go directly to CV rewrite
+        await processDirectCVRewrite();
+    } else {
+        // Redirect to payment page
+        sessionStorage.setItem('pendingRewrite', JSON.stringify(analysisData));
+        window.location.href = './payment.html';
+    }
+}
+
+/**
+ * Process CV rewrite directly without payment
+ */
+async function processDirectCVRewrite() {
+    console.log('🚀 Processing free CV rewrite...');
+    
+    try {
+        // Show loading state
+        showLoadingState();
+        
+        // Call CV rewrite API directly
+        const response = await fetch('/api/cv-rewrite/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                original_analysis: analysisData,
+                user_email: 'user@example.com', // In production, get from user session
+                bypass_payment: true
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`CV rewrite failed: ${response.status}`);
+        }
+        
+        const rewriteResult = await response.json();
+        console.log('✅ CV rewrite completed:', rewriteResult);
+        
+        // Store results and redirect to success page
+        sessionStorage.setItem('rewriteResult', JSON.stringify(rewriteResult));
+        window.location.href = './success.html';
+        
+    } catch (error) {
+        console.error('❌ CV rewrite failed:', error);
+        hideLoadingState();
+        alert('Failed to process CV rewrite. Please try again.');
+    }
+}
+
+/**
+ * Show loading state during CV processing
+ */
+function showLoadingState() {
+    if (upgradeBtn) {
+        upgradeBtn.disabled = true;
+        upgradeBtn.innerHTML = '🔄 Processing Your CV...';
+        upgradeBtn.classList.add('loading');
+    }
+    
+    // Also update modal button if visible
+    const modalFixBtn = document.getElementById('modalFixAllBtn');
+    if (modalFixBtn) {
+        modalFixBtn.disabled = true;
+        modalFixBtn.innerHTML = '🔄 Processing...';
+        modalFixBtn.classList.add('loading');
+    }
+}
+
+/**
+ * Hide loading state
+ */
+function hideLoadingState() {
+    if (upgradeBtn) {
+        upgradeBtn.disabled = false;
+        upgradeBtn.innerHTML = '🚀 FIX MY RESUME NOW - FREE 🚀';
+        upgradeBtn.classList.remove('loading');
+    }
+    
+    // Also restore modal button if visible
+    const modalFixBtn = document.getElementById('modalFixAllBtn');
+    if (modalFixBtn) {
+        modalFixBtn.disabled = false;
+        modalFixBtn.innerHTML = '🚀 Fix for Free - Instant Results';
+        modalFixBtn.classList.remove('loading');
+    }
+}
+
+/**
  * Setup upgrade button
  */
 function setupUpgradeButton() {
     if (upgradeBtn) {
         upgradeBtn.addEventListener('click', () => {
-            // Store current analysis data for payment page
-            sessionStorage.setItem('pendingRewrite', JSON.stringify(analysisData));
-            window.location.href = './payment.html';
+            handleCVRewrite('upgrade');
         });
     }
 }
@@ -1449,9 +1587,8 @@ function closeIssueModal() {
  */
 function handleModalFixAll() {
     console.log('🚀 Modal Fix All clicked');
-    // Store analysis data and redirect to payment
-    sessionStorage.setItem('pendingRewrite', JSON.stringify(analysisData));
-    window.location.href = './payment.html';
+    // Use the same bypass logic as main CTA
+    handleCVRewrite('modal');
 }
 
 /**
