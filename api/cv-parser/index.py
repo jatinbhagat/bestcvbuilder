@@ -6590,7 +6590,11 @@ def extract_specific_issues_with_examples(analysis_result: Dict[str, Any]) -> Di
         content = analysis_result.get('content', '')
         detailed_analysis = analysis_result.get('detailedAnalysis', {})
         
+        logger.info(f"🔍 Extract specific issues - Content length: {len(content)}")
+        logger.info(f"🔍 Extract specific issues - Categories available: {list(detailed_analysis.keys())}")
+        
         if not content:
+            logger.warning("⚠️ No resume content available for detailed analysis")
             return {'error': 'No resume content available for detailed analysis'}
         
         # Split content into lines for reference
@@ -6740,10 +6744,13 @@ def extract_specific_issues_with_examples(analysis_result: Dict[str, Any]) -> Di
         ])
         
         logger.info(f"✅ Extracted {issues_with_examples['total_specific_examples']} specific issues with examples")
+        logger.info(f"📊 Critical: {len(issues_with_examples['critical_issues'])}, Quick Wins: {len(issues_with_examples['quick_wins'])}, Content: {len(issues_with_examples['content_improvements'])}")
         return issues_with_examples
         
     except Exception as e:
-        logger.error(f"Error extracting specific issues: {str(e)}")
+        logger.error(f"❌ Error extracting specific issues: {str(e)}")
+        import traceback
+        logger.error(f"📍 Traceback: {traceback.format_exc()}")
         return {'error': f'Failed to extract specific issues: {str(e)}'}
 
 def find_date_formatting_issues(lines: List[str]) -> Dict[str, Any]:
@@ -7016,6 +7023,54 @@ def get_suggested_metrics_for_line(line_text: str) -> List[str]:
     
     return suggestions[:3]  # Return top 3 suggestions
 
+def create_basic_issues_from_analysis(detailed_analysis: Dict[str, Any]) -> Dict[str, Any]:
+    """Create basic issues structure from detailed analysis when specific extraction fails"""
+    issues = {
+        'critical_issues': [],
+        'quick_wins': [],
+        'content_improvements': []
+    }
+    
+    for category, data in detailed_analysis.items():
+        if not isinstance(data, dict) or 'score' not in data:
+            continue
+            
+        score = data.get('score', 10)
+        issues_list = data.get('issues', [])
+        
+        if score < 5:  # Critical
+            issues['critical_issues'].append({
+                'category': category,
+                'score': score,
+                'title': f'{category} Issues',
+                'impact': 'Critical ATS compatibility issue',
+                'examples': [],
+                'fix_instructions': ' | '.join(issues_list) if issues_list else 'Improve this category',
+                'time_to_fix': '10-15 minutes'
+            })
+        elif score < 8:  # Quick wins
+            issues['quick_wins'].append({
+                'category': category,
+                'score': score,
+                'title': f'{category} Improvements',
+                'impact': 'Easy fix for better ATS score',
+                'examples': [],
+                'fix_instructions': ' | '.join(issues_list) if issues_list else 'Improve this category',
+                'time_to_fix': '5-10 minutes'
+            })
+        elif score < 10:  # Content improvements
+            issues['content_improvements'].append({
+                'category': category,
+                'score': score,
+                'title': f'{category} Enhancement',
+                'impact': 'Polish for professional presentation',
+                'examples': [],
+                'fix_instructions': ' | '.join(issues_list) if issues_list else 'Improve this category',
+                'time_to_fix': '10-20 minutes'
+            })
+    
+    return issues
+
 def find_personal_pronouns(lines: List[str]) -> Dict[str, Any]:
     """Find personal pronouns (I, me, my, myself) in resume lines"""
     pronouns = ['I ', 'me ', 'my ', 'myself', 'My ', 'Me ']
@@ -7126,6 +7181,13 @@ def generate_comprehensive_issues_report(analysis_result: Dict[str, Any]) -> str
         
         # Extract specific issues with examples from the resume
         specific_issues = extract_specific_issues_with_examples(analysis_result)
+        
+        # Check if specific issues extraction failed
+        if 'error' in specific_issues:
+            logger.warning(f"⚠️ Specific issues extraction failed: {specific_issues['error']}")
+            # Fall back to generating issues from basic detailed_analysis
+            specific_issues = create_basic_issues_from_analysis(detailed_analysis)
+            logger.info(f"📄 Generated {len(specific_issues.get('critical_issues', []))} basic issues as fallback")
         
         # Extract main data
         score = analysis_result.get('ats_score', 0)
@@ -7582,11 +7644,20 @@ class handler(BaseHTTPRequestHandler):
             
             # Generate comprehensive TXT issues report
             try:
+                logger.info("🔍 Starting comprehensive TXT issues report generation...")
                 comprehensive_report = generate_comprehensive_issues_report(analysis_result)
-                analysis_result['comprehensive_issues_report'] = comprehensive_report
-                logger.info("✅ Comprehensive TXT issues report generated successfully")
+                
+                if comprehensive_report and len(comprehensive_report) > 100:
+                    analysis_result['comprehensive_issues_report'] = comprehensive_report
+                    logger.info(f"✅ Comprehensive TXT issues report generated successfully ({len(comprehensive_report)} chars)")
+                else:
+                    logger.warning("⚠️ Comprehensive report generated but appears empty or too short")
+                    analysis_result['comprehensive_issues_report'] = None
+                    
             except Exception as report_error:
-                logger.warning(f"Failed to generate comprehensive report: {str(report_error)}")
+                logger.error(f"❌ Failed to generate comprehensive report: {str(report_error)}")
+                import traceback
+                logger.error(f"📍 Traceback: {traceback.format_exc()}")
                 analysis_result['comprehensive_issues_report'] = None
             
             # Filter results based on request parameters
