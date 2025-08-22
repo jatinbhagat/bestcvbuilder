@@ -122,10 +122,10 @@ async function updateModalCTAButton(modalBtn) {
         
         if (shouldBypass) {
             modalBtn.innerHTML = '🚀 Fix for Free - Instant Results';
-            modalBtn.className = 'flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold py-2.5 px-4 rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-300 shadow-lg text-sm';
+            modalBtn.className = 'flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold py-3 px-6 rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-300 shadow-lg text-base';
         } else {
             modalBtn.innerHTML = '🚀 Fix This - ₹99';
-            modalBtn.className = 'flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold py-2.5 px-4 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg text-sm';
+            modalBtn.className = 'flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg text-base';
         }
     } catch (error) {
         console.error('⚠️ Failed to update modal CTA button:', error);

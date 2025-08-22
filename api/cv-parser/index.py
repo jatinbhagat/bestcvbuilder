@@ -6576,25 +6576,406 @@ def analyze_resume_content(file_url: str) -> Dict[str, Any]:
         raise ATSAnalysisError(f"An unexpected error occurred during analysis: {str(e)}")
 
 
+def extract_specific_issues_with_examples(analysis_result: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Extract specific issues from resume content with exact examples and line references
+    
+    Args:
+        analysis_result: Complete analysis result dictionary containing content and scores
+        
+    Returns:
+        Dictionary with categorized issues including specific examples and fix suggestions
+    """
+    try:
+        content = analysis_result.get('content', '')
+        detailed_analysis = analysis_result.get('detailedAnalysis', {})
+        
+        if not content:
+            return {'error': 'No resume content available for detailed analysis'}
+        
+        # Split content into lines for reference
+        lines = content.split('\n')
+        issues_with_examples = {
+            'critical_issues': [],
+            'quick_wins': [],
+            'content_improvements': [],
+            'total_specific_examples': 0
+        }
+        
+        # 1. DATES ISSUES - Find inconsistent date formats
+        if 'dates' in detailed_analysis and detailed_analysis['dates'].get('score', 10) < 8:
+            date_issues = find_date_formatting_issues(lines)
+            if date_issues:
+                issues_with_examples['critical_issues'].append({
+                    'category': 'Dates',
+                    'score': detailed_analysis['dates'].get('score', 0),
+                    'title': 'Inconsistent Date Formatting',
+                    'severity': 'CRITICAL',
+                    'impact': 'Major ATS blocker - prevents proper parsing',
+                    'examples': date_issues['examples'],
+                    'fix_instructions': date_issues['fix_instructions'],
+                    'time_to_fix': '10-15 minutes',
+                    'score_impact': '+8 to +15 points'
+                })
+        
+        # 2. VERB REPETITION - Find repeated action verbs
+        if 'repetition' in detailed_analysis and detailed_analysis['repetition'].get('score', 10) < 6:
+            verb_issues = find_verb_repetition_issues(lines)
+            if verb_issues:
+                issues_with_examples['critical_issues'].append({
+                    'category': 'Repetition',
+                    'score': detailed_analysis['repetition'].get('score', 0),
+                    'title': 'Repeated Action Verbs',
+                    'severity': 'HIGH',
+                    'impact': 'Reduces impact and shows limited vocabulary',
+                    'examples': verb_issues['examples'],
+                    'fix_instructions': verb_issues['fix_instructions'],
+                    'time_to_fix': '15-20 minutes',
+                    'score_impact': '+5 to +10 points'
+                })
+        
+        # 3. CONTACT INFO - Find missing contact elements
+        if 'contact_details' in detailed_analysis and detailed_analysis['contact_details'].get('score', 10) < 10:
+            contact_issues = find_contact_info_issues(lines)
+            if contact_issues:
+                issues_with_examples['quick_wins'].append({
+                    'category': 'Contact Details',
+                    'score': detailed_analysis['contact_details'].get('score', 8),
+                    'title': 'Missing Contact Information',
+                    'severity': 'QUICK_WIN',
+                    'impact': 'Easy fix for better ATS compatibility',
+                    'examples': contact_issues['examples'],
+                    'fix_instructions': contact_issues['fix_instructions'],
+                    'time_to_fix': '2-5 minutes',
+                    'score_impact': '+1 to +3 points'
+                })
+        
+        # 4. QUANTIFIABLE ACHIEVEMENTS - Find vague statements
+        if 'quantifiable_achievements' in detailed_analysis and detailed_analysis['quantifiable_achievements'].get('score', 10) < 9:
+            achievement_issues = find_quantification_issues(lines)
+            if achievement_issues:
+                issues_with_examples['content_improvements'].append({
+                    'category': 'Quantifiable Achievements',
+                    'score': detailed_analysis['quantifiable_achievements'].get('score', 8),
+                    'title': 'Vague Achievement Statements',
+                    'severity': 'IMPROVEMENT',
+                    'impact': 'Makes accomplishments more compelling and measurable',
+                    'examples': achievement_issues['examples'],
+                    'fix_instructions': achievement_issues['fix_instructions'],
+                    'time_to_fix': '20-30 minutes',
+                    'score_impact': '+2 to +5 points'
+                })
+        
+        # Count total examples
+        issues_with_examples['total_specific_examples'] = sum([
+            len(category) for category in [
+                issues_with_examples['critical_issues'],
+                issues_with_examples['quick_wins'],
+                issues_with_examples['content_improvements']
+            ]
+        ])
+        
+        logger.info(f"✅ Extracted {issues_with_examples['total_specific_examples']} specific issues with examples")
+        return issues_with_examples
+        
+    except Exception as e:
+        logger.error(f"Error extracting specific issues: {str(e)}")
+        return {'error': f'Failed to extract specific issues: {str(e)}'}
+
+def find_date_formatting_issues(lines: List[str]) -> Dict[str, Any]:
+    """Find specific date formatting inconsistencies in resume"""
+    import re
+    
+    date_patterns = {
+        'MM/YYYY': r'\b(0[1-9]|1[0-2])/\d{4}\b',          # 01/2020
+        'MM-YYYY': r'\b(0[1-9]|1[0-2])-\d{4}\b',          # 01-2020
+        'YYYY': r'\b\d{4}\b(?!-\d|\d)',                     # 2020
+        'Mon YYYY': r'\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}\b',  # Jan 2020
+        'Month YYYY': r'\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}\b',
+        'YYYY-YYYY': r'\b\d{4}-\d{4}\b',                   # 2020-2022
+        'MM/YY': r'\b(0[1-9]|1[0-2])/\d{2}\b'             # 01/20
+    }
+    
+    found_formats = {}
+    examples = []
+    
+    for line_num, line in enumerate(lines, 1):
+        line_clean = line.strip()
+        if len(line_clean) < 5:  # Skip very short lines
+            continue
+            
+        for format_name, pattern in date_patterns.items():
+            matches = re.findall(pattern, line_clean)
+            if matches:
+                if format_name not in found_formats:
+                    found_formats[format_name] = []
+                found_formats[format_name].extend([{
+                    'line_number': line_num,
+                    'line_text': line_clean,
+                    'date_found': match if isinstance(match, str) else matches[0],
+                    'format': format_name
+                } for match in matches])
+    
+    if len(found_formats) <= 1:
+        return {}  # No inconsistency found
+    
+    # Create examples showing inconsistency
+    for format_name, format_examples in found_formats.items():
+        for example in format_examples[:2]:  # Limit to 2 examples per format
+            examples.append({
+                'issue': f"Uses {format_name} format",
+                'line_number': example['line_number'],
+                'line_text': example['line_text'],
+                'problematic_text': example['date_found']
+            })
+    
+    # Generate fix instructions
+    recommended_format = 'MM/YYYY'  # Most ATS-friendly format
+    fix_instructions = [
+        f"Use consistent {recommended_format} format throughout your resume",
+        "Examples of fixes:"
+    ]
+    
+    for format_name, format_examples in found_formats.items():
+        if format_name != recommended_format:
+            example = format_examples[0]
+            original = example['date_found']
+            # Convert to recommended format (simplified conversion)
+            if format_name == 'Mon YYYY':
+                month_map = {'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04', 'May': '05', 'Jun': '06',
+                           'Jul': '07', 'Aug': '08', 'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'}
+                parts = original.split()
+                if len(parts) == 2 and parts[0] in month_map:
+                    converted = f"{month_map[parts[0]]}/{parts[1]}"
+                    fix_instructions.append(f"• Change \"{original}\" → \"{converted}\"")
+            elif format_name == 'YYYY-YYYY':
+                parts = original.split('-')
+                if len(parts) == 2:
+                    converted = f"01/{parts[0]} - 12/{parts[1]}"
+                    fix_instructions.append(f"• Change \"{original}\" → \"{converted}\"")
+    
+    return {
+        'examples': examples[:6],  # Limit to 6 examples
+        'fix_instructions': fix_instructions,
+        'formats_found': list(found_formats.keys())
+    }
+
+def find_verb_repetition_issues(lines: List[str]) -> Dict[str, Any]:
+    """Find repeated action verbs with specific examples"""
+    import re
+    from collections import defaultdict
+    
+    # Action verbs to check for repetition
+    action_verbs = [
+        'managed', 'developed', 'created', 'implemented', 'designed', 'executed',
+        'delivered', 'coordinated', 'supervised', 'administered', 'maintained',
+        'organized', 'planned', 'handled', 'processed', 'worked', 'helped'
+    ]
+    
+    verb_occurrences = defaultdict(list)
+    
+    for line_num, line in enumerate(lines, 1):
+        line_clean = line.strip().lower()
+        if len(line_clean) < 10:  # Skip very short lines
+            continue
+            
+        for verb in action_verbs:
+            # Look for verb at start of bullet points or sentences
+            pattern = rf'\b{verb}(?:d|ed|ing|s)?\b'
+            if re.search(pattern, line_clean):
+                verb_occurrences[verb].append({
+                    'line_number': line_num,
+                    'line_text': line.strip(),
+                    'verb_used': verb
+                })
+    
+    # Find verbs used more than once
+    repeated_verbs = {verb: occurrences for verb, occurrences in verb_occurrences.items() if len(occurrences) > 1}
+    
+    if not repeated_verbs:
+        return {}
+    
+    examples = []
+    fix_instructions = ["Replace repeated verbs with stronger alternatives:"]
+    
+    # Verb alternatives mapping
+    verb_alternatives = {
+        'managed': ['Led', 'Spearheaded', 'Orchestrated', 'Directed', 'Guided'],
+        'developed': ['Engineered', 'Architected', 'Crafted', 'Built', 'Designed'],
+        'created': ['Established', 'Founded', 'Initiated', 'Launched', 'Pioneered'],
+        'implemented': ['Deployed', 'Executed', 'Rolled out', 'Introduced', 'Installed'],
+        'coordinated': ['Orchestrated', 'Facilitated', 'Synchronized', 'Organized', 'Harmonized'],
+        'worked': ['Collaborated', 'Partnered', 'Engaged', 'Contributed', 'Participated']
+    }
+    
+    for verb, occurrences in list(repeated_verbs.items())[:3]:  # Limit to top 3 repeated verbs
+        count = len(occurrences)
+        examples.append({
+            'issue': f'"{verb.title()}" used {count} times',
+            'occurrences': occurrences[:3],  # Show up to 3 occurrences
+            'alternatives': verb_alternatives.get(verb, ['Led', 'Executed', 'Achieved'])
+        })
+        
+        alternatives = verb_alternatives.get(verb, ['Led', 'Executed', 'Achieved'])
+        fix_instructions.append(f"• \"{verb.title()}\" → Use: {', '.join(alternatives[:3])}")
+    
+    return {
+        'examples': examples,
+        'fix_instructions': fix_instructions,
+        'repeated_verbs_count': len(repeated_verbs)
+    }
+
+def find_contact_info_issues(lines: List[str]) -> Dict[str, Any]:
+    """Find missing contact information elements"""
+    import re
+    
+    # Check first 10 lines for contact info
+    header_lines = lines[:10]
+    header_text = '\n'.join(header_lines)
+    
+    contact_elements = {
+        'email': bool(re.search(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', header_text, re.IGNORECASE)),
+        'phone': bool(re.search(r'(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}', header_text)),
+        'linkedin': bool(re.search(r'linkedin\.com|in/[\w-]+', header_text, re.IGNORECASE)),
+        'location': bool(re.search(r'\b\w+,\s*\w+\b|\b\w+\s+\w+,\s*\w+\b', header_text))
+    }
+    
+    missing_elements = [element for element, present in contact_elements.items() if not present]
+    
+    if not missing_elements:
+        return {}
+    
+    examples = []
+    fix_instructions = ["Add missing contact information to your header:"]
+    
+    for element in missing_elements:
+        if element == 'linkedin':
+            examples.append({
+                'issue': 'LinkedIn profile URL missing',
+                'line_number': 'Header section',
+                'impact': 'LinkedIn increases profile visibility to recruiters'
+            })
+            fix_instructions.append("• Add: linkedin.com/in/your-username")
+            
+        elif element == 'phone':
+            examples.append({
+                'issue': 'Phone number missing',
+                'line_number': 'Header section', 
+                'impact': 'Phone contact essential for follow-ups'
+            })
+            fix_instructions.append("• Add: Your phone number in format +1 (XXX) XXX-XXXX")
+            
+        elif element == 'location':
+            examples.append({
+                'issue': 'Location/City missing',
+                'line_number': 'Header section',
+                'impact': 'Location helps with local job matching'
+            })
+            fix_instructions.append("• Add: City, State or City, Country")
+    
+    return {
+        'examples': examples,
+        'fix_instructions': fix_instructions,
+        'missing_count': len(missing_elements)
+    }
+
+def find_quantification_issues(lines: List[str]) -> Dict[str, Any]:
+    """Find statements that need quantification"""
+    import re
+    
+    # Vague terms that should be quantified
+    vague_terms = [
+        'significantly', 'substantially', 'considerably', 'greatly', 'highly',
+        'many', 'several', 'multiple', 'various', 'numerous', 'large', 'small',
+        'improved', 'increased', 'reduced', 'enhanced', 'optimized', 'boosted'
+    ]
+    
+    examples = []
+    
+    for line_num, line in enumerate(lines, 1):
+        line_clean = line.strip()
+        if len(line_clean) < 15:  # Skip very short lines
+            continue
+            
+        # Check if line contains vague terms and lacks numbers
+        has_vague_term = any(re.search(rf'\b{term}\b', line_clean, re.IGNORECASE) for term in vague_terms)
+        has_numbers = bool(re.search(r'\d+[%$]?|\$\d+|[0-9,]+\s*(users|clients|projects|hours|days|months|years)', line_clean))
+        
+        if has_vague_term and not has_numbers:
+            # Find which vague term was used
+            vague_found = []
+            for term in vague_terms:
+                if re.search(rf'\b{term}\b', line_clean, re.IGNORECASE):
+                    vague_found.append(term)
+            
+            examples.append({
+                'issue': 'Vague statement needs quantification',
+                'line_number': line_num,
+                'line_text': line_clean,
+                'vague_terms': vague_found[:2],  # Show up to 2 vague terms
+                'suggested_metrics': get_suggested_metrics_for_line(line_clean)
+            })
+    
+    if not examples:
+        return {}
+    
+    fix_instructions = [
+        "Add specific numbers to quantify your achievements:",
+        "Examples of quantifiable metrics:",
+        "• Performance: '40% improvement', '25% faster'",
+        "• Scale: '50 users', '10 projects', '$100K budget'",
+        "• Time: '6-month project', '2 weeks ahead of schedule'",
+        "• Team: '5-person team', '15 stakeholders'"
+    ]
+    
+    return {
+        'examples': examples[:5],  # Limit to 5 examples
+        'fix_instructions': fix_instructions,
+        'vague_statements_count': len(examples)
+    }
+
+def get_suggested_metrics_for_line(line_text: str) -> List[str]:
+    """Suggest appropriate metrics based on line content"""
+    line_lower = line_text.lower()
+    suggestions = []
+    
+    if any(word in line_lower for word in ['performance', 'speed', 'efficiency']):
+        suggestions.extend(['% improvement', 'time reduction', 'speed increase'])
+    elif any(word in line_lower for word in ['team', 'people', 'staff']):
+        suggestions.extend(['team size', 'number of people', 'reports managed'])
+    elif any(word in line_lower for word in ['project', 'initiative']):
+        suggestions.extend(['project count', 'timeline', 'budget size'])
+    elif any(word in line_lower for word in ['revenue', 'sales', 'cost']):
+        suggestions.extend(['dollar amount', '% increase', 'ROI'])
+    else:
+        suggestions.extend(['specific numbers', 'percentages', 'time periods'])
+    
+    return suggestions[:3]  # Return top 3 suggestions
+
 def generate_comprehensive_issues_report(analysis_result: Dict[str, Any]) -> str:
     """
-    Generate comprehensive TXT report of all ATS issues across categories
+    Generate comprehensive TXT report of all ATS issues with specific examples from resume
     
     Args:
         analysis_result: Complete analysis result dictionary
         
     Returns:
-        Formatted text report with all issues and actionable fixes
+        Formatted text report with specific issues and actionable fixes with examples
     """
     try:
-        logger.info("🔍 Generating comprehensive TXT issues report...")
+        logger.info("🔍 Generating enhanced TXT issues report with specific examples...")
+        
+        # Extract specific issues with examples from the resume
+        specific_issues = extract_specific_issues_with_examples(analysis_result)
         
         # Extract main data
         score = analysis_result.get('ats_score', 0)
         detailed_analysis = analysis_result.get('detailedAnalysis', {})
-        critical_issues = analysis_result.get('critical_issues', [])
-        quick_wins = analysis_result.get('quick_wins', [])
-        content_improvements = analysis_result.get('content_improvements', [])
+        
+        # Use the enhanced issues with examples
+        critical_issues = specific_issues.get('critical_issues', [])
+        quick_wins = specific_issues.get('quick_wins', [])
+        content_improvements = specific_issues.get('content_improvements', [])
         
         # Build comprehensive report
         report_lines = []
@@ -6602,28 +6983,40 @@ def generate_comprehensive_issues_report(analysis_result: Dict[str, Any]) -> str
         # Header section
         report_lines.extend([
             "=" * 80,
-            "ATS COMPREHENSIVE ISSUES REPORT",
+            "ATS SPECIFIC ISSUES REPORT WITH RESUME EXAMPLES",
             "=" * 80,
             f"Current ATS Score: {score}/100",
             f"Report Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
             "",
-            "EXECUTIVE SUMMARY",
+            "EXECUTIVE DASHBOARD",
             "-" * 40
         ])
         
-        # Categorize issues by severity
-        critical_count = len([i for i in critical_issues if i.get('score', 10) <= 5])
-        important_count = len([i for i in critical_issues + quick_wins if 6 <= i.get('score', 10) <= 7])
-        moderate_count = len([i for i in critical_issues + quick_wins + content_improvements if 8 <= i.get('score', 10) <= 9])
+        # Count issues based on the new structure
+        critical_count = len(critical_issues)
+        quick_wins_count = len(quick_wins)
+        improvements_count = len(content_improvements)
+        total_issues = critical_count + quick_wins_count + improvements_count
+        
+        # Calculate estimated time
+        total_time_minutes = (critical_count * 7) + (quick_wins_count * 3) + (improvements_count * 12)
+        hours = total_time_minutes // 60
+        minutes = total_time_minutes % 60
+        time_estimate = f"{hours}h {minutes}m" if hours > 0 else f"{minutes} minutes"
         
         report_lines.extend([
-            f"• Critical Issues (Score 0-5): {critical_count}",
-            f"• Important Issues (Score 6-7): {important_count}",
-            f"• Moderate Issues (Score 8-9): {moderate_count}",
-            f"• Total Issues Found: {critical_count + important_count + moderate_count}",
+            f"🚨 Critical Issues (High Impact): {critical_count}",
+            f"⚡ Quick Wins (Easy Fixes): {quick_wins_count}",
+            f"📝 Content Improvements: {improvements_count}",
+            f"📊 Total Specific Issues Found: {total_issues}",
+            f"⏱️  Estimated Fix Time: {time_estimate}",
             "",
-            "PRIORITY ACTION MATRIX",
-            "-" * 40
+            "🎯 PRIORITY ACTION PLAN",
+            "-" * 40,
+            "1. Fix Critical Issues first (biggest ATS score boost)",
+            "2. Complete Quick Wins next (easy points)",
+            "3. Work on Content Improvements for polish",
+            ""
         ])
         
         # Critical Issues Section
@@ -6639,17 +7032,38 @@ def generate_comprehensive_issues_report(analysis_result: Dict[str, Any]) -> str
                 title = issue.get('title', 'Issue')
                 description = issue.get('description', 'No description available')
                 score = issue.get('score', 'N/A')
+                time_to_fix = issue.get('time_to_fix', '5-10 minutes')
+                
+                # Enhanced issue display with specific examples
+                problematic_text = issue.get('problematic_text', '')
+                line_number = issue.get('line_number', '')
                 fix_suggestion = issue.get('fix_suggestion', 'No fix suggestion available')
-                time_to_fix = issue.get('time_to_fix', 'Unknown time')
                 
                 report_lines.extend([
                     f"{i}. {category.upper()}: {title}",
-                    f"   Current Score: {score}/10",
-                    f"   Issue: {description}",
-                    f"   Fix: {fix_suggestion}",
-                    f"   Time Required: {time_to_fix}",
+                    f"   Current Score: {score}/10 | Time to Fix: {time_to_fix}",
+                    f"   Problem: {description}",
                     ""
                 ])
+                
+                # Add specific example if available
+                if problematic_text and line_number:
+                    report_lines.extend([
+                        f"   📍 FOUND IN YOUR RESUME (Line {line_number}):",
+                        f"   \"{problematic_text}\"",
+                        ""
+                    ])
+                
+                # Add specific fix with before/after if available
+                if fix_suggestion:
+                    report_lines.extend([
+                        f"   ✅ SPECIFIC FIX:",
+                        f"   {fix_suggestion}",
+                        ""
+                    ])
+                
+                report_lines.append("-" * 50)
+                report_lines.append("")
         
         # Quick Wins Section
         if quick_wins:
@@ -6664,17 +7078,38 @@ def generate_comprehensive_issues_report(analysis_result: Dict[str, Any]) -> str
                 title = issue.get('title', 'Issue')
                 description = issue.get('description', 'No description available')
                 score = issue.get('score', 'N/A')
+                time_to_fix = issue.get('time_to_fix', '2-5 minutes')
+                
+                # Enhanced issue display with specific examples
+                problematic_text = issue.get('problematic_text', '')
+                line_number = issue.get('line_number', '')
                 fix_suggestion = issue.get('fix_suggestion', 'No fix suggestion available')
-                time_to_fix = issue.get('time_to_fix', 'Unknown time')
                 
                 report_lines.extend([
                     f"{i}. {category.upper()}: {title}",
-                    f"   Current Score: {score}/10",
-                    f"   Issue: {description}",
-                    f"   Fix: {fix_suggestion}",
-                    f"   Time Required: {time_to_fix}",
+                    f"   Current Score: {score}/10 | Time to Fix: {time_to_fix}",
+                    f"   Problem: {description}",
                     ""
                 ])
+                
+                # Add specific example if available
+                if problematic_text and line_number:
+                    report_lines.extend([
+                        f"   📍 FOUND IN YOUR RESUME (Line {line_number}):",
+                        f"   \"{problematic_text}\"",
+                        ""
+                    ])
+                
+                # Add specific fix with before/after if available
+                if fix_suggestion:
+                    report_lines.extend([
+                        f"   ✅ QUICK FIX:",
+                        f"   {fix_suggestion}",
+                        ""
+                    ])
+                
+                report_lines.append("-" * 50)
+                report_lines.append("")
         
         # Content Improvements Section
         if content_improvements:
@@ -6689,17 +7124,38 @@ def generate_comprehensive_issues_report(analysis_result: Dict[str, Any]) -> str
                 title = issue.get('title', 'Issue')
                 description = issue.get('description', 'No description available')
                 score = issue.get('score', 'N/A')
+                time_to_fix = issue.get('time_to_fix', '10-15 minutes')
+                
+                # Enhanced issue display with specific examples
+                problematic_text = issue.get('problematic_text', '')
+                line_number = issue.get('line_number', '')
                 fix_suggestion = issue.get('fix_suggestion', 'No fix suggestion available')
-                time_to_fix = issue.get('time_to_fix', 'Unknown time')
                 
                 report_lines.extend([
                     f"{i}. {category.upper()}: {title}",
-                    f"   Current Score: {score}/10",
-                    f"   Issue: {description}",
-                    f"   Fix: {fix_suggestion}",
-                    f"   Time Required: {time_to_fix}",
+                    f"   Current Score: {score}/10 | Time to Fix: {time_to_fix}",
+                    f"   Improvement: {description}",
                     ""
                 ])
+                
+                # Add specific example if available
+                if problematic_text and line_number:
+                    report_lines.extend([
+                        f"   📍 FOUND IN YOUR RESUME (Line {line_number}):",
+                        f"   \"{problematic_text}\"",
+                        ""
+                    ])
+                
+                # Add specific fix with before/after if available
+                if fix_suggestion:
+                    report_lines.extend([
+                        f"   ✅ ENHANCEMENT SUGGESTION:",
+                        f"   {fix_suggestion}",
+                        ""
+                    ])
+                
+                report_lines.append("-" * 50)
+                report_lines.append("")
         
         # Category-by-Category Breakdown
         if detailed_analysis:
@@ -6736,27 +7192,42 @@ def generate_comprehensive_issues_report(analysis_result: Dict[str, Any]) -> str
                     
                     report_lines.append("")
         
-        # Action Steps Summary
+        # Final Action Summary
         report_lines.extend([
             "",
-            "🎯 RECOMMENDED ACTION STEPS",
+            "🎯 YOUR SPECIFIC ACTION CHECKLIST",
             "=" * 60,
-            "1. Start with Critical Issues (highest impact on ATS score)",
-            "2. Complete Quick Wins next (easy points for minimal effort)", 
-            "3. Work on Content Improvements for professional presentation",
-            "4. Test your updated resume with ATS scanning tools",
-            "5. Tailor keywords and content for each job application",
+            "Complete these fixes in the exact order shown above:",
             "",
-            "💡 PRO TIPS FOR SUCCESS",
+            f"Phase 1: Critical Issues ({critical_count} items) - Est: {(critical_count * 7)} min",
+            "→ Focus on ATS compatibility issues that are blocking your resume",
+            "",
+            f"Phase 2: Quick Wins ({quick_wins_count} items) - Est: {(quick_wins_count * 3)} min", 
+            "→ Easy formatting and structural improvements",
+            "",
+            f"Phase 3: Content Improvements ({improvements_count} items) - Est: {(improvements_count * 12)} min",
+            "→ Polish your professional presentation",
+            "",
+            f"Total estimated time: {time_estimate}",
+            "",
+            "🔥 IMMEDIATE NEXT STEPS",
             "=" * 60,
-            "• Use simple, standard section headings (Experience, Education, Skills)",
-            "• Include relevant keywords from job descriptions naturally",
-            "• Maintain consistent formatting throughout your resume",
-            "• Use standard fonts like Arial, Calibri, or Times New Roman",
-            "• Save and submit resumes in PDF format when possible",
-            "• Keep your resume to 1-2 pages maximum",
+            "1. Print this report or keep it open while editing",
+            "2. Work through Critical Issues first - they have the biggest impact",
+            "3. Use the exact line references to find problems in your resume",
+            "4. Replace the quoted text with the suggested improvements",
+            "5. Re-upload your resume to BestCVBuilder.com to see score improvement",
+            "",
+            "💡 PRO TIPS FOR MAXIMUM ATS SUCCESS",
+            "=" * 60,
+            "• Each fix shown above was found specifically in YOUR resume",
+            "• Line numbers help you locate exact problems quickly",
+            "• Before/after examples show you exactly what to change",
+            "• Completing ALL fixes typically boosts ATS scores by 20-35 points",
+            "• Save final resume as PDF to preserve formatting",
             "",
             "Generated by BestCVBuilder.com - Your ATS Optimization Partner",
+            "For more advanced optimization: https://bestcvbuilder.com",
             "=" * 80
         ])
         
