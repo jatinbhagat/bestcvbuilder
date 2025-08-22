@@ -7023,6 +7023,54 @@ def get_suggested_metrics_for_line(line_text: str) -> List[str]:
     
     return suggestions[:3]  # Return top 3 suggestions
 
+def create_basic_issues_from_analysis(detailed_analysis: Dict[str, Any]) -> Dict[str, Any]:
+    """Create basic issues structure from detailed analysis when specific extraction fails"""
+    issues = {
+        'critical_issues': [],
+        'quick_wins': [],
+        'content_improvements': []
+    }
+    
+    for category, data in detailed_analysis.items():
+        if not isinstance(data, dict) or 'score' not in data:
+            continue
+            
+        score = data.get('score', 10)
+        issues_list = data.get('issues', [])
+        
+        if score < 5:  # Critical
+            issues['critical_issues'].append({
+                'category': category,
+                'score': score,
+                'title': f'{category} Issues',
+                'impact': 'Critical ATS compatibility issue',
+                'examples': [],
+                'fix_instructions': ' | '.join(issues_list) if issues_list else 'Improve this category',
+                'time_to_fix': '10-15 minutes'
+            })
+        elif score < 8:  # Quick wins
+            issues['quick_wins'].append({
+                'category': category,
+                'score': score,
+                'title': f'{category} Improvements',
+                'impact': 'Easy fix for better ATS score',
+                'examples': [],
+                'fix_instructions': ' | '.join(issues_list) if issues_list else 'Improve this category',
+                'time_to_fix': '5-10 minutes'
+            })
+        elif score < 10:  # Content improvements
+            issues['content_improvements'].append({
+                'category': category,
+                'score': score,
+                'title': f'{category} Enhancement',
+                'impact': 'Polish for professional presentation',
+                'examples': [],
+                'fix_instructions': ' | '.join(issues_list) if issues_list else 'Improve this category',
+                'time_to_fix': '10-20 minutes'
+            })
+    
+    return issues
+
 def find_personal_pronouns(lines: List[str]) -> Dict[str, Any]:
     """Find personal pronouns (I, me, my, myself) in resume lines"""
     pronouns = ['I ', 'me ', 'my ', 'myself', 'My ', 'Me ']
@@ -7133,6 +7181,13 @@ def generate_comprehensive_issues_report(analysis_result: Dict[str, Any]) -> str
         
         # Extract specific issues with examples from the resume
         specific_issues = extract_specific_issues_with_examples(analysis_result)
+        
+        # Check if specific issues extraction failed
+        if 'error' in specific_issues:
+            logger.warning(f"⚠️ Specific issues extraction failed: {specific_issues['error']}")
+            # Fall back to generating issues from basic detailed_analysis
+            specific_issues = create_basic_issues_from_analysis(detailed_analysis)
+            logger.info(f"📄 Generated {len(specific_issues.get('critical_issues', []))} basic issues as fallback")
         
         # Extract main data
         score = analysis_result.get('ats_score', 0)
