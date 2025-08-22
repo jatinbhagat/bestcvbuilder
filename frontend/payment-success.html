@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Successful - BestCVBuilder</title>
+    <meta name="description" content="Payment successful! Download your comprehensive resume report.">
+    
+    <!-- Tailwind CSS -->
+    <link href="./css/output.css" rel="stylesheet">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            min-height: 100vh;
+        }
+        
+        .success-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 3rem;
+            text-align: center;
+        }
+        
+        .success-icon {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 2rem;
+            animation: success-bounce 0.6s ease-out;
+        }
+        
+        @keyframes success-bounce {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .download-btn {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 1rem 2rem;
+            font-size: 1.125rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4);
+            margin: 0.5rem;
+            min-width: 200px;
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(59, 130, 246, 0.4);
+        }
+        
+        .secondary-btn {
+            background: white;
+            color: #374151;
+            border: 2px solid #e5e7eb;
+        }
+        
+        .secondary-btn:hover {
+            background: #f9fafb;
+            border-color: #d1d5db;
+        }
+        
+        .order-details {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            text-align: left;
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+        
+        .detail-label {
+            color: #6b7280;
+        }
+        
+        .detail-value {
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="min-h-screen flex items-center justify-center p-4">
+        <div class="success-container">
+            <!-- Success Icon -->
+            <div class="success-icon">
+                <svg class="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                </svg>
+            </div>
+            
+            <!-- Success Message -->
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                🎉 Payment Successful!
+            </h1>
+            <p class="text-lg text-gray-600 mb-6">
+                Your order has been processed successfully. You can now download your comprehensive ATS issues report.
+            </p>
+            
+            <!-- Order Details -->
+            <div class="order-details" id="orderDetails" style="display: none;">
+                <h3 class="font-semibold text-gray-900 mb-3">Order Details</h3>
+                <div class="detail-row">
+                    <span class="detail-label">Order ID:</span>
+                    <span class="detail-value" id="orderIdDisplay">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Transaction ID:</span>
+                    <span class="detail-value" id="transactionIdDisplay">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Amount Paid:</span>
+                    <span class="detail-value">₹99</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Payment Status:</span>
+                    <span class="detail-value text-green-600">Success</span>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="space-y-4">
+                <button id="downloadReportBtn" class="download-btn">
+                    <span id="downloadText">📄 Download Your ATS Report</span>
+                    <span id="downloadSpinner" class="loading-spinner" style="display: none;"></span>
+                </button>
+                
+                <div class="flex gap-4 justify-center">
+                    <button onclick="window.location.href='./index.html'" class="download-btn secondary-btn">
+                        🏠 Analyze Another Resume
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Success Benefits -->
+            <div class="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 class="font-semibold text-blue-800 mb-2">✅ What You Get:</h4>
+                <ul class="text-sm text-blue-700 space-y-1 text-left">
+                    <li>• Complete ATS analysis across 30+ categories</li>
+                    <li>• Specific issues found in your resume with examples</li>
+                    <li>• Step-by-step fix instructions for each issue</li>
+                    <li>• Priority action matrix for maximum impact</li>
+                    <li>• Professional tips for ATS optimization</li>
+                </ul>
+            </div>
+            
+            <!-- Support -->
+            <div class="mt-6 text-center">
+                <p class="text-xs text-gray-500">
+                    Need help? Contact us at 
+                    <a href="mailto:support@bestcvbuilder.com" class="text-blue-600 hover:underline">
+                        support@bestcvbuilder.com
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let payuResponse = null;
+        let orderDetails = null;
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('💳 Payment success page loaded');
+            handlePaymentSuccess();
+            setupEventListeners();
+        });
+        
+        /**
+         * Handle payment success response from PayU
+         */
+        function handlePaymentSuccess() {
+            try {
+                // Get PayU response from URL parameters
+                const urlParams = new URLSearchParams(window.location.search);
+                payuResponse = {};
+                
+                // Extract PayU response parameters
+                ['txnid', 'amount', 'productinfo', 'firstname', 'email', 'status', 'hash', 'key', 'payuMoneyId', 'phone'].forEach(param => {
+                    payuResponse[param] = urlParams.get(param);
+                });
+                
+                console.log('💳 PayU Response:', payuResponse);
+                
+                // Display order details
+                displayOrderDetails();
+                
+                // Generate and prepare report for download
+                prepareReportForDownload();
+                
+            } catch (error) {
+                console.error('❌ Error handling payment success:', error);
+                showError('Error processing payment success. Please contact support.');
+            }
+        }
+        
+        /**
+         * Display order details from PayU response
+         */
+        function displayOrderDetails() {
+            try {
+                const orderDetailsDiv = document.getElementById('orderDetails');
+                const orderIdDisplay = document.getElementById('orderIdDisplay');
+                const transactionIdDisplay = document.getElementById('transactionIdDisplay');
+                
+                if (payuResponse.txnid) {
+                    orderIdDisplay.textContent = payuResponse.txnid;
+                }
+                
+                if (payuResponse.payuMoneyId) {
+                    transactionIdDisplay.textContent = payuResponse.payuMoneyId;
+                }
+                
+                orderDetailsDiv.style.display = 'block';
+                
+            } catch (error) {
+                console.error('❌ Error displaying order details:', error);
+            }
+        }
+        
+        /**
+         * Prepare comprehensive report for download
+         */
+        function prepareReportForDownload() {
+            try {
+                // Get analysis data from session storage
+                const analysisData = sessionStorage.getItem('atsAnalysis') || sessionStorage.getItem('pendingAnalysis');
+                
+                if (analysisData) {
+                    const parsedData = JSON.parse(analysisData);
+                    
+                    // Check if comprehensive report exists
+                    if (parsedData.comprehensive_issues_report) {
+                        sessionStorage.setItem('comprehensiveReport', parsedData.comprehensive_issues_report);
+                        console.log('✅ Comprehensive report ready for download');
+                    } else {
+                        // Generate basic report as fallback
+                        const basicReport = generateBasicReport(parsedData);
+                        sessionStorage.setItem('comprehensiveReport', basicReport);
+                        console.log('⚠️ Generated basic report as fallback');
+                    }
+                } else {
+                    console.error('❌ No analysis data found for report generation');
+                }
+                
+            } catch (error) {
+                console.error('❌ Error preparing report:', error);
+            }
+        }
+        
+        /**
+         * Generate basic report from analysis data
+         */
+        function generateBasicReport(analysisData) {
+            const score = analysisData.score || analysisData.ats_score || 0;
+            const detailed = analysisData.detailedAnalysis || analysisData.detailed_analysis || {};
+            
+            let report = `ATS ISSUES REPORT - PAID VERSION\n`;
+            report += `${'='.repeat(60)}\n`;
+            report += `Order ID: ${payuResponse.txnid || 'Unknown'}\n`;
+            report += `Transaction ID: ${payuResponse.payuMoneyId || 'Unknown'}\n`;
+            report += `Current ATS Score: ${score}/100\n`;
+            report += `Report Generated: ${new Date().toLocaleString()}\n\n`;
+            
+            report += `COMPREHENSIVE ISSUE ANALYSIS\n`;
+            report += `${'-'.repeat(40)}\n\n`;
+            
+            Object.entries(detailed).forEach(([category, data]) => {
+                if (data && data.score < 10) {
+                    const name = category.split('_').map(word => 
+                        word.charAt(0).toUpperCase() + word.slice(1)
+                    ).join(' ');
+                    
+                    report += `${name}: ${data.score}/10\n`;
+                    if (data.issues && data.issues.length > 0) {
+                        data.issues.forEach(issue => {
+                            report += `  • ${issue}\n`;
+                        });
+                    }
+                    if (data.suggestions && data.suggestions.length > 0) {
+                        data.suggestions.forEach(suggestion => {
+                            report += `  → ${suggestion}\n`;
+                        });
+                    }
+                    report += `\n`;
+                }
+            });
+            
+            report += `\nThank you for using BestCVBuilder!\n`;
+            report += `For support: support@bestcvbuilder.com\n`;
+            report += `Visit: https://bestcvbuilder.com\n`;
+            
+            return report;
+        }
+        
+        /**
+         * Setup event listeners
+         */
+        function setupEventListeners() {
+            const downloadBtn = document.getElementById('downloadReportBtn');
+            downloadBtn.addEventListener('click', downloadReport);
+        }
+        
+        /**
+         * Download the comprehensive report
+         */
+        function downloadReport() {
+            try {
+                const downloadText = document.getElementById('downloadText');
+                const downloadSpinner = document.getElementById('downloadSpinner');
+                
+                // Show loading state
+                downloadText.style.display = 'none';
+                downloadSpinner.style.display = 'inline-block';
+                
+                const reportText = sessionStorage.getItem('comprehensiveReport');
+                
+                if (reportText) {
+                    // Create blob and download
+                    const blob = new Blob([reportText], { type: 'text/plain' });
+                    const url = window.URL.createObjectURL(blob);
+                    
+                    // Create download link
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `ATS-Report-${payuResponse.txnid || 'PAID'}-${new Date().toISOString().split('T')[0]}.txt`;
+                    
+                    // Trigger download
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    
+                    // Clean up
+                    window.URL.revokeObjectURL(url);
+                    
+                    // Update button to show success
+                    setTimeout(() => {
+                        downloadText.textContent = '✅ Downloaded Successfully!';
+                        downloadText.style.display = 'inline';
+                        downloadSpinner.style.display = 'none';
+                        
+                        // Reset button after 3 seconds
+                        setTimeout(() => {
+                            downloadText.textContent = '📄 Download Your ATS Report';
+                        }, 3000);
+                    }, 1000);
+                } else {
+                    throw new Error('No report data available');
+                }
+                
+            } catch (error) {
+                console.error('❌ Download error:', error);
+                alert('Failed to download report. Please contact support.');
+                
+                // Reset button
+                const downloadText = document.getElementById('downloadText');
+                const downloadSpinner = document.getElementById('downloadSpinner');
+                downloadText.style.display = 'inline';
+                downloadSpinner.style.display = 'none';
+            }
+        }
+        
+        /**
+         * Show error message
+         */
+        function showError(message) {
+            console.error('❌ Error:', message);
+            alert(message);
+        }
+    </script>
+</body>
+</html>

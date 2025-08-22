@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Failed - BestCVBuilder</title>
+    <meta name="description" content="Payment failed. Please try again or contact support.">
+    
+    <!-- Tailwind CSS -->
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            min-height: 100vh;
+        }
+        
+        .failure-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 3rem;
+            text-align: center;
+        }
+        
+        .failure-icon {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 2rem;
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        .retry-btn {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 1rem 2rem;
+            font-size: 1.125rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.4);
+            margin: 0.5rem;
+            min-width: 200px;
+        }
+        
+        .retry-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(16, 185, 129, 0.4);
+        }
+        
+        .secondary-btn {
+            background: white;
+            color: #374151;
+            border: 2px solid #e5e7eb;
+        }
+        
+        .secondary-btn:hover {
+            background: #f9fafb;
+            border-color: #d1d5db;
+        }
+        
+        .failure-details {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            text-align: left;
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+        
+        .detail-label {
+            color: #6b7280;
+        }
+        
+        .detail-value {
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .error-reasons {
+            background: #fff7ed;
+            border-left: 4px solid #f59e0b;
+            padding: 1rem;
+            margin: 2rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+  <link rel="stylesheet" crossorigin href="/assets/output-BQoH_Vvs-v2.css">
+</head>
+<body>
+    <div class="min-h-screen flex items-center justify-center p-4">
+        <div class="failure-container">
+            <!-- Failure Icon -->
+            <div class="failure-icon">
+                <svg class="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                </svg>
+            </div>
+            
+            <!-- Failure Message -->
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                ❌ Payment Failed
+            </h1>
+            <p class="text-lg text-gray-600 mb-6">
+                Unfortunately, your payment could not be processed. Please try again or contact our support team.
+            </p>
+            
+            <!-- Failure Details -->
+            <div class="failure-details" id="failureDetails" style="display: none;">
+                <h3 class="font-semibold text-red-900 mb-3">Transaction Details</h3>
+                <div class="detail-row">
+                    <span class="detail-label">Order ID:</span>
+                    <span class="detail-value" id="orderIdDisplay">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Transaction ID:</span>
+                    <span class="detail-value" id="transactionIdDisplay">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Amount:</span>
+                    <span class="detail-value">₹99</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Status:</span>
+                    <span class="detail-value text-red-600" id="statusDisplay">Failed</span>
+                </div>
+                <div class="detail-row" id="errorReasonRow" style="display: none;">
+                    <span class="detail-label">Reason:</span>
+                    <span class="detail-value text-red-600" id="errorReasonDisplay">-</span>
+                </div>
+            </div>
+            
+            <!-- Common Reasons -->
+            <div class="error-reasons">
+                <h4 class="font-semibold text-amber-800 mb-2">💡 Common Reasons for Payment Failure:</h4>
+                <ul class="text-sm text-amber-700 space-y-1 text-left">
+                    <li>• Insufficient funds in your account</li>
+                    <li>• Card expired or blocked by bank</li>
+                    <li>• Incorrect card details entered</li>
+                    <li>• Network or connectivity issues</li>
+                    <li>• Daily transaction limit exceeded</li>
+                    <li>• International transactions not enabled</li>
+                </ul>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="space-y-4">
+                <button id="retryPaymentBtn" class="retry-btn">
+                    <span id="retryText">🔄 Retry Payment</span>
+                    <span id="retrySpinner" class="loading-spinner" style="display: none;"></span>
+                </button>
+                
+                <div class="flex gap-4 justify-center">
+                    <button onclick="window.location.href='./result.html'" class="retry-btn secondary-btn">
+                        ← Back to Results
+                    </button>
+                    <button onclick="window.location.href='./index.html'" class="retry-btn secondary-btn">
+                        🏠 Home
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Support Section -->
+            <div class="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <h4 class="font-semibold text-gray-800 mb-2">🆘 Need Help?</h4>
+                <p class="text-sm text-gray-600 mb-3">
+                    If the problem persists, our support team is here to help you.
+                </p>
+                <div class="space-y-2">
+                    <a href="mailto:support@bestcvbuilder.com" class="text-blue-600 hover:underline text-sm block">
+                        📧 support@bestcvbuilder.com
+                    </a>
+                    <a href="tel:+911234567890" class="text-blue-600 hover:underline text-sm block">
+                        📱 +91 1234 567 890
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Alternative Options -->
+            <div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 class="font-semibold text-blue-800 mb-2">💳 Alternative Payment Methods:</h4>
+                <ul class="text-sm text-blue-700 space-y-1 text-left">
+                    <li>• Try a different credit/debit card</li>
+                    <li>• Use UPI payments (faster & secure)</li>
+                    <li>• Net banking from your bank</li>
+                    <li>• Digital wallets (PayPal, Paytm, etc.)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let payuResponse = null;
+        let orderDetails = null;
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('💳 Payment failure page loaded');
+            handlePaymentFailure();
+            setupEventListeners();
+        });
+        
+        /**
+         * Handle payment failure response from PayU
+         */
+        function handlePaymentFailure() {
+            try {
+                // Get PayU response from URL parameters
+                const urlParams = new URLSearchParams(window.location.search);
+                payuResponse = {};
+                
+                // Extract PayU response parameters
+                ['txnid', 'amount', 'productinfo', 'firstname', 'email', 'status', 'hash', 'key', 'payuMoneyId', 'phone', 'error', 'error_Message'].forEach(param => {
+                    payuResponse[param] = urlParams.get(param);
+                });
+                
+                console.log('💳 PayU Failure Response:', payuResponse);
+                
+                // Display failure details
+                displayFailureDetails();
+                
+            } catch (error) {
+                console.error('❌ Error handling payment failure:', error);
+            }
+        }
+        
+        /**
+         * Display failure details from PayU response
+         */
+        function displayFailureDetails() {
+            try {
+                const failureDetailsDiv = document.getElementById('failureDetails');
+                const orderIdDisplay = document.getElementById('orderIdDisplay');
+                const transactionIdDisplay = document.getElementById('transactionIdDisplay');
+                const statusDisplay = document.getElementById('statusDisplay');
+                const errorReasonRow = document.getElementById('errorReasonRow');
+                const errorReasonDisplay = document.getElementById('errorReasonDisplay');
+                
+                if (payuResponse.txnid) {
+                    orderIdDisplay.textContent = payuResponse.txnid;
+                }
+                
+                if (payuResponse.payuMoneyId) {
+                    transactionIdDisplay.textContent = payuResponse.payuMoneyId;
+                } else if (payuResponse.txnid) {
+                    transactionIdDisplay.textContent = 'N/A';
+                }
+                
+                if (payuResponse.status) {
+                    statusDisplay.textContent = payuResponse.status;
+                }
+                
+                // Show error reason if available
+                const errorReason = payuResponse.error_Message || payuResponse.error;
+                if (errorReason) {
+                    errorReasonDisplay.textContent = errorReason;
+                    errorReasonRow.style.display = 'flex';
+                }
+                
+                failureDetailsDiv.style.display = 'block';
+                
+            } catch (error) {
+                console.error('❌ Error displaying failure details:', error);
+            }
+        }
+        
+        /**
+         * Setup event listeners
+         */
+        function setupEventListeners() {
+            const retryBtn = document.getElementById('retryPaymentBtn');
+            retryBtn.addEventListener('click', retryPayment);
+        }
+        
+        /**
+         * Retry payment with same order details
+         */
+        function retryPayment() {
+            try {
+                const retryText = document.getElementById('retryText');
+                const retrySpinner = document.getElementById('retrySpinner');
+                
+                // Show loading state
+                retryText.style.display = 'none';
+                retrySpinner.style.display = 'inline-block';
+                
+                // Get original order data from session storage
+                const pendingAnalysis = sessionStorage.getItem('pendingAnalysis');
+                if (pendingAnalysis && payuResponse.txnid) {
+                    // Store the order ID for retry
+                    sessionStorage.setItem('retryOrderId', payuResponse.txnid);
+                    
+                    // Redirect back to create-order page to retry
+                    setTimeout(() => {
+                        window.location.href = './create-order.html';
+                    }, 1000);
+                } else {
+                    // Fallback - redirect to results page
+                    setTimeout(() => {
+                        window.location.href = './result.html';
+                    }, 1000);
+                }
+                
+            } catch (error) {
+                console.error('❌ Retry payment error:', error);
+                alert('Failed to retry payment. Please go back to results and try again.');
+                
+                // Reset button
+                const retryText = document.getElementById('retryText');
+                const retrySpinner = document.getElementById('retrySpinner');
+                retryText.style.display = 'inline';
+                retrySpinner.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

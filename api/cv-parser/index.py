@@ -18,6 +18,7 @@ import math
 import uuid
 import gc
 import sys
+from datetime import datetime
 
 # Configure logging first
 logging.basicConfig(level=logging.INFO)
@@ -6574,6 +6575,202 @@ def analyze_resume_content(file_url: str) -> Dict[str, Any]:
         logger.error(f"Traceback: {traceback.format_exc()}")
         raise ATSAnalysisError(f"An unexpected error occurred during analysis: {str(e)}")
 
+
+def generate_comprehensive_issues_report(analysis_result: Dict[str, Any]) -> str:
+    """
+    Generate comprehensive TXT report of all ATS issues across categories
+    
+    Args:
+        analysis_result: Complete analysis result dictionary
+        
+    Returns:
+        Formatted text report with all issues and actionable fixes
+    """
+    try:
+        logger.info("🔍 Generating comprehensive TXT issues report...")
+        
+        # Extract main data
+        score = analysis_result.get('ats_score', 0)
+        detailed_analysis = analysis_result.get('detailedAnalysis', {})
+        critical_issues = analysis_result.get('critical_issues', [])
+        quick_wins = analysis_result.get('quick_wins', [])
+        content_improvements = analysis_result.get('content_improvements', [])
+        
+        # Build comprehensive report
+        report_lines = []
+        
+        # Header section
+        report_lines.extend([
+            "=" * 80,
+            "ATS COMPREHENSIVE ISSUES REPORT",
+            "=" * 80,
+            f"Current ATS Score: {score}/100",
+            f"Report Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            "",
+            "EXECUTIVE SUMMARY",
+            "-" * 40
+        ])
+        
+        # Categorize issues by severity
+        critical_count = len([i for i in critical_issues if i.get('score', 10) <= 5])
+        important_count = len([i for i in critical_issues + quick_wins if 6 <= i.get('score', 10) <= 7])
+        moderate_count = len([i for i in critical_issues + quick_wins + content_improvements if 8 <= i.get('score', 10) <= 9])
+        
+        report_lines.extend([
+            f"• Critical Issues (Score 0-5): {critical_count}",
+            f"• Important Issues (Score 6-7): {important_count}",
+            f"• Moderate Issues (Score 8-9): {moderate_count}",
+            f"• Total Issues Found: {critical_count + important_count + moderate_count}",
+            "",
+            "PRIORITY ACTION MATRIX",
+            "-" * 40
+        ])
+        
+        # Critical Issues Section
+        if critical_issues:
+            report_lines.extend([
+                "",
+                "🚨 CRITICAL ISSUES (IMMEDIATE ATTENTION REQUIRED)",
+                "=" * 60
+            ])
+            
+            for i, issue in enumerate(critical_issues, 1):
+                category = issue.get('category', 'General')
+                title = issue.get('title', 'Issue')
+                description = issue.get('description', 'No description available')
+                score = issue.get('score', 'N/A')
+                fix_suggestion = issue.get('fix_suggestion', 'No fix suggestion available')
+                time_to_fix = issue.get('time_to_fix', 'Unknown time')
+                
+                report_lines.extend([
+                    f"{i}. {category.upper()}: {title}",
+                    f"   Current Score: {score}/10",
+                    f"   Issue: {description}",
+                    f"   Fix: {fix_suggestion}",
+                    f"   Time Required: {time_to_fix}",
+                    ""
+                ])
+        
+        # Quick Wins Section
+        if quick_wins:
+            report_lines.extend([
+                "",
+                "⚡ QUICK WINS (EASY FIXES FOR IMMEDIATE IMPACT)",
+                "=" * 60
+            ])
+            
+            for i, issue in enumerate(quick_wins, 1):
+                category = issue.get('category', 'General')
+                title = issue.get('title', 'Issue')
+                description = issue.get('description', 'No description available')
+                score = issue.get('score', 'N/A')
+                fix_suggestion = issue.get('fix_suggestion', 'No fix suggestion available')
+                time_to_fix = issue.get('time_to_fix', 'Unknown time')
+                
+                report_lines.extend([
+                    f"{i}. {category.upper()}: {title}",
+                    f"   Current Score: {score}/10",
+                    f"   Issue: {description}",
+                    f"   Fix: {fix_suggestion}",
+                    f"   Time Required: {time_to_fix}",
+                    ""
+                ])
+        
+        # Content Improvements Section
+        if content_improvements:
+            report_lines.extend([
+                "",
+                "📝 CONTENT IMPROVEMENTS (ENHANCE YOUR PRESENTATION)",
+                "=" * 60
+            ])
+            
+            for i, issue in enumerate(content_improvements, 1):
+                category = issue.get('category', 'General')
+                title = issue.get('title', 'Issue')
+                description = issue.get('description', 'No description available')
+                score = issue.get('score', 'N/A')
+                fix_suggestion = issue.get('fix_suggestion', 'No fix suggestion available')
+                time_to_fix = issue.get('time_to_fix', 'Unknown time')
+                
+                report_lines.extend([
+                    f"{i}. {category.upper()}: {title}",
+                    f"   Current Score: {score}/10",
+                    f"   Issue: {description}",
+                    f"   Fix: {fix_suggestion}",
+                    f"   Time Required: {time_to_fix}",
+                    ""
+                ])
+        
+        # Category-by-Category Breakdown
+        if detailed_analysis:
+            report_lines.extend([
+                "",
+                "📊 DETAILED CATEGORY BREAKDOWN",
+                "=" * 60
+            ])
+            
+            # Sort categories by score (lowest first)
+            sorted_categories = sorted(detailed_analysis.items(), key=lambda x: x[1].get('score', 10))
+            
+            for category, data in sorted_categories:
+                score = data.get('score', 10)
+                issues = data.get('issues', [])
+                suggestions = data.get('suggestions', [])
+                
+                # Only show categories with issues
+                if score < 10 or issues:
+                    report_lines.extend([
+                        f"{category.upper().replace('_', ' ')} - Score: {score}/10",
+                        "-" * 50
+                    ])
+                    
+                    if issues:
+                        report_lines.append("Issues Found:")
+                        for issue in issues:
+                            report_lines.append(f"  • {issue}")
+                    
+                    if suggestions:
+                        report_lines.append("Recommendations:")
+                        for suggestion in suggestions:
+                            report_lines.append(f"  • {suggestion}")
+                    
+                    report_lines.append("")
+        
+        # Action Steps Summary
+        report_lines.extend([
+            "",
+            "🎯 RECOMMENDED ACTION STEPS",
+            "=" * 60,
+            "1. Start with Critical Issues (highest impact on ATS score)",
+            "2. Complete Quick Wins next (easy points for minimal effort)", 
+            "3. Work on Content Improvements for professional presentation",
+            "4. Test your updated resume with ATS scanning tools",
+            "5. Tailor keywords and content for each job application",
+            "",
+            "💡 PRO TIPS FOR SUCCESS",
+            "=" * 60,
+            "• Use simple, standard section headings (Experience, Education, Skills)",
+            "• Include relevant keywords from job descriptions naturally",
+            "• Maintain consistent formatting throughout your resume",
+            "• Use standard fonts like Arial, Calibri, or Times New Roman",
+            "• Save and submit resumes in PDF format when possible",
+            "• Keep your resume to 1-2 pages maximum",
+            "",
+            "Generated by BestCVBuilder.com - Your ATS Optimization Partner",
+            "=" * 80
+        ])
+        
+        # Join all lines and return
+        final_report = "\n".join(report_lines)
+        
+        logger.info(f"✅ Generated comprehensive report with {len(report_lines)} lines")
+        return final_report
+        
+    except Exception as e:
+        logger.error(f"Error generating comprehensive issues report: {str(e)}")
+        return f"Error generating comprehensive report: {str(e)}"
+
+
 from http.server import BaseHTTPRequestHandler
 
 class handler(BaseHTTPRequestHandler):
@@ -6716,6 +6913,15 @@ class handler(BaseHTTPRequestHandler):
                     )
                 except Exception as log_error:
                     logger.warning(f"Failed to log activity: {str(log_error)}")
+            
+            # Generate comprehensive TXT issues report
+            try:
+                comprehensive_report = generate_comprehensive_issues_report(analysis_result)
+                analysis_result['comprehensive_issues_report'] = comprehensive_report
+                logger.info("✅ Comprehensive TXT issues report generated successfully")
+            except Exception as report_error:
+                logger.warning(f"Failed to generate comprehensive report: {str(report_error)}")
+                analysis_result['comprehensive_issues_report'] = None
             
             # Filter results based on request parameters
             if not include_recommendations:

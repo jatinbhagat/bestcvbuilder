@@ -35,7 +35,7 @@ try {
 /**
  * Initialize the result page
  */
-function initializeResultPage() {
+async function initializeResultPage() {
     console.log('🚀 Initializing result page...');
     
     // Check all possible session storage keys for debugging
@@ -64,6 +64,9 @@ function initializeResultPage() {
         }
     }
     
+    // Update CTA text based on payment config
+    await updateCTAText();
+    
     // Display overall score
     displayOverallScore();
     
@@ -80,6 +83,54 @@ function initializeResultPage() {
     setupModalEventListeners();
     
     console.log('✅ Result page initialized successfully');
+}
+
+/**
+ * Update CTA text based on payment bypass configuration
+ */
+async function updateCTAText() {
+    try {
+        const config = await fetchAppConfig();
+        const shouldBypass = config.bypass_payment || config.free_mode_enabled;
+        
+        // Update main CTA button
+        const upgradeBtn = document.getElementById('upgradeBtn');
+        if (upgradeBtn) {
+            if (shouldBypass) {
+                upgradeBtn.innerHTML = '🚀 FIX MY RESUME NOW - FREE 🚀';
+            } else {
+                upgradeBtn.innerHTML = '🚀 FIX THIS RESUME NOW - ₹99 🚀';
+            }
+        }
+        
+        // Update any modal CTA buttons (will be handled when modal is shown)
+        console.log(`🔧 CTA text updated - bypass: ${shouldBypass}`);
+        
+    } catch (error) {
+        console.error('⚠️ Failed to update CTA text:', error);
+        // Keep default text if config fails
+    }
+}
+
+/**
+ * Update modal CTA button text based on payment config
+ */
+async function updateModalCTAButton(modalBtn) {
+    try {
+        const config = await fetchAppConfig();
+        const shouldBypass = config.bypass_payment || config.free_mode_enabled;
+        
+        if (shouldBypass) {
+            modalBtn.innerHTML = '🚀 Fix for Free - Instant Results';
+            modalBtn.className = 'flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold py-2.5 px-4 rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-300 shadow-lg text-sm';
+        } else {
+            modalBtn.innerHTML = '🚀 Fix This - ₹99';
+            modalBtn.className = 'flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold py-2.5 px-4 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg text-sm';
+        }
+    } catch (error) {
+        console.error('⚠️ Failed to update modal CTA button:', error);
+        // Keep default styling if config fails
+    }
 }
 
 /**
@@ -388,7 +439,7 @@ async function fetchAppConfig() {
  * Handle CV rewrite with payment bypass check
  */
 async function handleCVRewrite(source = 'upgrade') {
-    console.log(`🚀 CV Rewrite clicked from: ${source}`);
+    console.log(`🚀 CTA clicked from: ${source}`);
     
     // Fetch configuration to check bypass
     const config = await fetchAppConfig();
@@ -397,54 +448,89 @@ async function handleCVRewrite(source = 'upgrade') {
     console.log(`🔧 Payment bypass enabled: ${shouldBypass}`);
     
     if (shouldBypass) {
-        // Bypass payment - go directly to CV rewrite
-        await processDirectCVRewrite();
+        // Bypass payment - show TXT download page
+        await showTXTDownloadPage();
     } else {
-        // Redirect to payment page
-        sessionStorage.setItem('pendingRewrite', JSON.stringify(analysisData));
-        window.location.href = './payment.html';
+        // Redirect to order creation page for PayU payment
+        sessionStorage.setItem('pendingAnalysis', JSON.stringify(analysisData));
+        window.location.href = './create-order.html';
     }
 }
 
 /**
- * Process CV rewrite directly without payment
+ * Show TXT download page with comprehensive issues report
  */
-async function processDirectCVRewrite() {
-    console.log('🚀 Processing free CV rewrite...');
+async function showTXTDownloadPage() {
+    console.log('📄 Showing TXT download page...');
     
     try {
         // Show loading state
         showLoadingState();
         
-        // Call CV rewrite API directly
-        const response = await fetch('/api/cv-rewrite/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                original_analysis: analysisData,
-                user_email: 'user@example.com', // In production, get from user session
-                bypass_payment: true
-            })
-        });
+        // Get comprehensive issues report from analysis data
+        const comprehensiveReport = analysisData.comprehensive_issues_report;
         
-        if (!response.ok) {
-            throw new Error(`CV rewrite failed: ${response.status}`);
+        if (comprehensiveReport) {
+            // Store the TXT report for the download page
+            sessionStorage.setItem('comprehensiveReport', comprehensiveReport);
+            console.log('✅ Comprehensive report found and stored');
+        } else {
+            // Generate a basic report from current analysis data
+            const basicReport = generateBasicIssuesReport();
+            sessionStorage.setItem('comprehensiveReport', basicReport);
+            console.log('⚠️ Generated basic report as fallback');
         }
         
-        const rewriteResult = await response.json();
-        console.log('✅ CV rewrite completed:', rewriteResult);
-        
-        // Store results and redirect to success page
-        sessionStorage.setItem('rewriteResult', JSON.stringify(rewriteResult));
-        window.location.href = './success.html';
+        // Redirect to TXT download page
+        window.location.href = './download-report.html';
         
     } catch (error) {
-        console.error('❌ CV rewrite failed:', error);
+        console.error('❌ Failed to show TXT download page:', error);
         hideLoadingState();
-        alert('Failed to process CV rewrite. Please try again.');
+        alert('Failed to generate issues report. Please try again.');
     }
+}
+
+/**
+ * Generate basic issues report from current analysis data
+ */
+function generateBasicIssuesReport() {
+    const score = analysisData.score || analysisData.ats_score || 0;
+    const detailed = analysisData.detailedAnalysis || analysisData.detailed_analysis || {};
+    
+    let report = `ATS ISSUES REPORT\n`;
+    report += `${'='.repeat(50)}\n`;
+    report += `Current ATS Score: ${score}/100\n`;
+    report += `Report Generated: ${new Date().toLocaleString()}\n\n`;
+    
+    report += `ISSUES BY CATEGORY\n`;
+    report += `${'-'.repeat(30)}\n\n`;
+    
+    Object.entries(detailed).forEach(([category, data]) => {
+        if (data && data.score < 10) {
+            const name = category.split('_').map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' ');
+            
+            report += `${name}: ${data.score}/10\n`;
+            if (data.issues && data.issues.length > 0) {
+                data.issues.forEach(issue => {
+                    report += `  • ${issue}\n`;
+                });
+            }
+            if (data.suggestions && data.suggestions.length > 0) {
+                data.suggestions.forEach(suggestion => {
+                    report += `  → ${suggestion}\n`;
+                });
+            }
+            report += `\n`;
+        }
+    });
+    
+    report += `\nGenerated by BestCVBuilder.com\n`;
+    report += `Your ATS Optimization Partner\n`;
+    
+    return report;
 }
 
 /**
@@ -672,11 +758,10 @@ function displayBackendModalContent(modalContent, categoryName) {
     `;
     modalIssuesList.appendChild(ctaSection);
     
-    // Update the modal button text to match "Fix for Free" branding
+    // Update the modal button text based on payment config
     const modalFixBtn = document.getElementById('modalFixAllBtn');
     if (modalFixBtn) {
-        modalFixBtn.innerHTML = '🚀 Fix for Free - Instant Results';
-        modalFixBtn.className = 'flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold py-2.5 px-4 rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-300 shadow-lg text-sm';
+        updateModalCTAButton(modalFixBtn);
     }
 }
 
@@ -723,11 +808,10 @@ function displayFrontendModalContent(categoryName) {
     `;
     modalIssuesList.appendChild(ctaSection);
     
-    // Update the modal button text to match "Fix for Free" branding for fallback modals too
+    // Update the modal button text based on payment config for fallback modals too
     const modalFixBtn = document.getElementById('modalFixAllBtn');
     if (modalFixBtn) {
-        modalFixBtn.innerHTML = '🚀 Fix for Free - Instant Results';
-        modalFixBtn.className = 'flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold py-2.5 px-4 rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-300 shadow-lg text-sm';
+        updateModalCTAButton(modalFixBtn);
     }
 }
 

@@ -40,3 +40,28 @@ def is_free_mode_enabled():
 def get_feature_flag(flag_name):
     """Get a specific feature flag"""
     return FEATURE_FLAGS.get(flag_name, False)
+
+# PayU Payment Gateway Configuration
+PAYU_CONFIG = {
+    # Production PayU credentials (replace with actual values)
+    'merchant_id': 'YOUR_PRODUCTION_MID',  # Replace with actual MID
+    'salt': 'YOUR_PRODUCTION_SALT',        # Replace with actual Salt
+    'base_url': 'https://secure.payu.in',  # Production URL
+    'success_url': '/payment-success',      # Relative URL for success
+    'failure_url': '/payment-failure',      # Relative URL for failure
+    'cancel_url': '/payment-cancel',        # Relative URL for cancel
+    
+    # Fixed payment details
+    'amount': 99.00,
+    'currency': 'INR',
+    'product_info': 'BestCVBuilder - ATS Resume Optimization',
+    'service_provider': 'payu_paisa',
+    
+    # Order ID configuration
+    'order_prefix': 'BCVB',  # BestCVBuilder prefix
+    'order_format': 'BCVB_%Y%m%d_%06d'  # Format: BCVB_YYYYMMDD_NNNNNN
+}
+
+def get_payu_config():
+    """Get PayU configuration"""
+    return PAYU_CONFIG
