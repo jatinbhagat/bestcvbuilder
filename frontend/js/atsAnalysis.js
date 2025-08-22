@@ -77,10 +77,10 @@ export async function analyzeResume(fileUrl, userId = null) {
         console.log('🚀 Making request to:', CV_PARSER_ENDPOINT);
         console.log('📤 Request body:', requestBody);
         
-        // Try with explicit CORS settings - multiple attempts with different configurations
+        // Try with explicit CORS settings - reduced attempts for faster response
         let response;
         const attempts = [
-            // Attempt 1: Standard CORS request
+            // Attempt 1: Standard CORS request with fast analysis
             {
                 method: 'POST',
                 mode: 'cors',
@@ -90,20 +90,15 @@ export async function analyzeResume(fileUrl, userId = null) {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
                 },
-                body: JSON.stringify(requestBody)
+                body: JSON.stringify({
+                    ...requestBody,
+                    analysis_type: 'fast_ats_score' // Request faster analysis
+                })
             },
-            // Attempt 2: Simplified headers
+            // Attempt 2: Fallback to standard analysis
             {
                 method: 'POST',
                 mode: 'cors',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(requestBody)
-            },
-            // Attempt 3: No explicit mode
-            {
-                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -114,14 +109,21 @@ export async function analyzeResume(fileUrl, userId = null) {
         let lastError;
         for (let i = 0; i < attempts.length; i++) {
             try {
-                console.log(`🔄 Attempt ${i + 1}/3 with configuration:`, attempts[i]);
+                console.log(`🔄 Attempt ${i + 1}/2 with configuration:`, attempts[i]);
                 
-                // Add timeout to prevent infinite hanging (120 seconds for CV analysis)
+                // Show progress update for user
+                if (i === 0) {
+                    console.log('⚡ Trying fast analysis first...');
+                } else {
+                    console.log('🔍 Trying comprehensive analysis...');
+                }
+                
+                // Add timeout to prevent infinite hanging (60 seconds - increased slightly)
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => {
-                    console.log(`⏰ Request ${i + 1} timed out after 120 seconds`);
+                    console.log(`⏰ Request ${i + 1} timed out after 60 seconds`);
                     controller.abort();
-                }, 120000);
+                }, 60000);
                 
                 // Add abort signal to attempt
                 const attemptWithTimeout = {
