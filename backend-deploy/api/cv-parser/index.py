@@ -6590,7 +6590,11 @@ def extract_specific_issues_with_examples(analysis_result: Dict[str, Any]) -> Di
         content = analysis_result.get('content', '')
         detailed_analysis = analysis_result.get('detailedAnalysis', {})
         
+        logger.info(f"🔍 Extract specific issues - Content length: {len(content)}")
+        logger.info(f"🔍 Extract specific issues - Categories available: {list(detailed_analysis.keys())}")
+        
         if not content:
+            logger.warning("⚠️ No resume content available for detailed analysis")
             return {'error': 'No resume content available for detailed analysis'}
         
         # Split content into lines for reference
@@ -6740,10 +6744,13 @@ def extract_specific_issues_with_examples(analysis_result: Dict[str, Any]) -> Di
         ])
         
         logger.info(f"✅ Extracted {issues_with_examples['total_specific_examples']} specific issues with examples")
+        logger.info(f"📊 Critical: {len(issues_with_examples['critical_issues'])}, Quick Wins: {len(issues_with_examples['quick_wins'])}, Content: {len(issues_with_examples['content_improvements'])}")
         return issues_with_examples
         
     except Exception as e:
-        logger.error(f"Error extracting specific issues: {str(e)}")
+        logger.error(f"❌ Error extracting specific issues: {str(e)}")
+        import traceback
+        logger.error(f"📍 Traceback: {traceback.format_exc()}")
         return {'error': f'Failed to extract specific issues: {str(e)}'}
 
 def find_date_formatting_issues(lines: List[str]) -> Dict[str, Any]:
@@ -7582,11 +7589,20 @@ class handler(BaseHTTPRequestHandler):
             
             # Generate comprehensive TXT issues report
             try:
+                logger.info("🔍 Starting comprehensive TXT issues report generation...")
                 comprehensive_report = generate_comprehensive_issues_report(analysis_result)
-                analysis_result['comprehensive_issues_report'] = comprehensive_report
-                logger.info("✅ Comprehensive TXT issues report generated successfully")
+                
+                if comprehensive_report and len(comprehensive_report) > 100:
+                    analysis_result['comprehensive_issues_report'] = comprehensive_report
+                    logger.info(f"✅ Comprehensive TXT issues report generated successfully ({len(comprehensive_report)} chars)")
+                else:
+                    logger.warning("⚠️ Comprehensive report generated but appears empty or too short")
+                    analysis_result['comprehensive_issues_report'] = None
+                    
             except Exception as report_error:
-                logger.warning(f"Failed to generate comprehensive report: {str(report_error)}")
+                logger.error(f"❌ Failed to generate comprehensive report: {str(report_error)}")
+                import traceback
+                logger.error(f"📍 Traceback: {traceback.format_exc()}")
                 analysis_result['comprehensive_issues_report'] = None
             
             # Filter results based on request parameters
