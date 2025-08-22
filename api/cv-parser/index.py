@@ -6603,12 +6603,12 @@ def extract_specific_issues_with_examples(analysis_result: Dict[str, Any]) -> Di
         }
         
         # 1. DATES ISSUES - Find inconsistent date formats
-        if 'dates' in detailed_analysis and detailed_analysis['dates'].get('score', 10) < 8:
+        if 'Dates' in detailed_analysis and detailed_analysis['Dates'].get('score', 10) < 8:
             date_issues = find_date_formatting_issues(lines)
             if date_issues:
                 issues_with_examples['critical_issues'].append({
                     'category': 'Dates',
-                    'score': detailed_analysis['dates'].get('score', 0),
+                    'score': detailed_analysis['Dates'].get('score', 0),
                     'title': 'Inconsistent Date Formatting',
                     'severity': 'CRITICAL',
                     'impact': 'Major ATS blocker - prevents proper parsing',
@@ -6619,12 +6619,12 @@ def extract_specific_issues_with_examples(analysis_result: Dict[str, Any]) -> Di
                 })
         
         # 2. VERB REPETITION - Find repeated action verbs
-        if 'repetition' in detailed_analysis and detailed_analysis['repetition'].get('score', 10) < 6:
+        if 'Repetition' in detailed_analysis and detailed_analysis['Repetition'].get('score', 10) < 6:
             verb_issues = find_verb_repetition_issues(lines)
             if verb_issues:
                 issues_with_examples['critical_issues'].append({
                     'category': 'Repetition',
-                    'score': detailed_analysis['repetition'].get('score', 0),
+                    'score': detailed_analysis['Repetition'].get('score', 0),
                     'title': 'Repeated Action Verbs',
                     'severity': 'HIGH',
                     'impact': 'Reduces impact and shows limited vocabulary',
@@ -6635,12 +6635,12 @@ def extract_specific_issues_with_examples(analysis_result: Dict[str, Any]) -> Di
                 })
         
         # 3. CONTACT INFO - Find missing contact elements
-        if 'contact_details' in detailed_analysis and detailed_analysis['contact_details'].get('score', 10) < 10:
+        if 'Contact Details' in detailed_analysis and detailed_analysis['Contact Details'].get('score', 10) < 10:
             contact_issues = find_contact_info_issues(lines)
             if contact_issues:
                 issues_with_examples['quick_wins'].append({
                     'category': 'Contact Details',
-                    'score': detailed_analysis['contact_details'].get('score', 8),
+                    'score': detailed_analysis['Contact Details'].get('score', 8),
                     'title': 'Missing Contact Information',
                     'severity': 'QUICK_WIN',
                     'impact': 'Easy fix for better ATS compatibility',
@@ -6651,12 +6651,12 @@ def extract_specific_issues_with_examples(analysis_result: Dict[str, Any]) -> Di
                 })
         
         # 4. QUANTIFIABLE ACHIEVEMENTS - Find vague statements
-        if 'quantifiable_achievements' in detailed_analysis and detailed_analysis['quantifiable_achievements'].get('score', 10) < 9:
+        if 'Quantifiable Achievements' in detailed_analysis and detailed_analysis['Quantifiable Achievements'].get('score', 10) < 9:
             achievement_issues = find_quantification_issues(lines)
             if achievement_issues:
                 issues_with_examples['content_improvements'].append({
                     'category': 'Quantifiable Achievements',
-                    'score': detailed_analysis['quantifiable_achievements'].get('score', 8),
+                    'score': detailed_analysis['Quantifiable Achievements'].get('score', 8),
                     'title': 'Vague Achievement Statements',
                     'severity': 'IMPROVEMENT',
                     'impact': 'Makes accomplishments more compelling and measurable',
@@ -6664,6 +6664,70 @@ def extract_specific_issues_with_examples(analysis_result: Dict[str, Any]) -> Di
                     'fix_instructions': achievement_issues['fix_instructions'],
                     'time_to_fix': '20-30 minutes',
                     'score_impact': '+2 to +5 points'
+                })
+        
+        # 5. ACTION VERBS - Check for weak or repetitive action verbs
+        if 'Action Verbs' in detailed_analysis and detailed_analysis['Action Verbs'].get('score', 10) < 9:
+            verb_issues = find_verb_repetition_issues(lines)
+            if verb_issues:
+                issues_with_examples['quick_wins'].append({
+                    'category': 'Action Verbs',
+                    'score': detailed_analysis['Action Verbs'].get('score', 8),
+                    'title': 'Weak Action Verbs',
+                    'severity': 'QUICK_WIN',
+                    'impact': 'Stronger verbs create more impact',
+                    'examples': verb_issues['examples'],
+                    'fix_instructions': verb_issues['fix_instructions'],
+                    'time_to_fix': '10-15 minutes',
+                    'score_impact': '+1 to +2 points'
+                })
+        
+        # 6. PERSONAL PRONOUNS - Find first-person pronouns
+        if 'Personal Pronouns' in detailed_analysis and detailed_analysis['Personal Pronouns'].get('score', 10) < 8:
+            pronoun_issues = find_personal_pronouns(lines)
+            if pronoun_issues:
+                issues_with_examples['critical_issues'].append({
+                    'category': 'Personal Pronouns',
+                    'score': detailed_analysis['Personal Pronouns'].get('score', 0),
+                    'title': 'First-Person Pronouns Used',
+                    'severity': 'CRITICAL',
+                    'impact': 'ATS systems prefer third-person format',
+                    'examples': pronoun_issues['examples'],
+                    'fix_instructions': pronoun_issues['fix_instructions'],
+                    'time_to_fix': '5-10 minutes',
+                    'score_impact': '+3 to +6 points'
+                })
+        
+        # 7. VERB TENSES - Check for tense consistency
+        if 'Verb Tenses' in detailed_analysis and detailed_analysis['Verb Tenses'].get('score', 10) < 8:
+            tense_issues = find_verb_tense_issues(lines)
+            if tense_issues:
+                issues_with_examples['critical_issues'].append({
+                    'category': 'Verb Tenses',
+                    'score': detailed_analysis['Verb Tenses'].get('score', 0),
+                    'title': 'Inconsistent Verb Tenses',
+                    'severity': 'CRITICAL',
+                    'impact': 'Tense consistency is crucial for ATS parsing',
+                    'examples': tense_issues['examples'],
+                    'fix_instructions': tense_issues['fix_instructions'],
+                    'time_to_fix': '10-15 minutes',
+                    'score_impact': '+3 to +6 points'
+                })
+        
+        # 8. SUMMARY SECTION - Check summary quality
+        if 'Summary' in detailed_analysis and detailed_analysis['Summary'].get('score', 10) < 6:
+            summary_issues = find_summary_issues(lines)
+            if summary_issues:
+                issues_with_examples['content_improvements'].append({
+                    'category': 'Summary',
+                    'score': detailed_analysis['Summary'].get('score', 0),
+                    'title': 'Professional Summary Issues',
+                    'severity': 'IMPROVEMENT',
+                    'impact': 'Strong summary improves first impression',
+                    'examples': summary_issues['examples'],
+                    'fix_instructions': summary_issues['fix_instructions'],
+                    'time_to_fix': '15-20 minutes',
+                    'score_impact': '+3 to +7 points'
                 })
         
         # Count total examples
@@ -6952,6 +7016,101 @@ def get_suggested_metrics_for_line(line_text: str) -> List[str]:
     
     return suggestions[:3]  # Return top 3 suggestions
 
+def find_personal_pronouns(lines: List[str]) -> Dict[str, Any]:
+    """Find personal pronouns (I, me, my, myself) in resume lines"""
+    pronouns = ['I ', 'me ', 'my ', 'myself', 'My ', 'Me ']
+    examples = []
+    
+    for i, line in enumerate(lines):
+        for pronoun in pronouns:
+            if pronoun in line:
+                examples.append({
+                    'line_number': i + 1,
+                    'problematic_text': line.strip(),
+                    'pronoun_found': pronoun.strip(),
+                    'fix_suggestion': line.replace(pronoun, '').strip()
+                })
+                break  # Only one example per line
+        
+        if len(examples) >= 3:  # Limit examples
+            break
+    
+    return {
+        'examples': examples,
+        'fix_instructions': 'Remove all first-person pronouns and rewrite in third person'
+    }
+
+def find_verb_tense_issues(lines: List[str]) -> Dict[str, Any]:
+    """Find verb tense inconsistencies in resume"""
+    past_tense_indicators = ['ed ', 'was ', 'were ', 'had ', 'did ']
+    present_tense_indicators = ['ing ', 'is ', 'are ', 'have ', 'do ']
+    examples = []
+    
+    past_found = False
+    present_found = False
+    
+    for i, line in enumerate(lines):
+        line_lower = line.lower()
+        has_past = any(indicator in line_lower for indicator in past_tense_indicators)
+        has_present = any(indicator in line_lower for indicator in present_tense_indicators)
+        
+        if has_past:
+            past_found = True
+        if has_present:
+            present_found = True
+            
+        if (has_past or has_present) and len(examples) < 3:
+            examples.append({
+                'line_number': i + 1,
+                'problematic_text': line.strip(),
+                'tense_type': 'past' if has_past else 'present',
+                'fix_suggestion': 'Use past tense for previous roles, present for current role'
+            })
+    
+    return {
+        'examples': examples,
+        'fix_instructions': 'Use past tense for previous positions, present tense only for current role',
+        'inconsistency_found': past_found and present_found
+    }
+
+def find_summary_issues(lines: List[str]) -> Dict[str, Any]:
+    """Find issues in professional summary section"""
+    examples = []
+    summary_found = False
+    
+    for i, line in enumerate(lines):
+        line_lower = line.lower()
+        if any(keyword in line_lower for keyword in ['summary', 'objective', 'profile']):
+            summary_found = True
+            continue
+            
+        if summary_found and line.strip():
+            # Check for common summary issues
+            issues = []
+            if 'I ' in line or 'my ' in line:
+                issues.append('Contains first-person pronouns')
+            if len(line.split()) < 10:
+                issues.append('Too brief - needs more detail')
+            if not any(char.isdigit() for char in line):
+                issues.append('Missing quantifiable achievements')
+                
+            if issues and len(examples) < 2:
+                examples.append({
+                    'line_number': i + 1,
+                    'problematic_text': line.strip(),
+                    'issues_found': issues,
+                    'fix_suggestion': 'Rewrite in third person with specific achievements and metrics'
+                })
+            
+            # Stop after a few lines (summary section)
+            if len(examples) >= 2 or i > 10:
+                break
+    
+    return {
+        'examples': examples,
+        'fix_instructions': 'Write compelling summary with measurable achievements, no pronouns'
+    }
+
 def generate_comprehensive_issues_report(analysis_result: Dict[str, Any]) -> str:
     """
     Generate comprehensive TXT report of all ATS issues with specific examples from resume
@@ -7035,32 +7194,44 @@ def generate_comprehensive_issues_report(analysis_result: Dict[str, Any]) -> str
                 time_to_fix = issue.get('time_to_fix', '5-10 minutes')
                 
                 # Enhanced issue display with specific examples
-                problematic_text = issue.get('problematic_text', '')
-                line_number = issue.get('line_number', '')
-                fix_suggestion = issue.get('fix_suggestion', 'No fix suggestion available')
+                examples = issue.get('examples', [])
+                fix_instructions = issue.get('fix_instructions', 'No fix instructions available')
+                impact = issue.get('impact', description)
                 
                 report_lines.extend([
                     f"{i}. {category.upper()}: {title}",
                     f"   Current Score: {score}/10 | Time to Fix: {time_to_fix}",
-                    f"   Problem: {description}",
+                    f"   Problem: {impact}",
                     ""
                 ])
                 
-                # Add specific example if available
-                if problematic_text and line_number:
-                    report_lines.extend([
-                        f"   📍 FOUND IN YOUR RESUME (Line {line_number}):",
-                        f"   \"{problematic_text}\"",
-                        ""
-                    ])
+                # Add specific examples if available
+                if examples:
+                    for j, example in enumerate(examples[:2]):  # Show max 2 examples
+                        line_num = example.get('line_number', 'N/A')
+                        text = example.get('problematic_text', '')
+                        if text and line_num:
+                            report_lines.extend([
+                                f"   📍 FOUND IN YOUR RESUME (Line {line_num}):",
+                                f"   \"{text}\"",
+                                ""
+                            ])
                 
-                # Add specific fix with before/after if available
-                if fix_suggestion:
+                # Add specific fix with instructions
+                if fix_instructions:
                     report_lines.extend([
                         f"   ✅ SPECIFIC FIX:",
-                        f"   {fix_suggestion}",
+                        f"   {fix_instructions}",
                         ""
                     ])
+                    
+                    # Add specific example fix if available
+                    if examples and examples[0].get('fix_suggestion'):
+                        report_lines.extend([
+                            f"   💡 EXAMPLE REPLACEMENT:",
+                            f"   {examples[0]['fix_suggestion']}",
+                            ""
+                        ])
                 
                 report_lines.append("-" * 50)
                 report_lines.append("")
@@ -7081,32 +7252,44 @@ def generate_comprehensive_issues_report(analysis_result: Dict[str, Any]) -> str
                 time_to_fix = issue.get('time_to_fix', '2-5 minutes')
                 
                 # Enhanced issue display with specific examples
-                problematic_text = issue.get('problematic_text', '')
-                line_number = issue.get('line_number', '')
-                fix_suggestion = issue.get('fix_suggestion', 'No fix suggestion available')
+                examples = issue.get('examples', [])
+                fix_instructions = issue.get('fix_instructions', 'No fix instructions available')
+                impact = issue.get('impact', description)
                 
                 report_lines.extend([
                     f"{i}. {category.upper()}: {title}",
                     f"   Current Score: {score}/10 | Time to Fix: {time_to_fix}",
-                    f"   Problem: {description}",
+                    f"   Problem: {impact}",
                     ""
                 ])
                 
-                # Add specific example if available
-                if problematic_text and line_number:
-                    report_lines.extend([
-                        f"   📍 FOUND IN YOUR RESUME (Line {line_number}):",
-                        f"   \"{problematic_text}\"",
-                        ""
-                    ])
+                # Add specific examples if available
+                if examples:
+                    for j, example in enumerate(examples[:2]):  # Show max 2 examples
+                        line_num = example.get('line_number', 'N/A')
+                        text = example.get('problematic_text', '')
+                        if text and line_num:
+                            report_lines.extend([
+                                f"   📍 FOUND IN YOUR RESUME (Line {line_num}):",
+                                f"   \"{text}\"",
+                                ""
+                            ])
                 
-                # Add specific fix with before/after if available
-                if fix_suggestion:
+                # Add specific fix with instructions
+                if fix_instructions:
                     report_lines.extend([
                         f"   ✅ QUICK FIX:",
-                        f"   {fix_suggestion}",
+                        f"   {fix_instructions}",
                         ""
                     ])
+                    
+                    # Add specific example fix if available
+                    if examples and examples[0].get('fix_suggestion'):
+                        report_lines.extend([
+                            f"   💡 EXAMPLE REPLACEMENT:",
+                            f"   {examples[0]['fix_suggestion']}",
+                            ""
+                        ])
                 
                 report_lines.append("-" * 50)
                 report_lines.append("")
@@ -7127,32 +7310,44 @@ def generate_comprehensive_issues_report(analysis_result: Dict[str, Any]) -> str
                 time_to_fix = issue.get('time_to_fix', '10-15 minutes')
                 
                 # Enhanced issue display with specific examples
-                problematic_text = issue.get('problematic_text', '')
-                line_number = issue.get('line_number', '')
-                fix_suggestion = issue.get('fix_suggestion', 'No fix suggestion available')
+                examples = issue.get('examples', [])
+                fix_instructions = issue.get('fix_instructions', 'No fix instructions available')
+                impact = issue.get('impact', description)
                 
                 report_lines.extend([
                     f"{i}. {category.upper()}: {title}",
                     f"   Current Score: {score}/10 | Time to Fix: {time_to_fix}",
-                    f"   Improvement: {description}",
+                    f"   Improvement: {impact}",
                     ""
                 ])
                 
-                # Add specific example if available
-                if problematic_text and line_number:
-                    report_lines.extend([
-                        f"   📍 FOUND IN YOUR RESUME (Line {line_number}):",
-                        f"   \"{problematic_text}\"",
-                        ""
-                    ])
+                # Add specific examples if available
+                if examples:
+                    for j, example in enumerate(examples[:2]):  # Show max 2 examples
+                        line_num = example.get('line_number', 'N/A')
+                        text = example.get('problematic_text', '')
+                        if text and line_num:
+                            report_lines.extend([
+                                f"   📍 FOUND IN YOUR RESUME (Line {line_num}):",
+                                f"   \"{text}\"",
+                                ""
+                            ])
                 
-                # Add specific fix with before/after if available
-                if fix_suggestion:
+                # Add specific fix with instructions
+                if fix_instructions:
                     report_lines.extend([
                         f"   ✅ ENHANCEMENT SUGGESTION:",
-                        f"   {fix_suggestion}",
+                        f"   {fix_instructions}",
                         ""
                     ])
+                    
+                    # Add specific example fix if available
+                    if examples and examples[0].get('fix_suggestion'):
+                        report_lines.extend([
+                            f"   💡 EXAMPLE REPLACEMENT:",
+                            f"   {examples[0]['fix_suggestion']}",
+                            ""
+                        ])
                 
                 report_lines.append("-" * 50)
                 report_lines.append("")
