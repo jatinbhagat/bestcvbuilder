@@ -639,20 +639,20 @@ function displayBackendModalContent(modalContent, categoryName) {
     // Create dynamic examples section
     if (modalContent.dynamic_examples && modalContent.dynamic_examples.length > 0) {
         const dynamicSection = document.createElement('div');
-        dynamicSection.className = 'bg-red-50 border-l-4 border-red-400 p-4 mb-4';
+        dynamicSection.className = 'bg-red-50 border-l-4 border-red-400 p-3 mb-3';
         dynamicSection.innerHTML = `
-            <h3 class="text-lg font-semibold text-red-900 mb-3">Issues Found in Your Resume</h3>
-            <div class="space-y-3">
+            <h3 class="text-md font-semibold text-red-900 mb-2">Issues Found</h3>
+            <div class="space-y-2">
                 ${modalContent.dynamic_examples.map((example, index) => `
-                    <div class="bg-white border border-red-200 rounded-lg p-3">
-                        <div class="flex items-start gap-3">
-                            <div class="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
+                    <div class="bg-white border border-red-200 rounded p-2">
+                        <div class="flex items-start gap-2">
+                            <div class="w-1.5 h-1.5 bg-red-500 rounded-full mt-1.5 flex-shrink-0"></div>
                             <div class="flex-1">
-                                <p class="text-sm font-medium text-gray-900 mb-2">${example.issue}</p>
-                                <div class="bg-gray-50 border border-gray-200 rounded p-2 font-mono text-xs text-gray-700 mb-1">
+                                <p class="text-xs font-medium text-gray-900 mb-1">${example.issue}</p>
+                                <div class="bg-gray-50 border border-gray-200 rounded p-1 font-mono text-xs text-gray-600 mb-1">
                                     "${example.example}"
                                 </div>
-                                <p class="text-xs text-red-600 font-medium">${example.suggestion}</p>
+                                <p class="text-xs text-red-600">${example.suggestion}</p>
                             </div>
                         </div>
                     </div>
@@ -664,12 +664,11 @@ function displayBackendModalContent(modalContent, categoryName) {
     
     // Add enhanced call-to-action section with prominent styling
     const ctaSection = document.createElement('div');
-    ctaSection.className = 'bg-gradient-to-r from-green-50 to-green-100 border-2 border-green-300 rounded-xl p-6 text-center mt-4';
+    ctaSection.className = 'bg-gradient-to-r from-green-50 to-green-100 border-2 border-green-300 rounded-lg p-3 text-center mt-3';
     ctaSection.innerHTML = `
-        <div class="text-2xl mb-3">🚀</div>
-        <h4 class="text-xl font-black text-green-800 mb-3">Ready to Fix These Issues?</h4>
-        <p class="text-sm font-bold text-green-700 mb-2">Our AI will automatically optimize all these issues to boost your ATS score</p>
-        <p class="text-xs text-green-600">✓ Instant results • ✓ No credit card required • ✓ Professional quality</p>
+        <div class="text-lg mb-2">🚀</div>
+        <h4 class="text-md font-bold text-green-800 mb-2">Ready to Fix These Issues?</h4>
+        <p class="text-xs text-green-600">✓ Instant results • ✓ No credit card required</p>
     `;
     modalIssuesList.appendChild(ctaSection);
     
@@ -677,7 +676,7 @@ function displayBackendModalContent(modalContent, categoryName) {
     const modalFixBtn = document.getElementById('modalFixAllBtn');
     if (modalFixBtn) {
         modalFixBtn.innerHTML = '🚀 Fix for Free - Instant Results';
-        modalFixBtn.className = 'flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white font-black py-4 px-8 rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-300 transform hover:scale-105 shadow-lg border-2 border-green-400';
+        modalFixBtn.className = 'flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold py-2.5 px-4 rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-300 shadow-lg text-sm';
     }
 }
 
@@ -716,12 +715,11 @@ function displayFrontendModalContent(categoryName) {
     
     // Add the same enhanced CTA section for fallback modals
     const ctaSection = document.createElement('div');
-    ctaSection.className = 'bg-gradient-to-r from-green-50 to-green-100 border-2 border-green-300 rounded-xl p-6 text-center mt-4';
+    ctaSection.className = 'bg-gradient-to-r from-green-50 to-green-100 border-2 border-green-300 rounded-lg p-3 text-center mt-3';
     ctaSection.innerHTML = `
-        <div class="text-2xl mb-3">🚀</div>
-        <h4 class="text-xl font-black text-green-800 mb-3">Ready to Fix These Issues?</h4>
-        <p class="text-sm font-bold text-green-700 mb-2">Our AI will automatically optimize all these issues to boost your ATS score</p>
-        <p class="text-xs text-green-600">✓ Instant results • ✓ No credit card required • ✓ Professional quality</p>
+        <div class="text-lg mb-2">🚀</div>
+        <h4 class="text-md font-bold text-green-800 mb-2">Ready to Fix These Issues?</h4>
+        <p class="text-xs text-green-600">✓ Instant results • ✓ No credit card required</p>
     `;
     modalIssuesList.appendChild(ctaSection);
     
@@ -729,7 +727,7 @@ function displayFrontendModalContent(categoryName) {
     const modalFixBtn = document.getElementById('modalFixAllBtn');
     if (modalFixBtn) {
         modalFixBtn.innerHTML = '🚀 Fix for Free - Instant Results';
-        modalFixBtn.className = 'flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white font-black py-4 px-8 rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-300 transform hover:scale-105 shadow-lg border-2 border-green-400';
+        modalFixBtn.className = 'flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold py-2.5 px-4 rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-300 shadow-lg text-sm';
     }
 }
 
