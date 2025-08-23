@@ -6557,26 +6557,41 @@ def analyze_resume_content(file_url: str) -> Dict[str, Any]:
         
         # CRITICAL: Generate comprehensive TXT issues report for Flask app
         try:
-            logger.info("🔍 Flask app: Starting comprehensive TXT issues report generation...")
+            logger.info("🔍 FLASK DEBUG: Starting comprehensive TXT issues report generation...")
+            logger.info(f"🔍 FLASK DEBUG: About to call generate_comprehensive_issues_report with result keys: {list(result.keys())}")
+            
             comprehensive_report = generate_comprehensive_issues_report(result)
+            
+            logger.info(f"🔍 FLASK DEBUG: generate_comprehensive_issues_report returned: {type(comprehensive_report)}")
+            logger.info(f"🔍 FLASK DEBUG: Report length: {len(comprehensive_report) if comprehensive_report else 'None'}")
             
             if comprehensive_report and len(comprehensive_report) > 100:
                 result['comprehensive_issues_report'] = comprehensive_report
-                logger.info(f"✅ Flask app: Comprehensive TXT issues report generated successfully ({len(comprehensive_report)} chars)")
+                logger.info(f"✅ FLASK DEBUG: Comprehensive TXT issues report generated successfully ({len(comprehensive_report)} chars)")
+                logger.info(f"🔍 FLASK DEBUG: Report preview: {comprehensive_report[:150]}...")
             else:
-                logger.warning("⚠️ Flask app: Comprehensive report generated but appears empty or too short")
+                logger.warning(f"⚠️ FLASK DEBUG: Comprehensive report generated but appears empty or too short: {comprehensive_report}")
                 result['comprehensive_issues_report'] = None
                 
         except Exception as report_error:
-            logger.error(f"❌ Flask app: Failed to generate comprehensive report: {str(report_error)}")
+            logger.error(f"❌ FLASK DEBUG: Failed to generate comprehensive report: {str(report_error)}")
             import traceback
-            logger.error(f"Flask app traceback: {traceback.format_exc()}")
+            logger.error(f"FLASK DEBUG traceback: {traceback.format_exc()}")
             result['comprehensive_issues_report'] = None
         
         # Debug: Log the final result keys after merging
         logger.info(f'🔍 DEBUG: final result keys: {list(result.keys())}')
         logger.info(f'🔍 DEBUG: final result detailedAnalysis count: {len(result.get("detailedAnalysis", {}))}')
         logger.info(f'🔍 DEBUG: final result detailed_analysis count: {len(result.get("detailed_analysis", {}))}')
+        
+        # FINAL CHECK: Verify comprehensive_issues_report is in the result before returning
+        logger.info(f"🔍 FINAL CHECK: comprehensive_issues_report in result? {'comprehensive_issues_report' in result}")
+        if 'comprehensive_issues_report' in result:
+            report_value = result['comprehensive_issues_report']
+            logger.info(f"🔍 FINAL CHECK: comprehensive_issues_report type: {type(report_value)}")
+            logger.info(f"🔍 FINAL CHECK: comprehensive_issues_report length: {len(report_value) if report_value else 'None'}")
+        else:
+            logger.error("❌ FINAL CHECK: comprehensive_issues_report NOT FOUND in result!")
         
         logger.info(f"Analysis completed - Score: {ats_analysis['ats_score']}")
         return result
@@ -7195,6 +7210,9 @@ def generate_comprehensive_issues_report(analysis_result: Dict[str, Any]) -> str
         Formatted text report with specific issues and actionable fixes with examples
     """
     try:
+        logger.info("🔍 REPORT DEBUG: Starting generate_comprehensive_issues_report function...")
+        logger.info(f"🔍 REPORT DEBUG: Input analysis_result keys: {list(analysis_result.keys())}")
+        logger.info(f"🔍 REPORT DEBUG: Input analysis_result type: {type(analysis_result)}")
         logger.info("🔍 Generating enhanced TXT issues report with specific examples...")
         
         # Extract specific issues with examples from the resume
