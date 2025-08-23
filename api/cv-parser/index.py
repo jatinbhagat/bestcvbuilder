@@ -6330,7 +6330,7 @@ def analyze_resume_content_fast(file_url: str) -> Dict[str, Any]:
         }
         
         # Return simplified results for speed
-        return {
+        result = {
             'ats_score': round(overall_score),
             'personal_information': personal_info,
             'detailed_analysis': {cat['name']: cat for cat in fast_categories},
@@ -6338,19 +6338,56 @@ def analyze_resume_content_fast(file_url: str) -> Dict[str, Any]:
             'strengths': [cat['name'] for cat in fast_categories if cat['score'] >= 8],
             'improvements_needed': [cat['name'] for cat in fast_categories if cat['score'] < 7],
             'analysis_type': 'fast',
-            'processing_time': 'under_30_seconds'
+            'processing_time': 'under_30_seconds',
+            'file_url': file_url,
+            'content': content
         }
+        
+        # CRITICAL: Generate comprehensive TXT issues report for FAST analysis too
+        try:
+            logger.info("🔍 FAST ANALYSIS: Starting comprehensive TXT issues report generation...")
+            comprehensive_report = generate_comprehensive_issues_report(result)
+            
+            if comprehensive_report and len(comprehensive_report) > 100:
+                result['comprehensive_issues_report'] = comprehensive_report
+                logger.info(f"✅ FAST ANALYSIS: Comprehensive TXT issues report generated successfully ({len(comprehensive_report)} chars)")
+            else:
+                logger.warning(f"⚠️ FAST ANALYSIS: Comprehensive report generated but appears empty or too short: {comprehensive_report}")
+                result['comprehensive_issues_report'] = None
+                
+        except Exception as report_error:
+            logger.error(f"❌ FAST ANALYSIS: Failed to generate comprehensive report: {str(report_error)}")
+            result['comprehensive_issues_report'] = None
+        
+        return result
         
     except Exception as e:
         logger.error(f"Fast analysis error: {str(e)}")
         # Fallback to basic scoring if fast analysis fails
-        return {
+        fallback_result = {
             'ats_score': 65,  # Default reasonable score
             'personal_information': {},
             'detailed_analysis': {},
             'analysis_type': 'fast_fallback',
-            'error': 'Fast analysis failed, using fallback scoring'
+            'error': 'Fast analysis failed, using fallback scoring',
+            'file_url': file_url,
+            'content': ''
         }
+        
+        # Try to generate comprehensive report even in fallback case
+        try:
+            logger.info("🔍 FAST FALLBACK: Attempting comprehensive report generation...")
+            comprehensive_report = generate_comprehensive_issues_report(fallback_result)
+            if comprehensive_report:
+                fallback_result['comprehensive_issues_report'] = comprehensive_report
+                logger.info(f"✅ FAST FALLBACK: Generated fallback comprehensive report")
+            else:
+                fallback_result['comprehensive_issues_report'] = None
+        except Exception as fallback_error:
+            logger.error(f"❌ FAST FALLBACK: Could not generate comprehensive report: {str(fallback_error)}")
+            fallback_result['comprehensive_issues_report'] = None
+            
+        return fallback_result
 
 def extract_text_from_pdf_fast(file_content: bytes) -> str:
     """Fast PDF text extraction using most available method"""
