@@ -6555,6 +6555,24 @@ def analyze_resume_content(file_url: str) -> Dict[str, Any]:
             'actionable_improvements': len([i for i in critical_issues + quick_fixes if i.get('time_to_fix', '').split()[0].isdigit() and int(i.get('time_to_fix', '0').split()[0]) <= 5])
         }
         
+        # CRITICAL: Generate comprehensive TXT issues report for Flask app
+        try:
+            logger.info("🔍 Flask app: Starting comprehensive TXT issues report generation...")
+            comprehensive_report = generate_comprehensive_issues_report(result)
+            
+            if comprehensive_report and len(comprehensive_report) > 100:
+                result['comprehensive_issues_report'] = comprehensive_report
+                logger.info(f"✅ Flask app: Comprehensive TXT issues report generated successfully ({len(comprehensive_report)} chars)")
+            else:
+                logger.warning("⚠️ Flask app: Comprehensive report generated but appears empty or too short")
+                result['comprehensive_issues_report'] = None
+                
+        except Exception as report_error:
+            logger.error(f"❌ Flask app: Failed to generate comprehensive report: {str(report_error)}")
+            import traceback
+            logger.error(f"Flask app traceback: {traceback.format_exc()}")
+            result['comprehensive_issues_report'] = None
+        
         # Debug: Log the final result keys after merging
         logger.info(f'🔍 DEBUG: final result keys: {list(result.keys())}')
         logger.info(f'🔍 DEBUG: final result detailedAnalysis count: {len(result.get("detailedAnalysis", {}))}')
