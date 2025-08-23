@@ -86,6 +86,46 @@ except ImportError as e:
     print(f"❌ Could not import Job analyzer functions: {e}")
     job_analyzer_available = False
 
+@app.route('/debug-version', methods=['GET'])
+def debug_version():
+    """Debug endpoint to check what version of code is running"""
+    try:
+        # Check if we can import the comprehensive report function
+        try:
+            from index import generate_comprehensive_issues_report
+            has_comprehensive_func = True
+        except ImportError:
+            has_comprehensive_func = False
+        
+        # Check if analyze_resume_content has the comprehensive report code
+        import inspect
+        from index import analyze_resume_content
+        source_lines = inspect.getsource(analyze_resume_content)
+        has_comprehensive_in_source = 'comprehensive_issues_report' in source_lines
+        
+        debug_info = {
+            'status': 'debug',
+            'comprehensive_function_importable': has_comprehensive_func,
+            'comprehensive_in_analyze_function': has_comprehensive_in_source,
+            'analyze_function_line_count': len(source_lines.split('\n')),
+            'last_lines_of_analyze_function': source_lines.split('\n')[-10:],
+            'timestamp': int(time.time())
+        }
+        
+        response = jsonify(debug_info)
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
+        
+    except Exception as e:
+        error_info = {
+            'status': 'error',
+            'error': str(e),
+            'timestamp': int(time.time())
+        }
+        response = jsonify(error_info)
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
+
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint for Render.com"""
