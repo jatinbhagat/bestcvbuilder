@@ -147,9 +147,20 @@ def health_check():
     except Exception as e:
         supabase_status = f"error: {str(e)}"
     
+    # Check if we have comprehensive report functionality
+    try:
+        from index import generate_comprehensive_issues_report, analyze_resume_content
+        import inspect
+        source = inspect.getsource(analyze_resume_content)
+        has_comprehensive = 'comprehensive_issues_report' in source
+    except:
+        has_comprehensive = False
+    
     response = jsonify({
         "status": "healthy",
         "service": "bestcvbuilder-api",
+        "version": "COMPREHENSIVE_REPORT_FIXED",
+        "comprehensive_report_available": has_comprehensive,
         "handlers": {
             "cv_parser": cv_parser_available,
             "cv_rewrite": False,
