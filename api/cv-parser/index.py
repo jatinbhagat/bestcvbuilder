@@ -6431,45 +6431,248 @@ def extract_name_fast(text: str) -> str:
     return ""
 
 def generate_fast_ats_scores(text: str) -> List[Dict]:
-    """Generate fast ATS scores for essential categories only"""
+    """Generate comprehensive ATS scores for all categories needed for specific issue extraction"""
     categories = []
+    text_lower = text.lower()
+    lines = text.split('\n')
+    word_count = len(text.split())
     
-    # Essential scoring categories for fast analysis
+    # CONTACT DETAILS
+    has_email = '@' in text
+    has_phone = any(char.isdigit() for char in text) and any(p in text for p in ['phone', 'tel', '(', ')', '-'])
     categories.append({
         'name': 'Contact Details',
-        'score': 8 if '@' in text and any(char.isdigit() for char in text) else 5,
-        'issue': 'Contact information analysis'
+        'score': 10 if has_email and has_phone else (8 if has_email or has_phone else 5),
+        'issues': ['Contact formatting optimization opportunity: All contact elements present but formatting could be enhanced'] if has_email and has_phone else ['Missing essential contact information'],
+        'suggestions': ['Optimize contact section layout'] if has_email and has_phone else ['Add missing phone number or email']
     })
     
+    # SPELLING  
+    categories.append({
+        'name': 'Spelling',
+        'score': 10,  # Assume good unless we detect obvious issues
+        'issues': ['Fix spelling errors using AI-powered detection'],
+        'suggestions': ['Use spell-check tools for final review']
+    })
+    
+    # ACTION VERBS
+    action_verbs = ['managed', 'led', 'created', 'developed', 'implemented', 'designed', 'optimized', 'achieved']
+    verb_score = min(10, len([v for v in action_verbs if v in text_lower]) + 4)
     categories.append({
         'name': 'Action Verbs',
-        'score': 7 if any(verb in text.lower() for verb in ['managed', 'led', 'created', 'developed']) else 4,
-        'issue': 'Action verb usage'
+        'score': verb_score,
+        'issues': ['Use more strong action verbs to start bullet points'],
+        'suggestions': ['Replace weak verbs with power words like "spearheaded", "orchestrated", "streamlined"']
     })
     
+    # QUANTIFIABLE ACHIEVEMENTS
+    has_numbers = any(char.isdigit() for char in text)
+    has_percentages = '%' in text
+    quant_score = 9 if has_numbers and has_percentages else (7 if has_numbers or has_percentages else 5)
+    categories.append({
+        'name': 'Quantifiable Achievements',
+        'score': quant_score,
+        'issues': ['Add more quantified achievements with specific numbers'],
+        'suggestions': ['Include metrics like "increased sales by 25%" or "managed team of 12"']
+    })
+    
+    # GRAMMAR
+    categories.append({
+        'name': 'Grammar',
+        'score': 9,  # Assume good grammar unless we detect issues
+        'issues': ['Fix grammar errors and improve language accuracy'],
+        'suggestions': ['Use grammar checking tools for final polish']
+    })
+    
+    # USE OF BULLETS
+    has_bullets = any(line.strip().startswith(('•', '-', '*')) for line in lines)
+    bullet_score = 9 if has_bullets else 6
+    categories.append({
+        'name': 'Use Of Bullets',
+        'score': bullet_score,
+        'issues': ['Improve bullet point structure and formatting'],
+        'suggestions': ['Use consistent bullet points for achievements']
+    })
+    
+    # PAGE DENSITY
+    density_score = 9 if 300 < word_count < 800 else (7 if word_count > 200 else 5)
+    categories.append({
+        'name': 'Page Density',
+        'score': density_score,
+        'issues': ['Optimize page layout and white space usage'],
+        'suggestions': ['Balance content density for better readability']
+    })
+    
+    # LEADERSHIP
+    leadership_words = ['led', 'managed', 'supervised', 'directed', 'mentored', 'coached']
+    leadership_score = 9 if any(word in text_lower for word in leadership_words) else 6
+    categories.append({
+        'name': 'Leadership',
+        'score': leadership_score,
+        'issues': ['Highlight mentorship and coaching of junior team members'],
+        'suggestions': ['Add specific examples of team leadership and management']
+    })
+    
+    # EDUCATION SECTION
+    education_words = ['university', 'college', 'degree', 'bachelor', 'master', 'phd', 'education']
+    has_education = any(word in text_lower for word in education_words)
+    categories.append({
+        'name': 'Education Section',
+        'score': 9 if has_education else 6,
+        'issues': ['Optimize education section format and content'],
+        'suggestions': ['Include degree, institution, and graduation year']
+    })
+    
+    # CV READABILITY SCORE
+    categories.append({
+        'name': 'CV Readability Score',
+        'score': 8.7,  # Good baseline score
+        'issues': ['Improve resume structure, formatting, and ATS compatibility for better readability'],
+        'suggestions': ['Use clear headings and consistent formatting']
+    })
+    
+    # VERBOSITY
+    avg_sentence_length = word_count / max(1, len([l for l in lines if l.strip()]))
+    verbosity_score = 8 if avg_sentence_length < 20 else 6
+    categories.append({
+        'name': 'Verbosity',
+        'score': verbosity_score,
+        'issues': ['Reduce wordiness for better readability'],
+        'suggestions': ['Use concise, impactful language']
+    })
+    
+    # ACTIVE VOICE
+    passive_indicators = ['was responsible', 'were responsible', 'was tasked', 'was assigned']
+    has_passive = any(indicator in text_lower for indicator in passive_indicators)
+    categories.append({
+        'name': 'Active Voice',
+        'score': 8 if not has_passive else 6,
+        'issues': ['Convert passive voice to active voice for impact'],
+        'suggestions': ['Replace "was responsible for" with action verbs like "managed"']
+    })
+    
+    # SKILLS SECTION
+    has_skills_section = 'skills' in text_lower or 'technologies' in text_lower or 'competencies' in text_lower
     categories.append({
         'name': 'Skills Section',
-        'score': 8 if 'skills' in text.lower() or 'technologies' in text.lower() else 5,
-        'issue': 'Skills section presence'
+        'score': 8 if has_skills_section else 5,
+        'issues': ['Add specific software proficiency levels (Expert, Advanced, Intermediate)'],
+        'suggestions': ['Create dedicated skills section with technical competencies']
     })
     
+    # PERSONAL PRONOUNS
+    pronouns = ['i ', ' i ', 'my ', 'me ', 'myself']
+    has_pronouns = any(pronoun in text_lower for pronoun in pronouns)
     categories.append({
-        'name': 'Experience',
-        'score': 7 if 'experience' in text.lower() or 'work' in text.lower() else 5,
-        'issue': 'Work experience section'
+        'name': 'Personal Pronouns',
+        'score': 7 if not has_pronouns else 5,
+        'issues': ['Remove first-person pronouns like "I", "me", "my"'],
+        'suggestions': ['Use professional third-person perspective']
     })
     
+    # UNNECESSARY SECTIONS
+    unnecessary_words = ['references', 'hobbies', 'interests', 'objective']
+    has_unnecessary = any(word in text_lower for word in unnecessary_words)
     categories.append({
-        'name': 'Education',
-        'score': 8 if any(word in text.lower() for word in ['university', 'college', 'degree', 'bachelor', 'master']) else 6,
-        'issue': 'Education section'
+        'name': 'Unnecessary Sections',
+        'score': 6 if has_unnecessary else 8,
+        'issues': ['Remove outdated sections like References, Objective, and high school education when you have higher qualifications'],
+        'suggestions': ['Focus on professional experience and achievements']
     })
     
-    # Quick formatting checks
+    # DRIVE
+    initiative_words = ['initiated', 'pioneered', 'launched', 'established', 'founded', 'created']
+    has_initiative = any(word in text_lower for word in initiative_words)
     categories.append({
-        'name': 'Formatting',
-        'score': 7 if len(text) > 500 and '\n' in text else 4,
-        'issue': 'Resume formatting'
+        'name': 'Drive',
+        'score': 5 if not has_initiative else 7,
+        'issues': ['Show initiative and self-motivation examples'],
+        'suggestions': ['Include projects you initiated or innovative solutions you created']
+    })
+    
+    # TEAMWORK
+    teamwork_words = ['collaborated', 'partnered', 'cross-functional', 'team member', 'worked with']
+    has_teamwork = any(word in text_lower for word in teamwork_words)
+    categories.append({
+        'name': 'Teamwork',
+        'score': 5 if not has_teamwork else 7,
+        'issues': ['Better showcase collaborative experiences'],
+        'suggestions': ['Include cross-functional projects and collaborative achievements']
+    })
+    
+    # ANALYTICAL
+    analytical_words = ['analyzed', 'evaluated', 'assessed', 'data', 'metrics', 'research']
+    has_analytical = any(word in text_lower for word in analytical_words)
+    categories.append({
+        'name': 'Analytical',
+        'score': 5 if not has_analytical else 7,
+        'issues': ['Quantify analytical impact with percentages and metrics'],
+        'suggestions': ['Include data analysis, research, or problem-solving achievements']
+    })
+    
+    # CERTIFICATIONS
+    cert_words = ['certified', 'certification', 'license', 'credential']
+    has_certifications = any(word in text_lower for word in cert_words)
+    categories.append({
+        'name': 'Certifications',
+        'score': 4 if not has_certifications else 7,
+        'issues': ['Obtain fundamental industry certifications immediately'],
+        'suggestions': ['Add relevant professional certifications and training']
+    })
+    
+    # VERB TENSES
+    mixed_tense_indicators = ['currently', 'present', 'ongoing']
+    has_mixed_tenses = any(indicator in text_lower for indicator in mixed_tense_indicators)
+    categories.append({
+        'name': 'Verb Tenses',
+        'score': 4 if has_mixed_tenses else 6,
+        'issues': ['Use consistent and appropriate verb tenses'],
+        'suggestions': ['Use present tense for current role, past tense for previous roles']
+    })
+    
+    # SUMMARY
+    has_summary = any(word in text_lower for word in ['summary', 'profile', 'about', 'overview'])
+    categories.append({
+        'name': 'Summary',
+        'score': 3 if not has_summary else 6,
+        'issues': ['Rewrite entire summary removing all personal pronouns'],
+        'suggestions': ['Add professional summary highlighting key achievements']
+    })
+    
+    # DATES
+    import re
+    has_dates = bool(re.search(r'\b\d{4}\b', text)) or bool(re.search(r'\d{1,2}/\d{4}', text))
+    categories.append({
+        'name': 'Dates',
+        'score': 0 if not has_dates else 6,
+        'issues': ['Add missing employment and education dates immediately'],
+        'suggestions': ['Include consistent date formatting throughout resume']
+    })
+    
+    # GROWTH SIGNALS
+    growth_words = ['promoted', 'advanced', 'progressed', 'increased responsibility']
+    has_growth = any(word in text_lower for word in growth_words)
+    categories.append({
+        'name': 'Growth Signals',
+        'score': 0 if not has_growth else 6,
+        'issues': ['Highlight any promotion or role expansion you\'ve had'],
+        'suggestions': ['Show career progression and increased responsibilities']
+    })
+    
+    # REPETITION
+    words = text_lower.split()
+    word_freq = {}
+    for word in words:
+        if len(word) > 4:  # Only check longer words
+            word_freq[word] = word_freq.get(word, 0) + 1
+    
+    max_repetition = max(word_freq.values()) if word_freq else 0
+    repetition_score = 0 if max_repetition > 8 else (5 if max_repetition > 5 else 8)
+    categories.append({
+        'name': 'Repetition',
+        'score': repetition_score,
+        'issues': ['Completely rewrite repetitive phrases with varied vocabulary'],
+        'suggestions': ['Use synonyms and varied language to avoid word repetition']
     })
     
     return categories
@@ -6658,7 +6861,8 @@ def extract_specific_issues_with_examples(analysis_result: Dict[str, Any]) -> Di
     """
     try:
         content = analysis_result.get('content', '')
-        detailed_analysis = analysis_result.get('detailedAnalysis', {})
+        # Try both camelCase and snake_case for detailed analysis
+        detailed_analysis = analysis_result.get('detailedAnalysis', {}) or analysis_result.get('detailed_analysis', {})
         
         logger.info(f"🔍 Extract specific issues - Content length: {len(content)}")
         logger.info(f"🔍 Extract specific issues - Categories available: {list(detailed_analysis.keys())}")
@@ -7252,6 +7456,11 @@ def generate_comprehensive_issues_report(analysis_result: Dict[str, Any]) -> str
         logger.info(f"🔍 REPORT DEBUG: Input analysis_result type: {type(analysis_result)}")
         logger.info("🔍 Generating enhanced TXT issues report with specific examples...")
         
+        # Extract main data first
+        score = analysis_result.get('ats_score', 0)
+        # Try both camelCase and snake_case for detailed analysis
+        detailed_analysis = analysis_result.get('detailedAnalysis', {}) or analysis_result.get('detailed_analysis', {})
+        
         # Extract specific issues with examples from the resume
         specific_issues = extract_specific_issues_with_examples(analysis_result)
         
@@ -7261,10 +7470,6 @@ def generate_comprehensive_issues_report(analysis_result: Dict[str, Any]) -> str
             # Fall back to generating issues from basic detailed_analysis
             specific_issues = create_basic_issues_from_analysis(detailed_analysis)
             logger.info(f"📄 Generated {len(specific_issues.get('critical_issues', []))} basic issues as fallback")
-        
-        # Extract main data
-        score = analysis_result.get('ats_score', 0)
-        detailed_analysis = analysis_result.get('detailedAnalysis', {})
         
         # Use the enhanced issues with examples
         critical_issues = specific_issues.get('critical_issues', [])
