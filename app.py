@@ -196,6 +196,37 @@ def test_connectivity():
     response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
     return response
 
+@app.route('/api/config/', methods=['GET', 'OPTIONS'])
+def app_config():
+    """Application configuration endpoint for payment bypass settings"""
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Accept, Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        response.headers.add('Access-Control-Max-Age', '86400')
+        return response
+    
+    # Configuration settings
+    config_info = {
+        'status': 'success',
+        'bypass_payment': True,  # Enable payment bypass for testing
+        'free_mode_enabled': True,  # Enable free mode
+        'features': {
+            'free_cv_rewrite': True,
+            'payment_bypass': True,
+            'txt_download': True
+        },
+        'environment': 'production',
+        'timestamp': int(time.time())
+    }
+    
+    response = jsonify(config_info)
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Accept, Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
+    return response
+
 @app.route('/api/cv-parser', methods=['POST', 'OPTIONS'])
 def cv_parser():
     """CV Parser API endpoint with timeout and memory management"""

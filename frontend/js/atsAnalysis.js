@@ -227,6 +227,9 @@ function processAnalysisResult(rawResult, fileUrl) {
         file_url: rawResult.file_url || fileUrl, // Original file URL from API response
         content: rawResult.content || '', // Extracted text content from PDF
         
+        // CRITICAL: Preserve TXT report field from backend
+        comprehensive_issues_report: rawResult.comprehensive_issues_report || null,
+        
         timestamp: new Date().toISOString()
     };
 }

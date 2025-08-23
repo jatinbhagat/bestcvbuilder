@@ -412,7 +412,12 @@ async function fetchAppConfig() {
     if (appConfig) return appConfig; // Return cached config
     
     try {
-        const response = await fetch('/api/config/', {
+        // Use production backend API URL (same as atsAnalysis.js)
+        const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+        const API_BASE_URL = isProduction ? 'https://bestcvbuilder-api.onrender.com/api' : '/api';
+        const CONFIG_URL = `${API_BASE_URL}/config/`;
+        
+        const response = await fetch(CONFIG_URL, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
