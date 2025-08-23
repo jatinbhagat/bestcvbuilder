@@ -27,6 +27,12 @@ try {
     console.log('📊 Raw session data:', rawData);
     analysisData = JSON.parse(rawData || '{}');
     console.log('📊 Parsed Analysis Data:', analysisData);
+    
+    // 🔍 DEBUG: Check comprehensive report in initial data
+    console.log('🔍 INITIAL DATA CHECK:');
+    console.log('🔍 Has comprehensive_issues_report?', 'comprehensive_issues_report' in analysisData);
+    console.log('🔍 comprehensive_issues_report value:', analysisData.comprehensive_issues_report);
+    
 } catch (error) {
     console.error('❌ Failed to parse session data:', error);
     analysisData = {};
@@ -467,18 +473,37 @@ async function showTXTDownloadPage() {
         // Show loading state
         showLoadingState();
         
+        // 🔍 DEBUG: Log full analysis data structure
+        console.log('🔍 DEBUGGING TXT REPORT GENERATION');
+        console.log('📊 Full analysisData keys:', Object.keys(analysisData));
+        console.log('📊 analysisData structure:', JSON.stringify(analysisData, null, 2));
+        
         // Get comprehensive issues report from analysis data
         const comprehensiveReport = analysisData.comprehensive_issues_report;
         
-        if (comprehensiveReport) {
+        // 🔍 DEBUG: Detailed comprehensive report analysis
+        console.log('🔍 comprehensive_issues_report field:', comprehensiveReport);
+        console.log('🔍 Type of comprehensive_issues_report:', typeof comprehensiveReport);
+        console.log('🔍 Is null/undefined?', comprehensiveReport === null || comprehensiveReport === undefined);
+        
+        if (comprehensiveReport && comprehensiveReport.length > 0) {
             // Store the TXT report for the download page
             sessionStorage.setItem('comprehensiveReport', comprehensiveReport);
             console.log('✅ Comprehensive report found and stored');
+            console.log('📄 Report length:', comprehensiveReport.length);
+            console.log('📄 Report preview (first 200 chars):', comprehensiveReport.substring(0, 200));
         } else {
+            // 🔍 DEBUG: Why are we falling back?
+            console.log('⚠️ FALLBACK TRIGGERED:');
+            console.log('   - comprehensiveReport exists?', !!comprehensiveReport);
+            console.log('   - comprehensiveReport length?', comprehensiveReport?.length || 'N/A');
+            console.log('   - comprehensiveReport content?', comprehensiveReport || 'NULL/UNDEFINED');
+            
             // Generate a basic report from current analysis data
             const basicReport = generateBasicIssuesReport();
             sessionStorage.setItem('comprehensiveReport', basicReport);
             console.log('⚠️ Generated basic report as fallback');
+            console.log('📄 Basic report length:', basicReport.length);
         }
         
         // Redirect to TXT download page
