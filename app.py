@@ -177,6 +177,15 @@ def cv_parser():
         result = analyze_resume_content(file_url)
         
         print(f"✅ CV analysis completed successfully")
+        print(f"🔍 FLASK APP DEBUG: analyze_resume_content returned {len(result)} fields")
+        print(f"🔍 FLASK APP DEBUG: comprehensive_issues_report in result? {'comprehensive_issues_report' in result}")
+        if 'comprehensive_issues_report' in result:
+            report_val = result['comprehensive_issues_report']
+            print(f"🔍 FLASK APP DEBUG: comprehensive_issues_report type: {type(report_val)}")
+            print(f"🔍 FLASK APP DEBUG: comprehensive_issues_report length: {len(report_val) if report_val else 'None'}")
+        else:
+            print(f"❌ FLASK APP DEBUG: comprehensive_issues_report NOT FOUND in analyze_resume_content result!")
+            print(f"🔍 FLASK APP DEBUG: Available fields: {list(result.keys())}")
         
         # Force garbage collection after analysis
         gc.collect()
@@ -255,6 +264,15 @@ def cv_parser():
             result['database_error'] = str(db_error)
         
         print(f"🎯 ATS Score: {result.get('ats_score', 'Not found')}")
+        
+        # FINAL FLASK CHECK: Verify comprehensive_issues_report before response
+        print(f"🔍 FLASK FINAL CHECK: comprehensive_issues_report in result? {'comprehensive_issues_report' in result}")
+        if 'comprehensive_issues_report' in result:
+            final_report = result['comprehensive_issues_report']
+            print(f"🔍 FLASK FINAL CHECK: Report exists, type: {type(final_report)}, length: {len(final_report) if final_report else 'None'}")
+        else:
+            print(f"❌ FLASK FINAL CHECK: comprehensive_issues_report MISSING from final result!")
+            print(f"🔍 FLASK FINAL CHECK: Final result keys ({len(result)}): {list(result.keys())}")
         
         # Return results with CORS headers
         response = jsonify(result)
