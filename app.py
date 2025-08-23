@@ -38,9 +38,28 @@ def timeout_handler(signum, frame):
 
 signal.signal(signal.SIGALRM, timeout_handler)
 
-# Import the CV parser functions directly
+# Import the CV parser functions directly with cache clearing
 try:
+    # Clear any cached imports to ensure we get the latest code
+    import sys
+    import importlib
+    
+    # Remove from cache if it exists
+    module_name = 'index'
+    if module_name in sys.modules:
+        print(f"🔄 Clearing cached module: {module_name}")
+        del sys.modules[module_name]
+    
+    # Fresh import
     from index import analyze_resume_content, ATSAnalysisError
+    
+    # Verify we have the latest version by checking if generate_comprehensive_issues_report exists
+    try:
+        from index import generate_comprehensive_issues_report
+        print("✅ CV parser functions imported successfully (with comprehensive report generation)")
+    except ImportError:
+        print("⚠️ generate_comprehensive_issues_report not found - using older version")
+        
     cv_parser_available = True
     print("✅ CV parser functions imported successfully")
 except ImportError as e:
@@ -172,6 +191,16 @@ def cv_parser():
         print(f"   Analysis Type: {analysis_type}")
         print(f"   User ID: {user_id}")
         print(f"   Function available: {callable(analyze_resume_content)}")
+        
+        # Test if our function has the comprehensive report feature
+        import inspect
+        source_lines = inspect.getsource(analyze_resume_content)
+        has_comprehensive_report = 'comprehensive_issues_report' in source_lines
+        print(f"🔍 Function has comprehensive report generation: {has_comprehensive_report}")
+        
+        if not has_comprehensive_report:
+            print("❌ WARNING: analyze_resume_content does not contain comprehensive report code!")
+            print("❌ This indicates we're importing old cached code or wrong version")
         
         # Call the main analysis function (only takes file_url)
         result = analyze_resume_content(file_url)
