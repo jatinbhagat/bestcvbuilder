@@ -630,7 +630,7 @@ def internal_error(error):
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    print(f"🚀 Starting BestCVBuilder API on port {port}")
+    print(f"🚀 Starting BestCVBuilder API on port {port} - Version: COMPREHENSIVE_REPORT_FIXED")
     
     # Configure for memory efficiency
     if os.environ.get('RENDER'):
