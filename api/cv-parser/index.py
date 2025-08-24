@@ -7456,8 +7456,8 @@ def generate_comprehensive_issues_report(analysis_result: Dict[str, Any]) -> str
         logger.info(f"🔍 REPORT DEBUG: Input analysis_result type: {type(analysis_result)}")
         logger.info("🔍 Generating enhanced TXT issues report with specific examples...")
         
-        # Extract main data first
-        score = analysis_result.get('ats_score', 0)
+        # Extract main data first - use SAME score as frontend (unified scoring)
+        score = analysis_result.get('score', analysis_result.get('ats_score', 0))
         # Try both camelCase and snake_case for detailed analysis
         detailed_analysis = analysis_result.get('detailedAnalysis', {}) or analysis_result.get('detailed_analysis', {})
         
