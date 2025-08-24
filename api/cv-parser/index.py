@@ -4765,8 +4765,9 @@ def calculate_comprehensive_ats_score(content: str, job_posting: str = None, kno
     logger.info(f'🔍 DEBUG: Sample comprehensive_analysis: {dict(list(comprehensive_analysis.items())[:3])}')
     
     response_data = {
-        'ats_score': final_score,  # Keep original for compatibility
-        'score': comprehensive_final_score,  # New comprehensive score
+        'comprehensive_final_score': comprehensive_final_score,  # Primary unified score
+        'ats_score': comprehensive_final_score,  # Unified - same as comprehensive_final_score
+        'score': comprehensive_final_score,  # Unified - same as comprehensive_final_score
         'base_score': base_score,
         'total_penalty': total_penalty,
         'penalty_breakdown': penalty_breakdown,
@@ -5004,7 +5005,7 @@ def generate_transformation_preview(analysis_data: Dict[str, Any], critical_issu
     Returns:
         Dictionary with transformation metrics
     """
-    current_score = analysis_data.get('ats_score', 0)
+    current_score = analysis_data.get('comprehensive_final_score', analysis_data.get('ats_score', 0))
     current_rates = calculate_interview_rates(current_score)
     
     # Calculate potential improvement
@@ -5201,7 +5202,7 @@ def generate_comprehensive_recommendations(analysis: Dict[str, Any]) -> Dict[str
     critical_issues = []
     suggestions = []
     
-    score = analysis['ats_score']
+    score = analysis.get('comprehensive_final_score', analysis.get('ats_score', analysis.get('score', 0)))
     components = analysis['detailed_analysis']
     
     # Analyze each component for recommendations
@@ -5312,7 +5313,7 @@ def generate_next_steps(score: int, components: Dict[str, Any]) -> List[str]:
 def generate_detailed_issues_analysis(analysis: Dict[str, Any], content: str) -> Dict[str, Any]:
     """Generate specific, actionable issues with detailed analysis"""
     
-    score = analysis['ats_score']
+    score = analysis.get('comprehensive_final_score', analysis.get('ats_score', analysis.get('score', 0)))
     components = analysis['detailed_analysis']
     
     critical_issues = []
@@ -6187,7 +6188,7 @@ def save_analysis_results(email: str, resume_id: int, analysis_data: Dict[str, A
             'email': email,
             'resume_id': resume_id,
             'session_uuid': session_uuid,
-            'ats_score': min(100, max(0, int(cleaned_analysis_data.get('ats_score', 0)))),
+            'ats_score': min(100, max(0, int(cleaned_analysis_data.get('comprehensive_final_score', cleaned_analysis_data.get('ats_score', 0))))),
             'score_category': cleaned_analysis_data.get('category', 'poor'),
             'structure_score': min(25, max(0, int(cleaned_analysis_data.get('component_scores', {}).get('structure', 0)))),
             'keywords_score': min(20, max(0, int(cleaned_analysis_data.get('component_scores', {}).get('keywords', 0)))),  # Fixed: 20 not 25
@@ -6745,14 +6746,14 @@ def analyze_resume_content(file_url: str) -> Dict[str, Any]:
         if 'component_scores' in ats_analysis:
             for component, score in ats_analysis['component_scores'].items():
                 logger.info(f"  {component}: {score}")
-        logger.info(f"Total ATS score: {ats_analysis.get('ats_score', 'Not found')}")
+        logger.info(f"Total ATS score: {ats_analysis.get('comprehensive_final_score', 'Not found')}")
         
         # Generate recommendations
         recommendations = generate_comprehensive_recommendations(ats_analysis)
         
         # Generate enhanced analysis with all new features
         critical_issues, quick_wins = classify_issues_by_priority(ats_analysis)
-        interview_metrics = calculate_interview_rates(ats_analysis['ats_score'])
+        interview_metrics = calculate_interview_rates(ats_analysis.get('comprehensive_final_score', ats_analysis.get('ats_score', 50)))
         transformation_preview = generate_transformation_preview(ats_analysis, critical_issues, quick_wins)
         enhanced_components = enhance_component_breakdown(ats_analysis)
         
@@ -6781,7 +6782,7 @@ def analyze_resume_content(file_url: str) -> Dict[str, Any]:
             'content': content,    # Extracted text content
             
             # Enhanced algorithm features
-            'letter_grade': get_letter_grade(ats_analysis['ats_score']),
+            'letter_grade': get_letter_grade(ats_analysis.get('comprehensive_final_score', ats_analysis.get('ats_score', 50))),
             'interview_metrics': interview_metrics,
             'critical_issues': critical_issues,
             'quick_wins': quick_fixes,  # Use quick_fixes from detailed analysis
@@ -6833,7 +6834,7 @@ def analyze_resume_content(file_url: str) -> Dict[str, Any]:
         else:
             logger.error("❌ FINAL CHECK: comprehensive_issues_report NOT FOUND in result!")
         
-        logger.info(f"Analysis completed - Score: {ats_analysis['ats_score']}")
+        logger.info(f"Analysis completed - Score: {ats_analysis.get('comprehensive_final_score', ats_analysis.get('ats_score', 'Unknown'))}")
         return result
         
     except requests.exceptions.Timeout:
@@ -7577,8 +7578,10 @@ def generate_comprehensive_issues_report(analysis_result: Dict[str, Any]) -> str
         logger.info(f"🔍 REPORT DEBUG: Input analysis_result type: {type(analysis_result)}")
         logger.info("🔍 Generating enhanced TXT issues report with specific examples...")
         
-        # Extract main data first - use SAME score as frontend (unified scoring)
-        score = analysis_result.get('score', analysis_result.get('ats_score', 0))
+        # Extract main data first - use unified comprehensive scoring
+        score = analysis_result.get('comprehensive_final_score', 
+                                  analysis_result.get('score', 
+                                                    analysis_result.get('ats_score', 0)))
         # Try both camelCase and snake_case for detailed analysis
         detailed_analysis = analysis_result.get('detailedAnalysis', {}) or analysis_result.get('detailed_analysis', {})
         
