@@ -7535,104 +7535,696 @@ def create_enhanced_issues_from_analysis(detailed_analysis: Dict[str, Any], cv_c
     return issues
 
 def extract_cv_examples_for_category(category: str, lines: List[str], cv_content: str) -> List[Dict[str, Any]]:
-    """Extract specific examples from CV content based on category"""
+    """Extract category-specific examples with contextual analysis and clear fix instructions"""
     import re
     
     examples = []
-    category_lower = category.lower()
+    category_lower = category.lower().replace('_', ' ')
     
-    # Different extraction logic based on category
-    if 'dates' in category_lower:
-        # Find date-related lines
-        date_pattern = r'\b(\d{4}|\d{1,2}/\d{4}|\w+\s+\d{4})\b'
-        for i, line in enumerate(lines, 1):
-            if re.search(date_pattern, line) and len(line.strip()) > 5:
-                examples.append({
-                    'line_number': i,
-                    'original_text': line.strip(),
-                    'problematic_text': line.strip(),  # Add for compatibility
-                    'issue_type': 'Date formatting inconsistency',
-                    'suggestion': 'Use consistent date format like "Jan 2020 - Dec 2022"',
-                    'fix_suggestion': f'"{line.strip()}" → "Jan 2020 - Dec 2022" (consistent format)'
-                })
-                if len(examples) >= 3:  # Limit examples
-                    break
-                    
-    elif 'repetition' in category_lower or 'verb' in category_lower:
-        # Find repeated action verbs
-        verbs_found = {}
-        for i, line in enumerate(lines, 1):
-            words = line.strip().split()
-            if words and len(line.strip()) > 10:
-                first_word = words[0].lower().rstrip('.,!?:;')
-                if first_word and len(first_word) > 2:
-                    if first_word not in verbs_found:
-                        verbs_found[first_word] = []
-                    verbs_found[first_word].append((i, line.strip()))
+    # First, identify resume sections for context-aware analysis
+    sections = identify_resume_sections(lines)
+    
+    # Category-specific extraction with intelligent pattern matching
+    if 'verb tense' in category_lower or 'tense' in category_lower:
+        examples = extract_verb_tense_issues(lines, sections)
         
-        # Find repeated verbs
-        for verb, occurrences in verbs_found.items():
-            if len(occurrences) > 1:
-                for line_num, text in occurrences[:2]:
-                    examples.append({
-                        'line_number': line_num,
-                        'original_text': text,
-                        'problematic_text': text,  # Add for compatibility
-                        'issue_type': f'Repeated verb: "{verb}"',
-                        'suggestion': f'Replace with alternatives like "achieved", "implemented", "optimized"',
-                        'fix_suggestion': f'"{text}" → Replace "{verb}" with "achieved/implemented/optimized"'
-                    })
-                break  # One repeated verb example is enough
-                
+    elif 'personal pronoun' in category_lower or 'pronoun' in category_lower:
+        examples = extract_personal_pronoun_issues(lines, sections)
+        
+    elif 'repetition' in category_lower:
+        examples = extract_repetition_issues(lines, sections)
+        
+    elif 'date' in category_lower:
+        examples = extract_date_inconsistency_issues(lines, sections)
+        
+    elif 'summary' in category_lower:
+        examples = extract_summary_issues(lines, sections)
+        
+    elif 'growth signal' in category_lower:
+        examples = extract_growth_signal_issues(lines, sections)
+        
+    elif 'certification' in category_lower:
+        examples = extract_certification_issues(lines, sections)
+        
+    elif 'teamwork' in category_lower:
+        examples = extract_teamwork_issues(lines, sections)
+        
+    elif 'leadership' in category_lower:
+        examples = extract_leadership_issues(lines, sections)
+        
+    elif 'analytical' in category_lower:
+        examples = extract_analytical_issues(lines, sections)
+        
+    elif 'action verb' in category_lower:
+        examples = extract_action_verb_issues(lines, sections)
+        
+    elif 'quantifiable' in category_lower:
+        examples = extract_quantifiable_issues(lines, sections)
+        
     elif 'contact' in category_lower:
-        # Find contact section
-        contact_keywords = ['email', 'phone', 'linkedin', '@', 'tel:', 'mobile']
-        for i, line in enumerate(lines, 1):
-            line_lower = line.lower()
-            if any(keyword in line_lower for keyword in contact_keywords) and len(line.strip()) > 3:
-                examples.append({
-                    'line_number': i,
-                    'original_text': line.strip(),
-                    'problematic_text': line.strip(),  # Add for compatibility
-                    'issue_type': 'Contact information formatting',
-                    'suggestion': 'Ensure professional email format and include LinkedIn URL',
-                    'fix_suggestion': f'Optimize contact format: add LinkedIn and ensure professional presentation'
-                })
-                if len(examples) >= 2:
-                    break
-                    
-    elif 'summary' in category_lower or 'personal' in category_lower:
-        # Find summary or lines with personal pronouns
-        pronouns = ['i ', 'my ', 'me ', 'myself']
-        for i, line in enumerate(lines, 1):
-            line_lower = line.lower()
-            if any(pronoun in line_lower for pronoun in pronouns) and len(line.strip()) > 10:
-                examples.append({
-                    'line_number': i,
-                    'original_text': line.strip(),
-                    'problematic_text': line.strip(),  # Add for compatibility
-                    'issue_type': 'Personal pronouns detected',
-                    'suggestion': 'Rewrite in third person: "Experienced professional with..." instead of "I am..."',
-                    'fix_suggestion': f'"{line.strip()}" → Rewrite without "I/my/me" pronouns'
-                })
-                if len(examples) >= 2:
-                    break
-                    
+        examples = extract_contact_issues(lines, sections)
+        
+    elif 'skill' in category_lower:
+        examples = extract_skills_issues(lines, sections)
+        
     else:
-        # Generic example extraction - find meaningful lines
-        meaningful_lines = [line for line in lines if len(line.strip()) > 15 and not line.strip().startswith('#')]
-        for i, line in enumerate(meaningful_lines[:3], 1):
-            line_idx = lines.index(line) + 1 if line in lines else i
+        # Fallback: only return examples if we find relevant content
+        examples = extract_generic_relevant_examples(category, lines, sections)
+    
+    # Filter and limit examples to most relevant
+    return filter_and_prioritize_examples(examples, category)
+
+def identify_resume_sections(lines: List[str]) -> Dict[str, List[int]]:
+    """Identify different sections of the resume for context-aware analysis"""
+    import re
+    
+    sections = {
+        'header': [],
+        'summary': [],
+        'experience': [],
+        'education': [],
+        'skills': [],
+        'certifications': [],
+        'contact': []
+    }
+    
+    current_section = 'header'
+    
+    for i, line in enumerate(lines):
+        line_clean = line.strip().lower()
+        
+        if not line_clean:
+            continue
+            
+        # Detect section headers
+        if re.search(r'\b(professional summary|summary|objective|profile)\b', line_clean):
+            current_section = 'summary'
+        elif re.search(r'\b(experience|employment|work history|professional experience)\b', line_clean):
+            current_section = 'experience'  
+        elif re.search(r'\b(education|academic|qualifications)\b', line_clean):
+            current_section = 'education'
+        elif re.search(r'\b(skills|technical skills|competencies|technologies)\b', line_clean):
+            current_section = 'skills'
+        elif re.search(r'\b(certification|licenses|credentials)\b', line_clean):
+            current_section = 'certifications'
+        elif re.search(r'\b(contact|phone|email|linkedin)\b', line_clean) and i < 10:
+            current_section = 'contact'
+        
+        sections[current_section].append(i)
+    
+    return sections
+
+def extract_verb_tense_issues(lines: List[str], sections: Dict[str, List[int]]) -> List[Dict[str, Any]]:
+    """Extract lines with specific verb tense inconsistencies"""
+    import re
+    
+    examples = []
+    
+    # Focus on experience section for verb tense analysis
+    experience_lines = sections.get('experience', [])
+    if not experience_lines:
+        # Fallback: look for bullet points anywhere
+        experience_lines = [i for i, line in enumerate(lines) if line.strip().startswith('•') or line.strip().startswith('-')]
+    
+    # Define tense patterns
+    past_tense_indicators = r'\b(developed|created|managed|led|implemented|achieved|improved|increased|reduced|designed|built|established|delivered|coordinated|supervised|executed|completed|launched|optimized|analyzed)\b'
+    present_tense_indicators = r'\b(develop|create|manage|lead|implement|achieve|improve|increase|reduce|design|build|establish|deliver|coordinate|supervise|execute|complete|launch|optimize|analyze)\b'
+    
+    # Check experience section for tense consistency
+    for line_idx in experience_lines:
+        if line_idx >= len(lines):
+            continue
+            
+        line = lines[line_idx].strip()
+        if len(line) < 10 or not (line.startswith('•') or line.startswith('-')):
+            continue
+            
+        line_lower = line.lower()
+        
+        # Check for mixed tenses or incorrect usage
+        has_past = bool(re.search(past_tense_indicators, line_lower))
+        has_present = bool(re.search(present_tense_indicators, line_lower))
+        
+        issue_found = False
+        issue_type = ""
+        suggestion = ""
+        
+        # Look for current role indicators
+        is_current_role = any(indicator in line_lower for indicator in ['present', 'current', 'ongoing', '- current'])
+        
+        if has_present and not is_current_role:
+            issue_found = True
+            issue_type = "Present tense used for past role"
+            suggestion = "Use past tense for previous positions (e.g., 'developed' instead of 'develop')"
+            
+        elif has_past and is_current_role:
+            issue_found = True 
+            issue_type = "Past tense used for current role"
+            suggestion = "Use present tense for current position (e.g., 'develop' instead of 'developed')"
+            
+        elif has_past and has_present:
+            issue_found = True
+            issue_type = "Mixed tenses in same bullet point"
+            suggestion = "Use consistent tense throughout each bullet point"
+        
+        if issue_found:
+            # Create specific before/after example
+            before_text = line
+            after_text = create_tense_correction(line, issue_type)
+            
             examples.append({
-                'line_number': line_idx,
-                'original_text': line.strip(),
-                'problematic_text': line.strip(),  # Add for compatibility
-                'issue_type': f'{category.replace("_", " ").title()} optimization needed',
-                'suggestion': f'Optimize this content for better ATS compatibility',
-                'fix_suggestion': f'Optimize: "{line.strip()[:50]}..." for better ATS performance'
+                'line_number': line_idx + 1,
+                'original_text': line,
+                'problematic_text': line,
+                'issue_type': issue_type,
+                'suggestion': suggestion,
+                'fix_suggestion': f'"{before_text}" → "{after_text}"',
+                'context': 'Resume Rule: Use past tense for previous roles, present tense for current role only'
             })
+            
+            if len(examples) >= 3:
+                break
     
     return examples
+
+def extract_personal_pronoun_issues(lines: List[str], sections: Dict[str, List[int]]) -> List[Dict[str, Any]]:
+    """Extract lines with personal pronouns that need to be removed"""
+    import re
+    
+    examples = []
+    pronouns_pattern = r'\b(I|me|my|myself|My|Me)\b'
+    
+    # Check all lines for personal pronouns
+    for i, line in enumerate(lines):
+        line_clean = line.strip()
+        if len(line_clean) < 10:
+            continue
+            
+        # Find pronouns in the line
+        pronouns_found = re.findall(pronouns_pattern, line_clean)
+        
+        if pronouns_found:
+            # Identify section context
+            section_context = identify_line_section(i, sections)
+            
+            # Create specific before/after example
+            before_text = line_clean
+            after_text = remove_pronouns_from_line(line_clean)
+            
+            examples.append({
+                'line_number': i + 1,
+                'original_text': line_clean,
+                'problematic_text': line_clean,
+                'issue_type': f'Personal pronouns detected: {", ".join(set(pronouns_found))}',
+                'suggestion': 'Remove first-person pronouns to maintain professional third-person format',
+                'fix_suggestion': f'"{before_text}" → "{after_text}"',
+                'context': f'Found in {section_context} section - ATS prefers third-person format'
+            })
+            
+            if len(examples) >= 3:
+                break
+    
+    return examples
+
+def extract_repetition_issues(lines: List[str], sections: Dict[str, List[int]]) -> List[Dict[str, Any]]:
+    """Extract lines showing actual word/phrase repetition"""
+    import re
+    from collections import Counter
+    
+    examples = []
+    
+    # Focus on experience section for repetition analysis
+    experience_lines = sections.get('experience', [])
+    if not experience_lines:
+        experience_lines = [i for i, line in enumerate(lines) if line.strip().startswith('•') or line.strip().startswith('-')]
+    
+    # Track word frequency and phrases
+    word_counter = Counter()
+    phrase_counter = Counter()
+    line_words = {}
+    
+    # Collect words and phrases from bullet points
+    for line_idx in experience_lines:
+        if line_idx >= len(lines):
+            continue
+            
+        line = lines[line_idx].strip()
+        if len(line) < 10:
+            continue
+            
+        # Extract action words (typically first 1-2 words after bullet)
+        words = re.findall(r'\b[a-zA-Z]+\b', line)
+        if not words:
+            continue
+            
+        # Focus on action verbs (first meaningful word)
+        for word in words[:3]:  # Check first 3 words for action verbs
+            word_lower = word.lower()
+            if len(word_lower) > 3 and word_lower not in ['with', 'from', 'through', 'using', 'that', 'this', 'and', 'the']:
+                word_counter[word_lower] += 1
+                if word_lower not in line_words:
+                    line_words[word_lower] = []
+                line_words[word_lower].append((line_idx, line))
+        
+        # Check for repeated phrases (2-3 words)
+        for i in range(len(words) - 1):
+            phrase = f"{words[i].lower()} {words[i+1].lower()}"
+            if not any(stop in phrase for stop in ['the ', 'and ', 'to ', 'of ', 'in ']):
+                phrase_counter[phrase] += 1
+    
+    # Find repetitions
+    for word, count in word_counter.items():
+        if count > 2:  # Repeated more than twice
+            word_lines = line_words[word]
+            for line_idx, line_text in word_lines[:2]:  # Show max 2 examples
+                alternative_verbs = get_alternative_action_verbs(word)
+                
+                examples.append({
+                    'line_number': line_idx + 1,
+                    'original_text': line_text,
+                    'problematic_text': line_text,
+                    'issue_type': f'Overused action verb: "{word}" (appears {count} times)',
+                    'suggestion': f'Vary vocabulary using alternatives: {", ".join(alternative_verbs)}',
+                    'fix_suggestion': f'Replace "{word}" with "{alternative_verbs[0]}" for variety',
+                    'context': 'ATS rewards vocabulary diversity and varied action verbs'
+                })
+                
+            if len(examples) >= 3:
+                break
+    
+    return examples
+
+def create_tense_correction(line: str, issue_type: str) -> str:
+    """Create corrected version of line with proper tense"""
+    import re
+    
+    # Simple tense corrections - this could be expanded
+    corrections = {
+        # Present to past
+        'develop': 'developed', 'create': 'created', 'manage': 'managed',
+        'lead': 'led', 'implement': 'implemented', 'achieve': 'achieved',
+        'improve': 'improved', 'increase': 'increased', 'reduce': 'reduced',
+        
+        # Past to present (for current roles)
+        'developed': 'develop', 'created': 'create', 'managed': 'manage',
+        'led': 'lead', 'implemented': 'implement', 'achieved': 'achieve',
+        'improved': 'improve', 'increased': 'increase', 'reduced': 'reduce'
+    }
+    
+    corrected = line
+    if "Present tense used for past role" in issue_type:
+        # Convert present to past
+        for present, past in corrections.items():
+            if present in corrections.values():  # Skip past tense words
+                continue
+            corrected = re.sub(r'\b' + present + r'\b', past, corrected, flags=re.IGNORECASE)
+            
+    elif "Past tense used for current role" in issue_type:
+        # Convert past to present
+        for present, past in corrections.items():
+            corrected = re.sub(r'\b' + past + r'\b', present, corrected, flags=re.IGNORECASE)
+    
+    return corrected
+
+def remove_pronouns_from_line(line: str) -> str:
+    """Remove personal pronouns and restructure sentence"""
+    import re
+    
+    # Simple pronoun removal - this could be enhanced with NLP
+    corrected = line
+    
+    # Remove "I am" constructions
+    corrected = re.sub(r'\bI am\s+', '', corrected, flags=re.IGNORECASE)
+    corrected = re.sub(r'\bI\s+', '', corrected, flags=re.IGNORECASE)
+    
+    # Replace "my" with "the" or remove
+    corrected = re.sub(r'\bmy\s+', '', corrected, flags=re.IGNORECASE)
+    corrected = re.sub(r'\bMe\s+', '', corrected, flags=re.IGNORECASE)
+    
+    # Clean up double spaces and fix capitalization
+    corrected = re.sub(r'\s+', ' ', corrected).strip()
+    if corrected and corrected[0].islower():
+        corrected = corrected[0].upper() + corrected[1:]
+    
+    return corrected
+
+def identify_line_section(line_idx: int, sections: Dict[str, List[int]]) -> str:
+    """Identify which section a line belongs to"""
+    for section_name, line_indices in sections.items():
+        if line_idx in line_indices:
+            return section_name
+    return 'unknown'
+
+def get_alternative_action_verbs(word: str) -> List[str]:
+    """Get alternative action verbs for variety"""
+    alternatives_map = {
+        'developed': ['created', 'built', 'designed', 'engineered', 'constructed'],
+        'managed': ['led', 'directed', 'oversaw', 'supervised', 'coordinated'],
+        'created': ['developed', 'designed', 'built', 'established', 'initiated'],
+        'improved': ['enhanced', 'optimized', 'refined', 'upgraded', 'strengthened'],
+        'increased': ['boosted', 'elevated', 'amplified', 'expanded', 'accelerated'],
+        'reduced': ['decreased', 'minimized', 'lowered', 'cut', 'streamlined'],
+        'implemented': ['executed', 'deployed', 'launched', 'established', 'initiated'],
+        'led': ['managed', 'directed', 'headed', 'supervised', 'guided'],
+        'achieved': ['accomplished', 'attained', 'delivered', 'secured', 'realized']
+    }
+    
+    return alternatives_map.get(word.lower(), ['accomplished', 'executed', 'delivered'])
+
+def extract_date_inconsistency_issues(lines: List[str], sections: Dict[str, List[int]]) -> List[Dict[str, Any]]:
+    """Extract lines with inconsistent date formatting"""
+    import re
+    
+    examples = []
+    date_formats = {}
+    
+    # Date patterns
+    patterns = {
+        'MM/YYYY': r'\b(0[1-9]|1[0-2])/20\d{2}\b',
+        'Mon YYYY': r'\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+20\d{2}\b',
+        'MM-YYYY': r'\b(0[1-9]|1[0-2])-20\d{2}\b',
+        'YYYY-YYYY': r'\b20\d{2}\s*[-–]\s*20\d{2}\b',
+        'Mon YYYY - Mon YYYY': r'\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+20\d{2}\s*[-–]\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+20\d{2}\b'
+    }
+    
+    # Find different date formats used
+    for i, line in enumerate(lines):
+        line_clean = line.strip()
+        if len(line_clean) < 8:
+            continue
+            
+        for format_name, pattern in patterns.items():
+            matches = re.findall(pattern, line_clean)
+            if matches:
+                if format_name not in date_formats:
+                    date_formats[format_name] = []
+                date_formats[format_name].append((i, line_clean, matches[0] if isinstance(matches[0], str) else ' '.join(matches[0])))
+    
+    # If multiple formats found, it's inconsistent
+    if len(date_formats) > 1:
+        format_names = list(date_formats.keys())
+        consistent_format = 'Mon YYYY - Mon YYYY'  # Recommended format
+        
+        # Show examples from different formats
+        for format_name in format_names[:2]:  # Max 2 different formats
+            for i, (line_idx, line_text, date_found) in enumerate(date_formats[format_name][:2]):
+                examples.append({
+                    'line_number': line_idx + 1,
+                    'original_text': line_text,
+                    'problematic_text': line_text,
+                    'issue_type': f'Inconsistent date format: {format_name}',
+                    'suggestion': f'Use consistent format: {consistent_format} (e.g., "Jan 2020 - Dec 2022")',
+                    'fix_suggestion': f'"{date_found}" → Convert to "Jan 2020 - Dec 2022" format',
+                    'context': 'ATS systems prefer consistent date formatting throughout resume'
+                })
+                
+                if len(examples) >= 3:
+                    break
+            if len(examples) >= 3:
+                break
+    
+    return examples
+
+def extract_summary_issues(lines: List[str], sections: Dict[str, List[int]]) -> List[Dict[str, Any]]:
+    """Extract issues from professional summary section"""
+    import re
+    
+    examples = []
+    summary_lines = sections.get('summary', [])
+    
+    # If no summary section found, look for summary-like content at the top
+    if not summary_lines:
+        for i in range(min(15, len(lines))):  # Check first 15 lines
+            line = lines[i].strip().lower()
+            if any(keyword in line for keyword in ['summary', 'objective', 'profile']) and len(line) < 50:
+                # Found summary header, collect next few lines
+                for j in range(i+1, min(i+6, len(lines))):
+                    if len(lines[j].strip()) > 20:
+                        summary_lines.append(j)
+                break
+    
+    # Analyze summary content
+    for line_idx in summary_lines:
+        if line_idx >= len(lines):
+            continue
+            
+        line = lines[line_idx].strip()
+        if len(line) < 15:
+            continue
+        
+        issues_found = []
+        
+        # Check for common summary issues
+        if re.search(r'\b(I|me|my|myself)\b', line, re.IGNORECASE):
+            issues_found.append('Personal pronouns detected')
+            
+        if not re.search(r'\b(experienced|skilled|proven|accomplished)\b', line, re.IGNORECASE):
+            issues_found.append('Missing professional descriptors')
+            
+        if not any(char.isdigit() for char in line):
+            issues_found.append('Missing quantifiable achievements')
+            
+        if len(line.split()) < 8:
+            issues_found.append('Too brief - needs more detail')
+        
+        if issues_found:
+            # Create improved version
+            improved_line = improve_summary_line(line)
+            
+            examples.append({
+                'line_number': line_idx + 1,
+                'original_text': line,
+                'problematic_text': line,
+                'issue_type': f'Summary issues: {", ".join(issues_found)}',
+                'suggestion': 'Write compelling summary with measurable achievements, no pronouns',
+                'fix_suggestion': f'"{line}" → "{improved_line}"',
+                'context': 'Professional summary should highlight experience without first-person pronouns'
+            })
+            
+            if len(examples) >= 2:
+                break
+    
+    return examples
+
+def extract_growth_signal_issues(lines: List[str], sections: Dict[str, List[int]]) -> List[Dict[str, Any]]:
+    """Extract missing career growth/promotion indicators"""
+    import re
+    
+    examples = []
+    
+    # Look for job titles and career progression indicators
+    job_titles = []
+    experience_lines = sections.get('experience', [])
+    
+    # Find job titles and levels
+    title_patterns = [
+        r'\b(Senior|Lead|Principal|Manager|Director|VP|Chief)\s+\w+',
+        r'\b(Junior|Associate|Staff|Senior)\s+\w+',
+        r'\b\w+\s+(Manager|Lead|Director|Engineer|Analyst|Specialist)'
+    ]
+    
+    for line_idx in experience_lines:
+        if line_idx >= len(lines):
+            continue
+            
+        line = lines[line_idx].strip()
+        for pattern in title_patterns:
+            matches = re.findall(pattern, line, re.IGNORECASE)
+            if matches:
+                job_titles.append((line_idx, line, matches[0]))
+    
+    # Check if progression indicators are missing
+    has_progression = any(keyword in ' '.join([title[1] for title in job_titles]).lower() 
+                         for keyword in ['promoted', 'advanced', 'progressed', 'senior', 'lead', 'promoted to'])
+    
+    if not has_progression and len(job_titles) >= 2:
+        # Show opportunity to highlight growth
+        for line_idx, line_text, title in job_titles[:2]:
+            examples.append({
+                'line_number': line_idx + 1,
+                'original_text': line_text,
+                'problematic_text': line_text,
+                'issue_type': 'Missing career progression indicators',
+                'suggestion': 'Highlight promotions, role expansions, or increased responsibilities',
+                'fix_suggestion': f'Add progression context: "Promoted to {title}" or "Advanced from..."',
+                'context': 'ATS values clear career growth and advancement indicators'
+            })
+            
+            if len(examples) >= 2:
+                break
+    
+    return examples
+
+def extract_certification_issues(lines: List[str], sections: Dict[str, List[int]]) -> List[Dict[str, Any]]:
+    """Extract missing or poorly formatted certification information"""
+    import re
+    
+    examples = []
+    cert_lines = sections.get('certifications', [])
+    
+    # Common certification keywords
+    cert_keywords = ['certified', 'certification', 'license', 'credential', 'certificate']
+    
+    # If no dedicated certification section, look for certifications elsewhere
+    if not cert_lines:
+        for i, line in enumerate(lines):
+            line_lower = line.strip().lower()
+            if any(keyword in line_lower for keyword in cert_keywords):
+                cert_lines.append(i)
+    
+    if not cert_lines:
+        # No certifications found - suggest adding them
+        # Look for skills section to suggest where to add certs
+        skills_lines = sections.get('skills', [])
+        if skills_lines:
+            skill_line_idx = skills_lines[0]
+            examples.append({
+                'line_number': skill_line_idx + 1,
+                'original_text': lines[skill_line_idx].strip() if skill_line_idx < len(lines) else 'Skills Section',
+                'problematic_text': 'No certifications found',
+                'issue_type': 'Missing industry certifications',
+                'suggestion': 'Add relevant certifications to boost ATS credibility',
+                'fix_suggestion': 'Add certifications like "AWS Certified", "PMP", "Google Analytics Certified"',
+                'context': 'Industry certifications significantly boost ATS scoring and credibility'
+            })
+    else:
+        # Analyze existing certifications for improvements
+        for line_idx in cert_lines[:2]:
+            if line_idx >= len(lines):
+                continue
+                
+            line = lines[line_idx].strip()
+            if len(line) < 10:
+                continue
+                
+            issues_found = []
+            
+            # Check for missing expiration dates
+            if not re.search(r'\b20\d{2}\b', line):
+                issues_found.append('Missing certification date')
+                
+            # Check for incomplete certification names
+            if len(line.split()) < 3:
+                issues_found.append('Certification name too brief')
+            
+            if issues_found:
+                examples.append({
+                    'line_number': line_idx + 1,
+                    'original_text': line,
+                    'problematic_text': line,
+                    'issue_type': f'Certification formatting: {", ".join(issues_found)}',
+                    'suggestion': 'Include full certification names with dates and issuing organizations',
+                    'fix_suggestion': f'"{line}" → Include date and organization (e.g., "AWS Certified Developer - 2023")',
+                    'context': 'Properly formatted certifications improve ATS credibility scoring'
+                })
+                
+                if len(examples) >= 2:
+                    break
+    
+    return examples
+
+def extract_generic_relevant_examples(category: str, lines: List[str], sections: Dict[str, List[int]]) -> List[Dict[str, Any]]:
+    """Fallback function for categories without specific extractors"""
+    examples = []
+    
+    # Only return examples if we can find relevant content
+    category_lower = category.lower().replace('_', ' ')
+    
+    # Keywords for different categories
+    keyword_map = {
+        'teamwork': ['team', 'collaborate', 'group', 'partnership', 'coordination'],
+        'leadership': ['led', 'managed', 'supervised', 'directed', 'guided'],
+        'analytical': ['analyze', 'data', 'metrics', 'insights', 'research'],
+        'drive': ['initiative', 'proactive', 'self-motivated', 'driven', 'ownership'],
+        'skills': ['proficient', 'skilled', 'experienced', 'expert', 'advanced']
+    }
+    
+    keywords = keyword_map.get(category_lower, [])
+    if not keywords:
+        return []  # No relevant keywords, return empty
+    
+    # Find lines containing relevant keywords
+    for i, line in enumerate(lines):
+        line_lower = line.strip().lower()
+        if len(line_lower) < 15:
+            continue
+            
+        if any(keyword in line_lower for keyword in keywords):
+            examples.append({
+                'line_number': i + 1,
+                'original_text': line.strip(),
+                'problematic_text': line.strip(),
+                'issue_type': f'{category.replace("_", " ").title()} opportunity identified',
+                'suggestion': f'Enhance {category_lower} demonstration with specific examples',
+                'fix_suggestion': f'Strengthen this line with more specific {category_lower} details',
+                'context': f'ATS rewards clear demonstration of {category_lower} skills'
+            })
+            
+            if len(examples) >= 2:
+                break
+    
+    return examples
+
+def filter_and_prioritize_examples(examples: List[Dict[str, Any]], category: str) -> List[Dict[str, Any]]:
+    """Filter and prioritize examples to show most relevant ones"""
+    if not examples:
+        return []
+    
+    # Remove duplicates based on line number
+    seen_lines = set()
+    filtered_examples = []
+    
+    for example in examples:
+        line_num = example.get('line_number')
+        if line_num not in seen_lines:
+            seen_lines.add(line_num)
+            filtered_examples.append(example)
+    
+    # Prioritize examples with more specific issues
+    filtered_examples.sort(key=lambda x: len(x.get('issue_type', '')), reverse=True)
+    
+    # Limit to top 3 most relevant examples
+    return filtered_examples[:3]
+
+def improve_summary_line(line: str) -> str:
+    """Create an improved version of a summary line"""
+    import re
+    
+    # Remove pronouns
+    improved = re.sub(r'\b(I am|I|me|my|myself)\b', '', line, flags=re.IGNORECASE)
+    
+    # Add professional descriptor if missing
+    if not re.search(r'\b(experienced|skilled|proven|accomplished)\b', improved, re.IGNORECASE):
+        improved = "Experienced " + improved.strip()
+    
+    # Clean up spacing and capitalization
+    improved = re.sub(r'\s+', ' ', improved).strip()
+    if improved and improved[0].islower():
+        improved = improved[0].upper() + improved[1:]
+    
+    return improved
+
+# Placeholder functions for remaining categories (can be implemented later)
+def extract_teamwork_issues(lines: List[str], sections: Dict[str, List[int]]) -> List[Dict[str, Any]]:
+    return extract_generic_relevant_examples('teamwork', lines, sections)
+
+def extract_leadership_issues(lines: List[str], sections: Dict[str, List[int]]) -> List[Dict[str, Any]]:
+    return extract_generic_relevant_examples('leadership', lines, sections)
+
+def extract_analytical_issues(lines: List[str], sections: Dict[str, List[int]]) -> List[Dict[str, Any]]:
+    return extract_generic_relevant_examples('analytical', lines, sections)
+
+def extract_action_verb_issues(lines: List[str], sections: Dict[str, List[int]]) -> List[Dict[str, Any]]:
+    return extract_generic_relevant_examples('action_verbs', lines, sections)
+
+def extract_quantifiable_issues(lines: List[str], sections: Dict[str, List[int]]) -> List[Dict[str, Any]]:
+    return extract_generic_relevant_examples('quantifiable', lines, sections)
+
+def extract_contact_issues(lines: List[str], sections: Dict[str, List[int]]) -> List[Dict[str, Any]]:
+    return extract_generic_relevant_examples('contact', lines, sections)
+
+def extract_skills_issues(lines: List[str], sections: Dict[str, List[int]]) -> List[Dict[str, Any]]:
+    return extract_generic_relevant_examples('skills', lines, sections)
 
 def find_personal_pronouns(lines: List[str]) -> Dict[str, Any]:
     """Find personal pronouns (I, me, my, myself) in resume lines"""
