@@ -7434,38 +7434,205 @@ def create_basic_issues_from_analysis(detailed_analysis: Dict[str, Any]) -> Dict
         score = data.get('score', 10)
         issues_list = data.get('issues', [])
         
+        # Extract first issue as fix instruction
+        fix_instruction = issues_list[0] if issues_list else f'Improve your {category.lower().replace("_", " ")}'
+        
         if score < 5:  # Critical
             issues['critical_issues'].append({
-                'category': category,
+                'category': category.upper(),
                 'score': score,
-                'title': f'{category} Issues',
+                'title': f'{category.replace("_", " ").title()} Issues',
                 'impact': 'Critical ATS compatibility issue',
                 'examples': [],
-                'fix_instructions': ' | '.join(issues_list) if issues_list else 'Improve this category',
+                'fix_instructions': fix_instruction,
                 'time_to_fix': '10-15 minutes'
             })
         elif score < 8:  # Quick wins
             issues['quick_wins'].append({
-                'category': category,
+                'category': category.upper(),
                 'score': score,
-                'title': f'{category} Improvements',
+                'title': f'{category.replace("_", " ").title()} Improvements',
                 'impact': 'Easy fix for better ATS score',
                 'examples': [],
-                'fix_instructions': ' | '.join(issues_list) if issues_list else 'Improve this category',
+                'fix_instructions': fix_instruction,
                 'time_to_fix': '5-10 minutes'
             })
         elif score < 10:  # Content improvements
             issues['content_improvements'].append({
-                'category': category,
+                'category': category.upper(),
                 'score': score,
-                'title': f'{category} Enhancement',
+                'title': f'{category.replace("_", " ").title()} Enhancement',
                 'impact': 'Polish for professional presentation',
                 'examples': [],
-                'fix_instructions': ' | '.join(issues_list) if issues_list else 'Improve this category',
+                'fix_instructions': fix_instruction,
                 'time_to_fix': '10-20 minutes'
             })
     
     return issues
+
+def create_enhanced_issues_from_analysis(detailed_analysis: Dict[str, Any], cv_content: str) -> Dict[str, Any]:
+    """Create enhanced issues with actual CV content examples"""
+    import re
+    
+    issues = {
+        'critical_issues': [],
+        'quick_wins': [],
+        'content_improvements': []
+    }
+    
+    if not cv_content:
+        logger.warning("⚠️ No CV content available for enhanced analysis")
+        return create_basic_issues_from_analysis(detailed_analysis)
+    
+    lines = cv_content.split('\n')
+    
+    for category, data in detailed_analysis.items():
+        if not isinstance(data, dict) or 'score' not in data:
+            continue
+            
+        score = data.get('score', 10)
+        issues_list = data.get('issues', [])
+        
+        # Extract first issue as fix instruction
+        fix_instruction = issues_list[0] if issues_list else f'Improve your {category.lower().replace("_", " ")}'
+        
+        # Get actual examples from CV content based on category
+        cv_examples = extract_cv_examples_for_category(category, lines, cv_content)
+        
+        category_title = category.replace("_", " ").title()
+        
+        if score < 5:  # Critical
+            issues['critical_issues'].append({
+                'category': category.upper(),
+                'score': score,
+                'title': f'{category_title} Issues',
+                'impact': 'Critical ATS compatibility issue',
+                'examples': cv_examples,
+                'fix_instructions': fix_instruction,
+                'time_to_fix': '10-15 minutes'
+            })
+        elif score < 8:  # Quick wins
+            issues['quick_wins'].append({
+                'category': category.upper(),
+                'score': score,
+                'title': f'{category_title} Improvements',
+                'impact': 'Easy fix for better ATS score',
+                'examples': cv_examples,
+                'fix_instructions': fix_instruction,
+                'time_to_fix': '5-10 minutes'
+            })
+        elif score < 10:  # Content improvements
+            issues['content_improvements'].append({
+                'category': category.upper(),
+                'score': score,
+                'title': f'{category_title} Enhancement',
+                'impact': 'Polish for professional presentation',
+                'examples': cv_examples,
+                'fix_instructions': fix_instruction,
+                'time_to_fix': '10-20 minutes'
+            })
+    
+    return issues
+
+def extract_cv_examples_for_category(category: str, lines: List[str], cv_content: str) -> List[Dict[str, Any]]:
+    """Extract specific examples from CV content based on category"""
+    import re
+    
+    examples = []
+    category_lower = category.lower()
+    
+    # Different extraction logic based on category
+    if 'dates' in category_lower:
+        # Find date-related lines
+        date_pattern = r'\b(\d{4}|\d{1,2}/\d{4}|\w+\s+\d{4})\b'
+        for i, line in enumerate(lines, 1):
+            if re.search(date_pattern, line) and len(line.strip()) > 5:
+                examples.append({
+                    'line_number': i,
+                    'original_text': line.strip(),
+                    'problematic_text': line.strip(),  # Add for compatibility
+                    'issue_type': 'Date formatting inconsistency',
+                    'suggestion': 'Use consistent date format like "Jan 2020 - Dec 2022"',
+                    'fix_suggestion': f'"{line.strip()}" → "Jan 2020 - Dec 2022" (consistent format)'
+                })
+                if len(examples) >= 3:  # Limit examples
+                    break
+                    
+    elif 'repetition' in category_lower or 'verb' in category_lower:
+        # Find repeated action verbs
+        verbs_found = {}
+        for i, line in enumerate(lines, 1):
+            words = line.strip().split()
+            if words and len(line.strip()) > 10:
+                first_word = words[0].lower().rstrip('.,!?:;')
+                if first_word and len(first_word) > 2:
+                    if first_word not in verbs_found:
+                        verbs_found[first_word] = []
+                    verbs_found[first_word].append((i, line.strip()))
+        
+        # Find repeated verbs
+        for verb, occurrences in verbs_found.items():
+            if len(occurrences) > 1:
+                for line_num, text in occurrences[:2]:
+                    examples.append({
+                        'line_number': line_num,
+                        'original_text': text,
+                        'problematic_text': text,  # Add for compatibility
+                        'issue_type': f'Repeated verb: "{verb}"',
+                        'suggestion': f'Replace with alternatives like "achieved", "implemented", "optimized"',
+                        'fix_suggestion': f'"{text}" → Replace "{verb}" with "achieved/implemented/optimized"'
+                    })
+                break  # One repeated verb example is enough
+                
+    elif 'contact' in category_lower:
+        # Find contact section
+        contact_keywords = ['email', 'phone', 'linkedin', '@', 'tel:', 'mobile']
+        for i, line in enumerate(lines, 1):
+            line_lower = line.lower()
+            if any(keyword in line_lower for keyword in contact_keywords) and len(line.strip()) > 3:
+                examples.append({
+                    'line_number': i,
+                    'original_text': line.strip(),
+                    'problematic_text': line.strip(),  # Add for compatibility
+                    'issue_type': 'Contact information formatting',
+                    'suggestion': 'Ensure professional email format and include LinkedIn URL',
+                    'fix_suggestion': f'Optimize contact format: add LinkedIn and ensure professional presentation'
+                })
+                if len(examples) >= 2:
+                    break
+                    
+    elif 'summary' in category_lower or 'personal' in category_lower:
+        # Find summary or lines with personal pronouns
+        pronouns = ['i ', 'my ', 'me ', 'myself']
+        for i, line in enumerate(lines, 1):
+            line_lower = line.lower()
+            if any(pronoun in line_lower for pronoun in pronouns) and len(line.strip()) > 10:
+                examples.append({
+                    'line_number': i,
+                    'original_text': line.strip(),
+                    'problematic_text': line.strip(),  # Add for compatibility
+                    'issue_type': 'Personal pronouns detected',
+                    'suggestion': 'Rewrite in third person: "Experienced professional with..." instead of "I am..."',
+                    'fix_suggestion': f'"{line.strip()}" → Rewrite without "I/my/me" pronouns'
+                })
+                if len(examples) >= 2:
+                    break
+                    
+    else:
+        # Generic example extraction - find meaningful lines
+        meaningful_lines = [line for line in lines if len(line.strip()) > 15 and not line.strip().startswith('#')]
+        for i, line in enumerate(meaningful_lines[:3], 1):
+            line_idx = lines.index(line) + 1 if line in lines else i
+            examples.append({
+                'line_number': line_idx,
+                'original_text': line.strip(),
+                'problematic_text': line.strip(),  # Add for compatibility
+                'issue_type': f'{category.replace("_", " ").title()} optimization needed',
+                'suggestion': f'Optimize this content for better ATS compatibility',
+                'fix_suggestion': f'Optimize: "{line.strip()[:50]}..." for better ATS performance'
+            })
+    
+    return examples
 
 def find_personal_pronouns(lines: List[str]) -> Dict[str, Any]:
     """Find personal pronouns (I, me, my, myself) in resume lines"""
@@ -7591,9 +7758,9 @@ def generate_comprehensive_issues_report(analysis_result: Dict[str, Any]) -> str
         # Check if specific issues extraction failed
         if 'error' in specific_issues:
             logger.warning(f"⚠️ Specific issues extraction failed: {specific_issues['error']}")
-            # Fall back to generating issues from basic detailed_analysis
-            specific_issues = create_basic_issues_from_analysis(detailed_analysis)
-            logger.info(f"📄 Generated {len(specific_issues.get('critical_issues', []))} basic issues as fallback")
+            # Fall back to generating issues from basic detailed_analysis with CV content
+            specific_issues = create_enhanced_issues_from_analysis(detailed_analysis, analysis_result.get('content', ''))
+            logger.info(f"📄 Generated {len(specific_issues.get('critical_issues', []))} enhanced issues as fallback")
         
         # Use the enhanced issues with examples
         critical_issues = specific_issues.get('critical_issues', [])
@@ -7673,7 +7840,7 @@ def generate_comprehensive_issues_report(analysis_result: Dict[str, Any]) -> str
                 if examples:
                     for j, example in enumerate(examples[:2]):  # Show max 2 examples
                         line_num = example.get('line_number', 'N/A')
-                        text = example.get('problematic_text', '')
+                        text = example.get('problematic_text', example.get('original_text', ''))
                         if text and line_num:
                             report_lines.extend([
                                 f"   📍 FOUND IN YOUR RESUME (Line {line_num}):",
@@ -7731,7 +7898,7 @@ def generate_comprehensive_issues_report(analysis_result: Dict[str, Any]) -> str
                 if examples:
                     for j, example in enumerate(examples[:2]):  # Show max 2 examples
                         line_num = example.get('line_number', 'N/A')
-                        text = example.get('problematic_text', '')
+                        text = example.get('problematic_text', example.get('original_text', ''))
                         if text and line_num:
                             report_lines.extend([
                                 f"   📍 FOUND IN YOUR RESUME (Line {line_num}):",
@@ -7789,7 +7956,7 @@ def generate_comprehensive_issues_report(analysis_result: Dict[str, Any]) -> str
                 if examples:
                     for j, example in enumerate(examples[:2]):  # Show max 2 examples
                         line_num = example.get('line_number', 'N/A')
-                        text = example.get('problematic_text', '')
+                        text = example.get('problematic_text', example.get('original_text', ''))
                         if text and line_num:
                             report_lines.extend([
                                 f"   📍 FOUND IN YOUR RESUME (Line {line_num}):",
