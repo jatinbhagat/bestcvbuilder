@@ -6880,13 +6880,40 @@ def extract_specific_issues_with_examples(analysis_result: Dict[str, Any]) -> Di
             'total_specific_examples': 0
         }
         
+        # Helper function to get category data by both naming conventions
+        def get_category_data(analysis_dict, category_name):
+            """Get category data checking both naming conventions"""
+            # Try title case with spaces first (original format)
+            if category_name in analysis_dict:
+                return analysis_dict[category_name]
+            
+            # Try lowercase with underscores (comprehensive format)
+            underscore_name = category_name.lower().replace(' ', '_')
+            if underscore_name in analysis_dict:
+                return analysis_dict[underscore_name]
+            
+            # Try other variations
+            variations = [
+                category_name.title(),
+                category_name.upper(),
+                category_name.replace(' ', '_').lower(),
+                category_name.replace('_', ' ').title()
+            ]
+            
+            for variation in variations:
+                if variation in analysis_dict:
+                    return analysis_dict[variation]
+            
+            return None
+        
         # 1. DATES ISSUES - Find inconsistent date formats
-        if 'Dates' in detailed_analysis and detailed_analysis['Dates'].get('score', 10) < 8:
+        dates_data = get_category_data(detailed_analysis, 'Dates')
+        if dates_data and dates_data.get('score', 10) < 8:
             date_issues = find_date_formatting_issues(lines)
             if date_issues:
                 issues_with_examples['critical_issues'].append({
                     'category': 'Dates',
-                    'score': detailed_analysis['Dates'].get('score', 0),
+                    'score': dates_data.get('score', 0),
                     'title': 'Inconsistent Date Formatting',
                     'severity': 'CRITICAL',
                     'impact': 'Major ATS blocker - prevents proper parsing',
@@ -6897,12 +6924,13 @@ def extract_specific_issues_with_examples(analysis_result: Dict[str, Any]) -> Di
                 })
         
         # 2. VERB REPETITION - Find repeated action verbs
-        if 'Repetition' in detailed_analysis and detailed_analysis['Repetition'].get('score', 10) < 6:
+        repetition_data = get_category_data(detailed_analysis, 'Repetition')
+        if repetition_data and repetition_data.get('score', 10) < 6:
             verb_issues = find_verb_repetition_issues(lines)
             if verb_issues:
                 issues_with_examples['critical_issues'].append({
                     'category': 'Repetition',
-                    'score': detailed_analysis['Repetition'].get('score', 0),
+                    'score': repetition_data.get('score', 0),
                     'title': 'Repeated Action Verbs',
                     'severity': 'HIGH',
                     'impact': 'Reduces impact and shows limited vocabulary',
@@ -6913,12 +6941,13 @@ def extract_specific_issues_with_examples(analysis_result: Dict[str, Any]) -> Di
                 })
         
         # 3. CONTACT INFO - Find missing contact elements
-        if 'Contact Details' in detailed_analysis and detailed_analysis['Contact Details'].get('score', 10) < 10:
+        contact_data = get_category_data(detailed_analysis, 'Contact Details')
+        if contact_data and contact_data.get('score', 10) < 10:
             contact_issues = find_contact_info_issues(lines)
             if contact_issues:
                 issues_with_examples['quick_wins'].append({
                     'category': 'Contact Details',
-                    'score': detailed_analysis['Contact Details'].get('score', 8),
+                    'score': contact_data.get('score', 8),
                     'title': 'Missing Contact Information',
                     'severity': 'QUICK_WIN',
                     'impact': 'Easy fix for better ATS compatibility',
@@ -6929,12 +6958,13 @@ def extract_specific_issues_with_examples(analysis_result: Dict[str, Any]) -> Di
                 })
         
         # 4. QUANTIFIABLE ACHIEVEMENTS - Find vague statements
-        if 'Quantifiable Achievements' in detailed_analysis and detailed_analysis['Quantifiable Achievements'].get('score', 10) < 9:
+        quant_data = get_category_data(detailed_analysis, 'Quantifiable Achievements')
+        if quant_data and quant_data.get('score', 10) < 9:
             achievement_issues = find_quantification_issues(lines)
             if achievement_issues:
                 issues_with_examples['content_improvements'].append({
                     'category': 'Quantifiable Achievements',
-                    'score': detailed_analysis['Quantifiable Achievements'].get('score', 8),
+                    'score': quant_data.get('score', 8),
                     'title': 'Vague Achievement Statements',
                     'severity': 'IMPROVEMENT',
                     'impact': 'Makes accomplishments more compelling and measurable',
@@ -6945,12 +6975,13 @@ def extract_specific_issues_with_examples(analysis_result: Dict[str, Any]) -> Di
                 })
         
         # 5. ACTION VERBS - Check for weak or repetitive action verbs
-        if 'Action Verbs' in detailed_analysis and detailed_analysis['Action Verbs'].get('score', 10) < 9:
+        action_data = get_category_data(detailed_analysis, 'Action Verbs')
+        if action_data and action_data.get('score', 10) < 9:
             verb_issues = find_verb_repetition_issues(lines)
             if verb_issues:
                 issues_with_examples['quick_wins'].append({
                     'category': 'Action Verbs',
-                    'score': detailed_analysis['Action Verbs'].get('score', 8),
+                    'score': action_data.get('score', 8),
                     'title': 'Weak Action Verbs',
                     'severity': 'QUICK_WIN',
                     'impact': 'Stronger verbs create more impact',
@@ -6960,8 +6991,26 @@ def extract_specific_issues_with_examples(analysis_result: Dict[str, Any]) -> Di
                     'score_impact': '+1 to +2 points'
                 })
         
-        # 6. PERSONAL PRONOUNS - Find first-person pronouns
-        if 'Personal Pronouns' in detailed_analysis and detailed_analysis['Personal Pronouns'].get('score', 10) < 8:
+        # 6. WEAK VERBS - Find generic/weak verbs that need strengthening  
+        weak_verb_data = get_category_data(detailed_analysis, 'Action Verbs')
+        if weak_verb_data and weak_verb_data.get('score', 10) < 8:  # Different threshold for weak verbs
+            weak_verb_issues = find_weak_verbs_issues(lines)
+            if weak_verb_issues:
+                issues_with_examples['content_improvements'].append({
+                    'category': 'Weak Verbs',
+                    'score': weak_verb_data.get('score', 6),
+                    'title': 'Generic Verbs Need Strengthening',
+                    'severity': 'IMPROVEMENT',
+                    'impact': 'Stronger verbs create more impact and show initiative',
+                    'examples': weak_verb_issues['examples'],
+                    'fix_instructions': weak_verb_issues['fix_instructions'],
+                    'time_to_fix': '10-15 minutes',
+                    'score_impact': '+3 to +5 points'
+                })
+        
+        # 7. PERSONAL PRONOUNS - Find first-person pronouns
+        pronoun_data = get_category_data(detailed_analysis, 'Personal Pronouns')
+        if pronoun_data and pronoun_data.get('score', 10) < 8:
             pronoun_issues = find_personal_pronouns(lines)
             if pronoun_issues:
                 issues_with_examples['critical_issues'].append({
@@ -7155,14 +7204,26 @@ def find_verb_repetition_issues(lines: List[str]) -> Dict[str, Any]:
     
     for verb, occurrences in list(repeated_verbs.items())[:3]:  # Limit to top 3 repeated verbs
         count = len(occurrences)
+        alternatives = verb_alternatives.get(verb, ['Led', 'Executed', 'Achieved'])
+        
         examples.append({
-            'issue': f'"{verb.title()}" used {count} times',
+            'issue': f'"{verb.title()}" used {count} times - shows limited vocabulary',
+            'line_number': f'Lines {", ".join([str(occ["line_number"]) for occ in occurrences[:3]])}',
+            'problematic_text': f'Found in: "{occurrences[0]["line_text"][:60]}..."',
             'occurrences': occurrences[:3],  # Show up to 3 occurrences
-            'alternatives': verb_alternatives.get(verb, ['Led', 'Executed', 'Achieved'])
+            'alternatives': alternatives,
+            'fix_suggestion': f'Replace with: {alternatives[0]} / {alternatives[1]} / {alternatives[2]}'
         })
         
-        alternatives = verb_alternatives.get(verb, ['Led', 'Executed', 'Achieved'])
-        fix_instructions.append(f"• \"{verb.title()}\" → Use: {', '.join(alternatives[:3])}")
+        fix_instructions.append(f"• Replace \"{verb.title()}\" → +{min(count, 3)} ATS points")
+        fix_instructions.append(f"  Strong alternatives: {', '.join(alternatives[:4])}")
+        
+        # Add specific before/after examples
+        for occ in occurrences[:2]:  # Show 2 specific examples
+            original_text = occ['line_text'][:50]
+            # Simple replacement for the example
+            replacement = original_text.replace(verb, alternatives[0].lower(), 1)
+            fix_instructions.append(f"  • \"{original_text}...\" → \"{replacement}...\"")
     
     return {
         'examples': examples,
@@ -7197,26 +7258,35 @@ def find_contact_info_issues(lines: List[str]) -> Dict[str, Any]:
         if element == 'linkedin':
             examples.append({
                 'issue': 'LinkedIn profile URL missing',
-                'line_number': 'Header section',
-                'impact': 'LinkedIn increases profile visibility to recruiters'
+                'line_number': 'Header section (Lines 1-3)',
+                'problematic_text': f'Contact section: {header_lines[0] if header_lines else "No LinkedIn URL found"}',
+                'impact': 'LinkedIn increases profile visibility to recruiters',
+                'fix_suggestion': 'Add: LinkedIn: linkedin.com/in/your-username'
             })
-            fix_instructions.append("• Add: linkedin.com/in/your-username")
+            fix_instructions.append("• Add LinkedIn profile URL → +2.5 ATS points")
+            fix_instructions.append("  Format: LinkedIn: linkedin.com/in/your-username")
             
         elif element == 'phone':
             examples.append({
-                'issue': 'Phone number missing',
-                'line_number': 'Header section', 
-                'impact': 'Phone contact essential for follow-ups'
+                'issue': 'Phone number missing', 
+                'line_number': 'Header section (Lines 1-3)',
+                'problematic_text': f'Contact section: {header_lines[0] if header_lines else "No phone number found"}',
+                'impact': 'Phone contact essential for recruiter follow-ups',
+                'fix_suggestion': 'Add: Phone: +1 (555) 123-4567'
             })
-            fix_instructions.append("• Add: Your phone number in format +1 (XXX) XXX-XXXX")
+            fix_instructions.append("• Add phone number → +2.5 ATS points")
+            fix_instructions.append("  Format: Phone: +1 (XXX) XXX-XXXX or (XXX) XXX-XXXX")
             
         elif element == 'location':
             examples.append({
                 'issue': 'Location/City missing',
-                'line_number': 'Header section',
-                'impact': 'Location helps with local job matching'
+                'line_number': 'Header section (Lines 1-3)',
+                'problematic_text': f'Contact section: {header_lines[0] if header_lines else "No location found"}',
+                'impact': 'Location helps with local job matching and relocation clarity',
+                'fix_suggestion': 'Add: Location: City, State'
             })
-            fix_instructions.append("• Add: City, State or City, Country")
+            fix_instructions.append("• Add location → +1.5 ATS points")
+            fix_instructions.append("  Format: City, State or City, Country")
     
     return {
         'examples': examples,
@@ -7277,6 +7347,57 @@ def find_quantification_issues(lines: List[str]) -> Dict[str, Any]:
         'examples': examples[:5],  # Limit to 5 examples
         'fix_instructions': fix_instructions,
         'vague_statements_count': len(examples)
+    }
+
+def find_weak_verbs_issues(lines: List[str]) -> Dict[str, Any]:
+    """Find weak/generic verbs that should be replaced with stronger alternatives"""
+    import re
+    
+    # Weak verbs that should be avoided
+    weak_verbs = {
+        'handled': ['Managed', 'Executed', 'Coordinated', 'Oversaw', 'Directed'],
+        'did': ['Executed', 'Completed', 'Accomplished', 'Delivered', 'Achieved'],
+        'worked on': ['Developed', 'Built', 'Created', 'Engineered', 'Designed'],
+        'responsible for': ['Led', 'Managed', 'Directed', 'Supervised', 'Coordinated'],
+        'helped': ['Assisted', 'Supported', 'Facilitated', 'Contributed', 'Enabled'],
+        'was involved': ['Participated', 'Contributed', 'Collaborated', 'Engaged', 'Worked'],
+        'dealt with': ['Managed', 'Handled', 'Addressed', 'Resolved', 'Processed'],
+        'used': ['Utilized', 'Leveraged', 'Applied', 'Implemented', 'Deployed']
+    }
+    
+    examples = []
+    fix_instructions = ["Replace weak verbs with stronger action verbs:"]
+    
+    for line_num, line in enumerate(lines, 1):
+        line_clean = line.strip()
+        if len(line_clean) < 15:  # Skip very short lines
+            continue
+            
+        line_lower = line_clean.lower()
+        
+        for weak_verb, alternatives in weak_verbs.items():
+            # Check for the weak verb in the line
+            if weak_verb in line_lower:
+                examples.append({
+                    'issue': f'Weak verb "{weak_verb}" found',
+                    'line_number': line_num,
+                    'problematic_text': line_clean,
+                    'weak_verb': weak_verb,
+                    'alternatives': alternatives,
+                    'fix_suggestion': f'Replace "{weak_verb}" with "{alternatives[0]}" or "{alternatives[1]}"'
+                })
+                
+                # Generate specific before/after example
+                replacement_example = line_clean.replace(weak_verb, alternatives[0].lower(), 1)
+                fix_instructions.append(f"• Line {line_num}: \"{weak_verb}\" → {alternatives[0]} (+1-2 points)")
+                fix_instructions.append(f"  Before: \"{line_clean[:50]}...\"")
+                fix_instructions.append(f"  After:  \"{replacement_example[:50]}...\"")
+                break  # Only report first weak verb per line
+    
+    return {
+        'examples': examples[:4],  # Limit to 4 examples
+        'fix_instructions': fix_instructions,
+        'weak_verbs_count': len(examples)
     }
 
 def get_suggested_metrics_for_line(line_text: str) -> List[str]:
