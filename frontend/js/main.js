@@ -311,7 +311,9 @@ class ATSLoadingScreen {
         this.steps = [
             'step-1',
             'step-2', 
-            'step-3'
+            'step-3',
+            'step-4',
+            'step-5'
         ];
         this.isActive = false;
     }
@@ -429,23 +431,33 @@ class ATSLoadingScreen {
         }
     }
 
-    // Fast 3-step analysis sequence
+    // Enhanced 5-step analysis sequence
     async startAnalysisSequence() {
         if (!this.isActive) return;
 
-        // Step 1: Processing (1.5 seconds)
-        await this.delay(1500);
+        // Step 1: Processing (2.5 seconds)
+        await this.delay(2500);
         this.completeStep('step-1');
 
         if (!this.isActive) return;
-        // Step 2: ATS Analysis (2 seconds)
+        // Step 2: Text Extraction (2 seconds)
         await this.delay(2000);
         this.completeStep('step-2');
 
         if (!this.isActive) return;
-        // Step 3: Results Ready (1 second)
-        await this.delay(1000);
+        // Step 3: ATS Compatibility (3 seconds)
+        await this.delay(3000);
         this.completeStep('step-3');
+
+        if (!this.isActive) return;
+        // Step 4: Recommendations (2 seconds)
+        await this.delay(2000);
+        this.completeStep('step-4');
+
+        if (!this.isActive) return;
+        // Step 5: Finalizing Results (1 second)
+        await this.delay(1000);
+        this.completeStep('step-5');
 
         // Final completion
         if (this.isActive) {

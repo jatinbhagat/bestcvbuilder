@@ -219,6 +219,9 @@ function displayComponentBreakdown() {
     // Display in sidebar
     displaySidebarItems(lowScore, mediumScore, highScore);
     
+    // Populate summary details
+    populateSummaryDetails(lowScore, mediumScore, highScore);
+    
     // Display detailed issues
     displayDetailedIssues(lowScore, mediumScore);
     
@@ -271,6 +274,96 @@ function createCategoriesFromBackend(components, detailed) {
 }
 
 // Helper functions removed - now using comprehensive backend data directly
+
+/**
+ * Populate summary details breakdown
+ */
+function populateSummaryDetails(lowScore, mediumScore, highScore) {
+    // Update detailed counts
+    const highPriorityDetailCount = document.getElementById('highPriorityDetailCount');
+    const needFixesDetailCount = document.getElementById('needFixesDetailCount');
+    const completedDetailCount = document.getElementById('completedDetailCount');
+    
+    if (highPriorityDetailCount) highPriorityDetailCount.textContent = lowScore.length;
+    if (needFixesDetailCount) needFixesDetailCount.textContent = mediumScore.length;
+    if (completedDetailCount) completedDetailCount.textContent = highScore.length;
+    
+    // Populate detailed lists
+    const highPriorityDetailList = document.getElementById('highPriorityDetailList');
+    const needFixesDetailList = document.getElementById('needFixesDetailList');
+    const completedDetailList = document.getElementById('completedDetailList');
+    
+    if (highPriorityDetailList) {
+        highPriorityDetailList.innerHTML = '';
+        lowScore.slice(0, 5).forEach(category => {
+            const item = document.createElement('div');
+            item.className = 'flex justify-between items-center py-1';
+            item.innerHTML = `
+                <span class="text-xs">${category.name}</span>
+                <span class="text-xs font-medium text-red-600">${category.score}/10</span>
+            `;
+            highPriorityDetailList.appendChild(item);
+        });
+        if (lowScore.length > 5) {
+            const moreItem = document.createElement('div');
+            moreItem.className = 'text-xs text-gray-400 py-1';
+            moreItem.textContent = `+${lowScore.length - 5} more items`;
+            highPriorityDetailList.appendChild(moreItem);
+        }
+    }
+    
+    if (needFixesDetailList) {
+        needFixesDetailList.innerHTML = '';
+        mediumScore.slice(0, 5).forEach(category => {
+            const item = document.createElement('div');
+            item.className = 'flex justify-between items-center py-1';
+            item.innerHTML = `
+                <span class="text-xs">${category.name}</span>
+                <span class="text-xs font-medium text-orange-600">${category.score}/10</span>
+            `;
+            needFixesDetailList.appendChild(item);
+        });
+        if (mediumScore.length > 5) {
+            const moreItem = document.createElement('div');
+            moreItem.className = 'text-xs text-gray-400 py-1';
+            moreItem.textContent = `+${mediumScore.length - 5} more items`;
+            needFixesDetailList.appendChild(moreItem);
+        }
+    }
+    
+    if (completedDetailList) {
+        completedDetailList.innerHTML = '';
+        highScore.slice(0, 5).forEach(category => {
+            const item = document.createElement('div');
+            item.className = 'flex justify-between items-center py-1';
+            item.innerHTML = `
+                <span class="text-xs">${category.name}</span>
+                <span class="text-xs font-medium text-green-600">${category.score}/10</span>
+            `;
+            completedDetailList.appendChild(item);
+        });
+        if (highScore.length > 5) {
+            const moreItem = document.createElement('div');
+            moreItem.className = 'text-xs text-gray-400 py-1';
+            moreItem.textContent = `+${highScore.length - 5} more items`;
+            completedDetailList.appendChild(moreItem);
+        }
+    }
+    
+    // Generate insights
+    const summaryInsights = document.getElementById('summaryInsights');
+    if (summaryInsights) {
+        let insight = '';
+        if (lowScore.length > 0) {
+            insight = `Focus on ${lowScore[0].name.toLowerCase()} first - it has the biggest impact on your ATS score`;
+        } else if (mediumScore.length > 0) {
+            insight = `Great job! Focus on ${mediumScore[0].name.toLowerCase()} for further improvement`;
+        } else {
+            insight = 'Excellent! Your resume is well-optimized for ATS systems';
+        }
+        summaryInsights.textContent = insight;
+    }
+}
 
 /**
  * Display sidebar items
@@ -383,6 +476,28 @@ function displayStrengths(highScore) {
  * Setup toggle functionality
  */
 function setupToggle() {
+    // Setup summary details toggle
+    const summaryToggleBtn = document.getElementById('toggleSummaryBtn');
+    const summaryToggleIcon = document.getElementById('toggleSummaryIcon');
+    const summaryDetails = document.getElementById('summaryDetails');
+    
+    if (summaryToggleBtn && summaryToggleIcon && summaryDetails) {
+        summaryToggleBtn.addEventListener('click', () => {
+            const isHidden = summaryDetails.classList.contains('hidden');
+            
+            if (isHidden) {
+                summaryDetails.classList.remove('hidden');
+                summaryToggleIcon.style.transform = 'rotate(180deg)';
+                summaryToggleBtn.title = 'Hide detailed breakdown';
+            } else {
+                summaryDetails.classList.add('hidden');
+                summaryToggleIcon.style.transform = 'rotate(0deg)';
+                summaryToggleBtn.title = 'Show detailed breakdown';
+            }
+        });
+    }
+
+    // Setup issues toggle (now starts visible)
     const toggleBtn = document.getElementById('toggleIssuesBtn');
     const toggleIcon = document.getElementById('toggleIcon');
     
@@ -394,12 +509,41 @@ function setupToggle() {
                 issuesList.classList.remove('hidden');
                 toggleIcon.style.transform = 'rotate(180deg)';
                 toggleBtn.querySelector('h3').textContent = 'Hide Detailed Issues';
-                toggleBtn.querySelector('p').textContent = 'Collapse the detailed issues list';
+                toggleBtn.querySelector('p').textContent = 'Collapse the detailed issues breakdown';
             } else {
                 issuesList.classList.add('hidden');
                 toggleIcon.style.transform = 'rotate(0deg)';
-                toggleBtn.querySelector('h3').textContent = 'View Detailed Issues';
-                toggleBtn.querySelector('p').textContent = 'See exactly what needs to be fixed in your resume';
+                toggleBtn.querySelector('h3').textContent = 'Show Detailed Issues';
+                toggleBtn.querySelector('p').textContent = 'View the detailed issues breakdown';
+            }
+        });
+    }
+
+    // Setup strengths toggle (starts hidden)
+    const strengthsBtn = document.getElementById('toggleStrengthsBtn');
+    const strengthsIcon = document.getElementById('toggleStrengthsIcon');
+    const strengthsContent = document.getElementById('strengthsContent');
+    const strengthsSection = document.getElementById('strengthsSection');
+    
+    if (strengthsBtn && strengthsIcon && strengthsContent) {
+        // Show the strengths section with toggle button
+        if (strengthsSection) {
+            strengthsSection.classList.remove('hidden');
+        }
+        
+        strengthsBtn.addEventListener('click', () => {
+            const isHidden = strengthsContent.classList.contains('hidden');
+            
+            if (isHidden) {
+                strengthsContent.classList.remove('hidden');
+                strengthsIcon.style.transform = 'rotate(180deg)';
+                strengthsBtn.querySelector('h3').textContent = 'Hide What You Did Well';
+                strengthsBtn.querySelector('p').textContent = 'Collapse the strengths section';
+            } else {
+                strengthsContent.classList.add('hidden');
+                strengthsIcon.style.transform = 'rotate(0deg)';
+                strengthsBtn.querySelector('h3').textContent = 'Show What You Did Well';
+                strengthsBtn.querySelector('p').textContent = 'View areas where your resume already excels';
             }
         });
     }
@@ -452,6 +596,10 @@ async function fetchAppConfig() {
 async function handleCVRewrite(source = 'upgrade') {
     console.log(`🚀 CTA clicked from: ${source}`);
     
+    // Get customer information (should be collected by now)
+    const customerInfo = JSON.parse(sessionStorage.getItem('customerInfo') || '{}');
+    console.log('👤 Customer info for CV rewrite:', customerInfo);
+    
     // Fetch configuration to check bypass
     const config = await fetchAppConfig();
     const shouldBypass = config.bypass_payment || config.free_mode_enabled;
@@ -459,12 +607,19 @@ async function handleCVRewrite(source = 'upgrade') {
     console.log(`🔧 Payment bypass enabled: ${shouldBypass}`);
     
     if (shouldBypass) {
-        // Bypass payment - show TXT download page
+        // Bypass payment - show TXT download page directly
+        console.log('✅ Free mode: proceeding directly to TXT download');
         await showTXTDownloadPage();
     } else {
-        // Redirect to order creation page for PayU payment
+        // Redirect to payment page with customer info
+        console.log('💳 Paid mode: redirecting to payment page');
+        
+        // Store both analysis data and customer info for payment page
         sessionStorage.setItem('pendingAnalysis', JSON.stringify(analysisData));
-        window.location.href = './create-order.html';
+        sessionStorage.setItem('customerInfoForPayment', JSON.stringify(customerInfo));
+        
+        // Redirect to payment page
+        window.location.href = './payment.html';
     }
 }
 
@@ -602,12 +757,189 @@ function hideLoadingState() {
 }
 
 /**
+ * Show customer information modal
+ */
+function showCustomerInfoModal() {
+    const modal = document.getElementById('customerInfoModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        // Reset form
+        document.getElementById('customerInfoForm').reset();
+        document.getElementById('submitCustomerInfo').disabled = true;
+        clearValidationErrors();
+        
+        // Setup modal event listeners
+        setupCustomerInfoModalListeners();
+    }
+}
+
+/**
+ * Hide customer information modal
+ */
+function hideCustomerInfoModal() {
+    const modal = document.getElementById('customerInfoModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+/**
+ * Setup customer information modal event listeners
+ */
+function setupCustomerInfoModalListeners() {
+    const form = document.getElementById('customerInfoForm');
+    const nameInput = document.getElementById('customerName');
+    const emailInput = document.getElementById('customerEmail');
+    const mobileInput = document.getElementById('customerMobile');
+    const submitBtn = document.getElementById('submitCustomerInfo');
+    const cancelBtn = document.getElementById('cancelCustomerInfo');
+
+    // Cancel button
+    if (cancelBtn) {
+        cancelBtn.removeEventListener('click', hideCustomerInfoModal); // Remove existing
+        cancelBtn.addEventListener('click', hideCustomerInfoModal);
+    }
+
+    // Form validation on input
+    [nameInput, emailInput, mobileInput].forEach(input => {
+        if (input) {
+            input.removeEventListener('input', validateCustomerForm); // Remove existing
+            input.addEventListener('input', validateCustomerForm);
+            input.removeEventListener('blur', validateField); // Remove existing
+            input.addEventListener('blur', validateField);
+        }
+    });
+
+    // Form submission
+    if (form) {
+        form.removeEventListener('submit', handleCustomerInfoSubmit); // Remove existing
+        form.addEventListener('submit', handleCustomerInfoSubmit);
+    }
+}
+
+/**
+ * Validate customer information form
+ */
+function validateCustomerForm() {
+    const nameInput = document.getElementById('customerName');
+    const emailInput = document.getElementById('customerEmail');
+    const mobileInput = document.getElementById('customerMobile');
+    const submitBtn = document.getElementById('submitCustomerInfo');
+
+    const name = nameInput?.value.trim() || '';
+    const email = emailInput?.value.trim() || '';
+    const mobile = mobileInput?.value.trim() || '';
+
+    // Validate each field
+    const isNameValid = name.length >= 2;
+    const isEmailValid = email.includes('@') && email.includes('.') && email.length >= 5;
+    const isMobileValid = mobile.length >= 10 && /[\d\s\+\-\(\)]+/.test(mobile);
+
+    // Enable/disable submit button
+    const allValid = isNameValid && isEmailValid && isMobileValid;
+    if (submitBtn) {
+        submitBtn.disabled = !allValid;
+        submitBtn.style.opacity = allValid ? '1' : '0.6';
+    }
+
+    return allValid;
+}
+
+/**
+ * Validate individual field on blur
+ */
+function validateField(event) {
+    const field = event.target;
+    const value = field.value.trim();
+    let isValid = false;
+    let errorMessage = '';
+
+    switch (field.id) {
+        case 'customerName':
+            isValid = value.length >= 2;
+            errorMessage = 'Please enter your full name (at least 2 characters)';
+            break;
+        case 'customerEmail':
+            isValid = value.includes('@') && value.includes('.') && value.length >= 5;
+            errorMessage = 'Please enter a valid email address';
+            break;
+        case 'customerMobile':
+            isValid = value.length >= 10 && /[\d\s\+\-\(\)]+/.test(value);
+            errorMessage = 'Please enter a valid mobile number (at least 10 digits)';
+            break;
+    }
+
+    // Show/hide error message
+    const errorId = field.id.replace('customer', '').toLowerCase() + 'Error';
+    const errorElement = document.getElementById(errorId);
+    
+    if (errorElement) {
+        if (value && !isValid) {
+            errorElement.textContent = errorMessage;
+            errorElement.classList.remove('hidden');
+            field.classList.add('border-red-500');
+        } else {
+            errorElement.classList.add('hidden');
+            field.classList.remove('border-red-500');
+        }
+    }
+}
+
+/**
+ * Clear validation errors
+ */
+function clearValidationErrors() {
+    ['nameError', 'emailError', 'mobileError'].forEach(id => {
+        const errorElement = document.getElementById(id);
+        if (errorElement) {
+            errorElement.classList.add('hidden');
+        }
+    });
+    
+    ['customerName', 'customerEmail', 'customerMobile'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            input.classList.remove('border-red-500');
+        }
+    });
+}
+
+/**
+ * Handle customer information form submission
+ */
+async function handleCustomerInfoSubmit(event) {
+    event.preventDefault();
+    
+    if (!validateCustomerForm()) {
+        return;
+    }
+
+    const formData = new FormData(event.target);
+    const customerInfo = {
+        name: formData.get('name'),
+        email: formData.get('email'),
+        mobile: formData.get('mobile')
+    };
+
+    console.log('👤 Customer info collected:', customerInfo);
+
+    // Store customer info in session storage
+    sessionStorage.setItem('customerInfo', JSON.stringify(customerInfo));
+
+    // Hide customer info modal
+    hideCustomerInfoModal();
+
+    // Proceed with CV rewrite flow
+    handleCVRewrite('customer_info');
+}
+
+/**
  * Setup upgrade button
  */
 function setupUpgradeButton() {
     if (upgradeBtn) {
         upgradeBtn.addEventListener('click', () => {
-            handleCVRewrite('upgrade');
+            showCustomerInfoModal();
         });
     }
 }
@@ -1695,12 +2027,26 @@ function closeIssueModal() {
 }
 
 /**
- * Handle modal fix all button - redirect to payment
+ * Handle modal fix all button - collect customer info first
  */
 function handleModalFixAll() {
     console.log('🚀 Modal Fix All clicked');
-    // Use the same bypass logic as main CTA
-    handleCVRewrite('modal');
+    
+    // Close the issue modal first
+    closeIssueModal();
+    
+    // Check if customer info is already collected
+    const customerInfo = JSON.parse(sessionStorage.getItem('customerInfo') || '{}');
+    
+    if (customerInfo.name && customerInfo.email && customerInfo.mobile) {
+        // Customer info already collected, proceed directly
+        console.log('✅ Customer info already available, proceeding to CV rewrite');
+        handleCVRewrite('modal');
+    } else {
+        // Need to collect customer info first
+        console.log('📝 Customer info needed, showing collection modal');
+        showCustomerInfoModal();
+    }
 }
 
 /**

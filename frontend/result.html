@@ -755,13 +755,19 @@
                 <div class="summary-card mb-8">
                     <div class="summary-header">
                         <div class="summary-icon">📊</div>
-                        <div>
+                        <div class="flex-1">
                             <h2 class="text-xl font-bold text-gray-900 mb-1">ATS Analysis Summary</h2>
                             <p class="text-gray-600 text-sm" id="summaryText">18 areas need improvement out of 26 categories analyzed</p>
                         </div>
+                        <button id="toggleSummaryBtn" class="ml-4 p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors">
+                            <svg id="toggleSummaryIcon" class="w-5 h-5 text-gray-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
                     </div>
                     
-                    <div class="summary-stats">
+                    <!-- High-Level Stats (Always Visible) -->
+                    <div class="summary-stats mb-4">
                         <div class="stat-item">
                             <span class="stat-number high" id="highPriorityCount">10</span>
                             <span class="stat-label">High Priority</span>
@@ -773,6 +779,53 @@
                         <div class="stat-item">
                             <span class="stat-number completed" id="completedCount">6</span>
                             <span class="stat-label">Completed</span>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Breakdown (Collapsible) -->
+                    <div id="summaryDetails" class="hidden border-t border-gray-200 pt-4">
+                        <div class="mb-3">
+                            <h3 class="text-sm font-semibold text-gray-700 mb-2">Category Breakdown</h3>
+                            <div class="text-xs text-gray-500 mb-3">Detailed analysis by category</div>
+                        </div>
+                        
+                        <!-- Category Lists -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                            <div>
+                                <h4 class="font-medium text-red-600 mb-2 flex items-center">
+                                    <span class="w-2 h-2 bg-red-500 rounded-full mr-2"></span>
+                                    High Priority (<span id="highPriorityDetailCount">0</span>)
+                                </h4>
+                                <div id="highPriorityDetailList" class="space-y-1 text-gray-600">
+                                    <!-- Will be populated by JavaScript -->
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4 class="font-medium text-orange-600 mb-2 flex items-center">
+                                    <span class="w-2 h-2 bg-orange-500 rounded-full mr-2"></span>
+                                    Need Fixes (<span id="needFixesDetailCount">0</span>)
+                                </h4>
+                                <div id="needFixesDetailList" class="space-y-1 text-gray-600">
+                                    <!-- Will be populated by JavaScript -->
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4 class="font-medium text-green-600 mb-2 flex items-center">
+                                    <span class="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                                    Completed (<span id="completedDetailCount">0</span>)
+                                </h4>
+                                <div id="completedDetailList" class="space-y-1 text-gray-600">
+                                    <!-- Will be populated by JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Additional Insights -->
+                        <div class="mt-4 p-3 bg-blue-50 rounded-lg">
+                            <h4 class="text-sm font-medium text-blue-800 mb-1">💡 Key Insights</h4>
+                            <p id="summaryInsights" class="text-xs text-blue-700">Focus on high priority items first for maximum ATS score improvement</p>
                         </div>
                     </div>
                 </div>
@@ -795,35 +848,144 @@
                     </div>
                 </div>
 
-                <!-- Issues Details - Hidden by Default -->
+                <!-- Detailed Issues - Shown by Default -->
                 <div class="issues-section mb-8">
                     <button id="toggleIssuesBtn" class="w-full bg-white border border-gray-200 rounded-xl p-4 text-left hover:border-gray-300 transition-colors">
                         <div class="flex items-center justify-between">
                             <div>
-                                <h3 class="font-semibold text-gray-900">View Detailed Issues</h3>
-                                <p class="text-sm text-gray-600">See exactly what needs to be fixed in your resume</p>
+                                <h3 class="font-semibold text-gray-900">Hide Detailed Issues</h3>
+                                <p class="text-sm text-gray-600">Collapse the detailed issues breakdown</p>
                             </div>
-                            <svg id="toggleIcon" class="w-5 h-5 text-gray-400 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg id="toggleIcon" class="w-5 h-5 text-gray-400 transform transition-transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </div>
                     </button>
                     
-                    <!-- Issues List - Initially Hidden -->
-                    <div id="issuesList" class="hidden mt-4">
+                    <!-- Issues List - Shown by Default -->
+                    <div id="issuesList" class="mt-4">
                         <!-- Will be populated by JavaScript -->
                     </div>
                 </div>
 
-                <!-- Strengths Section -->
-                <div class="strengths-section" id="strengthsSection">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-4">What you did well</h2>
-                    <p class="text-lg text-gray-600 mb-8">We ran comprehensive checks on your resume. Here are the areas where you excelled – well done!</p>
-                    <div id="strengthsList">
-                        <!-- Will be populated by JavaScript -->
+                <!-- Strengths Section - Hidden by Default -->
+                <div class="strengths-section hidden" id="strengthsSection">
+                    <div class="mb-4">
+                        <button id="toggleStrengthsBtn" class="w-full bg-white border border-gray-200 rounded-xl p-4 text-left hover:border-gray-300 transition-colors">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="font-semibold text-gray-900">Show What You Did Well</h3>
+                                    <p class="text-sm text-gray-600">View areas where your resume already excels</p>
+                                </div>
+                                <svg id="toggleStrengthsIcon" class="w-5 h-5 text-gray-400 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </div>
+                        </button>
+                    </div>
+                    <div id="strengthsContent" class="hidden">
+                        <h2 class="text-2xl font-bold text-gray-900 mb-4">What you did well</h2>
+                        <p class="text-lg text-gray-600 mb-8">We ran comprehensive checks on your resume. Here are the areas where you excelled – well done!</p>
+                        <div id="strengthsList">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Customer Information Modal -->
+    <div id="customerInfoModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">Your Information</h2>
+                <p class="text-gray-600 text-sm">We'll send your optimized resume to this information</p>
+            </div>
+
+            <form id="customerInfoForm" class="space-y-4">
+                <!-- Full Name -->
+                <div>
+                    <label for="customerName" class="block text-sm font-medium text-gray-700 mb-1">
+                        Full Name *
+                    </label>
+                    <input 
+                        type="text" 
+                        id="customerName" 
+                        name="name" 
+                        required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Enter your full name"
+                    >
+                    <div class="text-red-500 text-xs mt-1 hidden" id="nameError">Please enter your full name</div>
+                </div>
+
+                <!-- Email -->
+                <div>
+                    <label for="customerEmail" class="block text-sm font-medium text-gray-700 mb-1">
+                        Email Address *
+                    </label>
+                    <input 
+                        type="email" 
+                        id="customerEmail" 
+                        name="email" 
+                        required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="your@email.com"
+                    >
+                    <div class="text-red-500 text-xs mt-1 hidden" id="emailError">Please enter a valid email address</div>
+                </div>
+
+                <!-- Mobile Number -->
+                <div>
+                    <label for="customerMobile" class="block text-sm font-medium text-gray-700 mb-1">
+                        Mobile Number *
+                    </label>
+                    <input 
+                        type="tel" 
+                        id="customerMobile" 
+                        name="mobile" 
+                        required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="+1 (555) 123-4567"
+                    >
+                    <div class="text-red-500 text-xs mt-1 hidden" id="mobileError">Please enter a valid mobile number</div>
+                </div>
+
+                <!-- Privacy Note -->
+                <div class="bg-blue-50 rounded-lg p-3 mt-4">
+                    <p class="text-xs text-blue-700 flex items-start">
+                        <svg class="w-4 h-4 text-blue-500 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                        </svg>
+                        Your information is secure and will only be used to deliver your optimized resume. We never share your data.
+                    </p>
+                </div>
+
+                <!-- Buttons -->
+                <div class="flex gap-3 pt-4">
+                    <button 
+                        type="button" 
+                        id="cancelCustomerInfo" 
+                        class="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        type="submit" 
+                        id="submitCustomerInfo" 
+                        class="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg text-sm"
+                        disabled
+                    >
+                        Continue
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
