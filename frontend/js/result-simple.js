@@ -149,6 +149,10 @@ function displayOverallScore() {
     const finalScore = Math.round(analysisData.score || analysisData.ats_score || 0);
     atsScore.textContent = finalScore;
     
+    // Remove loading state
+    atsScore.classList.remove('initial-loading');
+    atsScore.classList.add('loaded');
+    
     console.log('📊 SCORE DEBUG: Received scores from backend:', { 
         score: analysisData.score, 
         ats_score: analysisData.ats_score,
@@ -210,11 +214,27 @@ function displayComponentBreakdown() {
         summaryText.textContent = `${totalIssues} areas need improvement out of ${categories.length} categories analyzed`;
     }
     
-    // Update counts
-    if (highPriorityCount) highPriorityCount.textContent = lowScore.length;
-    if (needFixesCount) needFixesCount.textContent = mediumScore.length;
-    if (completedCount) completedCount.textContent = highScore.length;
-    if (markedAsDone) markedAsDone.textContent = `${highScore.length} COMPLETED`;
+    // Update counts and remove loading states
+    if (highPriorityCount) {
+        highPriorityCount.textContent = lowScore.length;
+        highPriorityCount.classList.remove('initial-loading');
+        highPriorityCount.classList.add('loaded');
+    }
+    if (needFixesCount) {
+        needFixesCount.textContent = mediumScore.length;
+        needFixesCount.classList.remove('initial-loading');
+        needFixesCount.classList.add('loaded');
+    }
+    if (completedCount) {
+        completedCount.textContent = highScore.length;
+        completedCount.classList.remove('initial-loading');
+        completedCount.classList.add('loaded');
+    }
+    if (markedAsDone) {
+        markedAsDone.textContent = `${highScore.length} COMPLETED`;
+        markedAsDone.classList.remove('initial-loading');
+        markedAsDone.classList.add('loaded');
+    }
     
     // Display in sidebar
     displaySidebarItems(lowScore, mediumScore, highScore);
@@ -757,19 +777,179 @@ function hideLoadingState() {
 }
 
 /**
+ * Extract contact information from analysis data
+ */
+function extractContactInfoFromAnalysis() {
+    if (!analysisData) {
+        return { email: '', mobile: '', name: '' };
+    }
+    
+    let extractedEmail = '';
+    let extractedMobile = '';
+    let extractedName = '';
+    
+    // Check if backend already extracted personal information
+    const personalInfo = analysisData.personal_information || analysisData.personalInfo || {};
+    if (personalInfo.email) {
+        extractedEmail = personalInfo.email;
+    }
+    if (personalInfo.phone || personalInfo.mobile) {
+        extractedMobile = personalInfo.phone || personalInfo.mobile;
+    }
+    if (personalInfo.full_name || personalInfo.name) {
+        extractedName = personalInfo.full_name || personalInfo.name;
+    }
+    
+    // If not found in personal info, extract from resume content
+    const content = analysisData.content || analysisData.resume_text || '';
+    
+    if (!extractedEmail && content) {
+        // Extract email using regex
+        const emailPattern = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
+        const emailMatches = content.match(emailPattern);
+        if (emailMatches && emailMatches.length > 0) {
+            // Filter out obvious artifacts and pick the most professional looking email
+            const cleanEmails = emailMatches.filter(email => 
+                !email.match(/^[a-z][A-Z]/) && // Avoid extraction artifacts
+                email.length < 50 && // Reasonable length
+                !email.includes('example') && // Avoid example emails
+                !email.includes('test')
+            );
+            extractedEmail = cleanEmails[0] || emailMatches[0];
+        }
+    }
+    
+    if (!extractedMobile && content) {
+        // Extract phone numbers using multiple patterns
+        const phonePatterns = [
+            /\+91[-.\s]?\d{10}/g,  // +91-9999999999
+            /\+91\s?\d{10}/g,      // +91 9999999999
+            /\b\d{10}\b/g,         // 9999999999 (standalone)
+            /\d{3}[-.\s]\d{3}[-.\s]\d{4}/g,  // 999-999-9999
+            /\(\d{3}\)\s?\d{3}[-.\s]\d{4}/g // (999) 999-9999
+        ];
+        
+        for (const pattern of phonePatterns) {
+            const phoneMatches = content.match(pattern);
+            if (phoneMatches && phoneMatches.length > 0) {
+                // Pick the first valid looking phone number
+                const cleanPhone = phoneMatches[0].trim();
+                if (cleanPhone.replace(/[^\d]/g, '').length >= 10) {
+                    extractedMobile = cleanPhone;
+                    break;
+                }
+            }
+        }
+    }
+    
+    if (!extractedName && content) {
+        // Extract name from the first few lines (usually header)
+        const lines = content.split('\n');
+        const headerLines = lines.slice(0, 5);
+        
+        for (const line of headerLines) {
+            const trimmedLine = line.trim();
+            // Look for lines that could be names (2-4 words, reasonable length)
+            if (trimmedLine && 
+                trimmedLine.length > 3 && 
+                trimmedLine.length < 50 && 
+                !trimmedLine.includes('@') && 
+                !trimmedLine.includes('http') &&
+                !/\d{3,}/.test(trimmedLine)) { // Avoid lines with long numbers
+                
+                const words = trimmedLine.split(/\s+/);
+                if (words.length >= 2 && words.length <= 4) {
+                    // Check if it looks like a name (starts with capital letters)
+                    const looksLikeName = words.every(word => 
+                        word.charAt(0).toUpperCase() === word.charAt(0) &&
+                        word.length > 1
+                    );
+                    if (looksLikeName) {
+                        extractedName = trimmedLine;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    
+    console.log('📞 Extracted contact info:', { 
+        email: extractedEmail, 
+        mobile: extractedMobile, 
+        name: extractedName 
+    });
+    
+    return {
+        email: extractedEmail,
+        mobile: extractedMobile,
+        name: extractedName
+    };
+}
+
+/**
+ * Validate extracted contact information
+ */
+function validateExtractedContact(contact) {
+    const validated = { ...contact };
+    
+    // Validate email
+    if (validated.email && (!validated.email.includes('@') || validated.email.length < 5)) {
+        validated.email = '';
+    }
+    
+    // Validate mobile (must be at least 10 digits)
+    if (validated.mobile) {
+        const digits = validated.mobile.replace(/[^\d]/g, '');
+        if (digits.length < 10) {
+            validated.mobile = '';
+        }
+    }
+    
+    // Validate name (reasonable length)
+    if (validated.name && (validated.name.length < 2 || validated.name.length > 50)) {
+        validated.name = '';
+    }
+    
+    return validated;
+}
+
+/**
  * Show customer information modal
  */
 function showCustomerInfoModal() {
     const modal = document.getElementById('customerInfoModal');
     if (modal) {
         modal.classList.remove('hidden');
-        // Reset form
-        document.getElementById('customerInfoForm').reset();
-        document.getElementById('submitCustomerInfo').disabled = true;
+        
+        // Extract and validate contact information from resume
+        const extractedContact = extractContactInfoFromAnalysis();
+        const validatedContact = validateExtractedContact(extractedContact);
+        
+        // Prefill form with extracted data
+        const nameInput = document.getElementById('customerName');
+        const emailInput = document.getElementById('customerEmail');
+        const mobileInput = document.getElementById('customerMobile');
+        
+        if (nameInput && validatedContact.name) {
+            nameInput.value = validatedContact.name;
+        }
+        if (emailInput && validatedContact.email) {
+            emailInput.value = validatedContact.email;
+        }
+        if (mobileInput && validatedContact.mobile) {
+            mobileInput.value = validatedContact.mobile;
+        }
+        
+        // Clear any validation errors
         clearValidationErrors();
+        
+        // Validate the form to enable/disable submit button
+        validateCustomerForm();
         
         // Setup modal event listeners
         setupCustomerInfoModalListeners();
+        
+        console.log('✅ Customer info modal shown with prefilled data');
     }
 }
 
@@ -923,14 +1103,172 @@ async function handleCustomerInfoSubmit(event) {
 
     console.log('👤 Customer info collected:', customerInfo);
 
-    // Store customer info in session storage
-    sessionStorage.setItem('customerInfo', JSON.stringify(customerInfo));
+    // Show loading state
+    const submitBtn = document.getElementById('submitCustomerInfo');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creating Order...';
+    }
 
-    // Hide customer info modal
-    hideCustomerInfoModal();
+    try {
+        // Create order with customer info and analysis data
+        const orderId = await createOrder(customerInfo);
+        
+        if (orderId) {
+            console.log(`✅ Order created successfully: ${orderId}`);
+            
+            // Store customer info and order ID in session storage
+            sessionStorage.setItem('customerInfo', JSON.stringify(customerInfo));
+            sessionStorage.setItem('orderId', orderId);
 
-    // Proceed with CV rewrite flow
-    handleCVRewrite('customer_info');
+            // Hide customer info modal
+            hideCustomerInfoModal();
+
+            // Check if payment bypass is enabled
+            const config = await fetchAppConfig();
+            const shouldBypass = config.bypass_payment || config.free_mode_enabled;
+            
+            if (shouldBypass) {
+                console.log('✅ Payment bypass enabled, proceeding to TXT download');
+                // Store analysis data for TXT processing
+                sessionStorage.setItem('pendingAnalysis', JSON.stringify(sessionStorage.getItem('analysisResult')));
+                // Proceed directly to TXT download
+                handleCVRewrite('customer_info');
+            } else {
+                console.log('💳 Payment required, redirecting to order page');
+                // Store analysis data for order page
+                sessionStorage.setItem('pendingAnalysis', JSON.stringify(JSON.parse(sessionStorage.getItem('analysisResult'))));
+                // Redirect to create-order page for payment
+                window.location.href = './create-order.html';
+            }
+        } else {
+            throw new Error('Order creation failed - no order ID received');
+        }
+    } catch (error) {
+        console.error('❌ Order creation error:', error);
+        
+        // Show error to user
+        showOrderCreationError(error.message);
+        
+        // Reset submit button
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Continue';
+        }
+    }
+}
+
+/**
+ * Create order via API
+ */
+async function createOrder(customerInfo) {
+    try {
+        // Get analysis data from session storage
+        const analysisData = JSON.parse(sessionStorage.getItem('analysisResult') || '{}');
+        
+        if (!analysisData || !analysisData.content) {
+            throw new Error('Analysis data not found. Please analyze your resume again.');
+        }
+
+        // Prepare request data
+        const requestData = {
+            email: customerInfo.email,
+            phone: customerInfo.mobile,
+            analysis_data: analysisData,
+            user_id: null // Anonymous user for now
+        };
+
+        console.log('📦 Creating order with data:', { 
+            email: requestData.email, 
+            phone: requestData.phone,
+            hasAnalysisData: !!requestData.analysis_data 
+        });
+
+        // Make API request to create order
+        const response = await fetch('/api/orders/create-order', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestData)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `HTTP ${response.status}: Order creation failed`);
+        }
+
+        const result = await response.json();
+        
+        if (!result.success || !result.order) {
+            throw new Error(result.error || 'Invalid response from server');
+        }
+
+        // Log order creation details
+        console.log('✅ Order created:', {
+            orderId: result.order.order_id,
+            email: result.order.order_email,
+            mobile: result.order.order_mobile,
+            amount: result.amount,
+            currency: result.currency
+        });
+
+        // Store additional order details
+        sessionStorage.setItem('orderDetails', JSON.stringify({
+            orderId: result.order.order_id,
+            amount: result.amount,
+            currency: result.currency,
+            createdAt: new Date().toISOString()
+        }));
+
+        return result.order.order_id;
+
+    } catch (error) {
+        console.error('❌ Create order error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Show order creation error to user
+ */
+function showOrderCreationError(message) {
+    // Create or update error message element
+    let errorDiv = document.getElementById('orderCreationError');
+    if (!errorDiv) {
+        errorDiv = document.createElement('div');
+        errorDiv.id = 'orderCreationError';
+        errorDiv.className = 'mt-4 p-3 bg-red-50 border border-red-200 rounded-lg';
+        
+        // Insert before the form buttons
+        const form = document.getElementById('customerInfoForm');
+        const buttonsDiv = form?.querySelector('.flex.space-x-3');
+        if (buttonsDiv) {
+            form.insertBefore(errorDiv, buttonsDiv);
+        }
+    }
+    
+    errorDiv.innerHTML = `
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                </svg>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-red-800">Order Creation Failed</h3>
+                <p class="mt-1 text-sm text-red-700">${message}</p>
+                <p class="mt-2 text-xs text-red-600">Please try again or contact support if the issue persists.</p>
+            </div>
+        </div>
+    `;
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        if (errorDiv && errorDiv.parentNode) {
+            errorDiv.remove();
+        }
+    }, 5000);
 }
 
 /**

@@ -188,6 +188,8 @@
             box-shadow: var(--shadow-lg);
             position: relative;
             overflow: hidden;
+            display: block !important;
+            visibility: visible !important;
         }
 
         .summary-card::before {
@@ -670,6 +672,17 @@
             animation: spin 1s linear infinite;
         }
 
+        /* Initial loading state for scores */
+        .initial-loading {
+            opacity: 0.5;
+            color: var(--gray-400);
+        }
+
+        .initial-loading.loaded {
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -717,10 +730,10 @@
             <!-- Overall Score -->
             <div class="text-center mb-8">
                 <div class="score-circle mx-auto mb-4" id="scoreCircle">
-                    <div class="text-5xl font-black text-gray-900" id="atsScore">83</div>
+                    <div class="text-5xl font-black text-gray-900 initial-loading" id="atsScore">-</div>
                     <div class="text-sm font-medium text-gray-600 uppercase tracking-wide">OVERALL</div>
                 </div>
-                <div class="text-sm text-blue-600 font-medium" id="markedAsDone">1 MARKED AS DONE</div>
+                <div class="text-sm text-blue-600 font-medium initial-loading" id="markedAsDone">LOADING...</div>
             </div>
 
             <!-- Home Button -->
@@ -757,7 +770,7 @@
                         <div class="summary-icon">📊</div>
                         <div class="flex-1">
                             <h2 class="text-xl font-bold text-gray-900 mb-1">ATS Analysis Summary</h2>
-                            <p class="text-gray-600 text-sm" id="summaryText">18 areas need improvement out of 26 categories analyzed</p>
+                            <p class="text-gray-600 text-sm" id="summaryText">Loading analysis results...</p>
                         </div>
                         <button id="toggleSummaryBtn" class="ml-4 p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors">
                             <svg id="toggleSummaryIcon" class="w-5 h-5 text-gray-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -769,15 +782,15 @@
                     <!-- High-Level Stats (Always Visible) -->
                     <div class="summary-stats mb-4">
                         <div class="stat-item">
-                            <span class="stat-number high" id="highPriorityCount">10</span>
+                            <span class="stat-number high initial-loading" id="highPriorityCount">-</span>
                             <span class="stat-label">High Priority</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-number medium" id="needFixesCount">8</span>
+                            <span class="stat-number medium initial-loading" id="needFixesCount">-</span>
                             <span class="stat-label">Need Fixes</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-number completed" id="completedCount">6</span>
+                            <span class="stat-number completed initial-loading" id="completedCount">-</span>
                             <span class="stat-label">Completed</span>
                         </div>
                     </div>
