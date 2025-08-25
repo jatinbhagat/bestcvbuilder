@@ -2174,7 +2174,15 @@ def extract_summary_section(resume_text: str) -> str:
             continue
         
         # Check if we've reached a different section (end of summary)
-        if in_summary and any(re.search(header, line_lower) for header in end_headers):
+        # Only consider it a section header if it's short (<50 chars), mostly uppercase, or at start of line
+        is_section_header = (
+            len(line_clean) < 50 and 
+            (line_clean.isupper() or 
+             sum(1 for c in line_clean if c.isupper()) / max(len(line_clean), 1) > 0.5 or
+             line_clean.endswith(':'))
+        )
+        
+        if in_summary and is_section_header and any(re.search(header, line_lower) for header in end_headers):
             break
         
         # Collect summary content
@@ -8321,6 +8329,191 @@ def find_summary_issues(lines: List[str]) -> Dict[str, Any]:
         'fix_instructions': 'Write compelling summary with measurable achievements, no pronouns'
     }
 
+def explain_score_with_frontend_logic(category_name: str, score: int, resume_text: str) -> dict:
+    """
+    Generate detailed score explanation using the actual frontend scoring logic
+    Shows exactly why points were deducted with specific penalty breakdowns
+    """
+    category_lower = category_name.lower().replace(' ', '_')
+    
+    # Call the actual frontend scoring functions and capture penalties
+    explanations = {
+        'starting_score': 10,
+        'final_score': score,
+        'penalties': [],
+        'examples_found': [],
+        'specific_reasoning': '',
+        'rule_explanation': ''
+    }
+    
+    try:
+        if category_lower == 'verb_tenses':
+            # Run actual verb tense analysis
+            past_tense_verbs = ['developed', 'created', 'managed', 'led', 'implemented', 'designed', 'achieved', 'delivered']
+            present_tense_verbs = ['develop', 'create', 'manage', 'lead', 'implement', 'design', 'achieve', 'deliver']
+            
+            text_lower = resume_text.lower()
+            past_count = sum(1 for verb in past_tense_verbs if verb in text_lower)
+            present_count = sum(1 for verb in present_tense_verbs if verb in text_lower)
+            
+            explanations['rule_explanation'] = 'ATS Rule: Use past tense for previous roles, present tense only for current position'
+            
+            if past_count > present_count:
+                explanations['specific_reasoning'] = f'Good tense usage: Found {past_count} past tense vs {present_count} present tense verbs'
+                explanations['penalties'] = [f'No major penalties (score: {score}/10)']
+            elif past_count == present_count:
+                explanations['specific_reasoning'] = f'Mixed tenses: Found {past_count} past tense and {present_count} present tense verbs'
+                explanations['penalties'] = [f'Tense inconsistency penalty: -4 points (10 → 6)']
+            else:
+                explanations['specific_reasoning'] = f'Poor tense usage: Found {present_count} present tense vs {past_count} past tense verbs'
+                explanations['penalties'] = [f'Too many present tense verbs: -6 points (10 → 4)']
+                
+        elif category_lower == 'personal_pronouns':
+            # Run actual pronoun analysis
+            import re
+            pronoun_patterns = [r'\bi\b', r'\bme\b', r'\bmy\b', r'\bmyself\b', r'\bour\b', r'\bwe\b']
+            
+            found_pronouns = []
+            for pattern in pronoun_patterns:
+                matches = re.findall(pattern, resume_text, re.IGNORECASE)
+                if matches:
+                    found_pronouns.extend(matches)
+            
+            explanations['rule_explanation'] = 'ATS Rule: Remove all first-person pronouns (I, me, my, we, our)'
+            
+            if len(found_pronouns) == 0:
+                explanations['specific_reasoning'] = 'Excellent: No personal pronouns found'
+                explanations['penalties'] = [f'No penalties (score: {score}/10)']
+            else:
+                explanations['specific_reasoning'] = f'Found {len(found_pronouns)} personal pronouns: {", ".join(set(found_pronouns[:5]))}'
+                penalty = min(6, len(found_pronouns))
+                explanations['penalties'] = [f'Personal pronoun penalty: -{penalty} points (10 → {10-penalty})']
+                explanations['examples_found'] = found_pronouns[:3]
+                
+        elif category_lower == 'repetition':
+            # Run actual repetition analysis
+            import re
+            from collections import Counter
+            
+            # Extract action verbs and count repetition
+            action_verbs_patterns = [
+                r'\b(manage[ds]?|managing)\b', r'\b(develop[eds]?|developing)\b', 
+                r'\b(creat[ed]?|creating)\b', r'\b(implement[eds]?|implementing)\b',
+                r'\b(lead[s]?|leading|led)\b', r'\b(design[eds]?|designing)\b'
+            ]
+            
+            verb_matches = []
+            for pattern in action_verbs_patterns:
+                matches = re.findall(pattern, resume_text, re.IGNORECASE)
+                verb_matches.extend([match[0] if isinstance(match, tuple) else match for match in matches])
+            
+            verb_counts = Counter(verb_matches)
+            repeated_verbs = {verb: count for verb, count in verb_counts.items() if count > 1}
+            
+            explanations['rule_explanation'] = 'ATS Rule: Vary action verbs - deduct 2 points per repeated verb occurrence'
+            
+            if not repeated_verbs:
+                explanations['specific_reasoning'] = 'Good verb variety: No repeated action verbs found'
+                explanations['penalties'] = [f'No repetition penalties (score: {score}/10)']
+            else:
+                total_repetition = sum(count - 1 for count in repeated_verbs.values())  # Extra occurrences
+                penalty = min(10, total_repetition * 2)  # 2 points per repetition
+                explanations['specific_reasoning'] = f'Verb repetition detected: {dict(repeated_verbs)}'
+                explanations['penalties'] = [f'Repetition penalty: -{penalty} points (10 → {10-penalty})']
+                explanations['examples_found'] = list(repeated_verbs.keys())[:3]
+                
+        elif category_lower == 'summary':
+            # Run actual summary analysis
+            summary_text = extract_summary_section(resume_text)
+            
+            if not summary_text:
+                explanations['rule_explanation'] = 'ATS Rule: Professional summary required for optimal scoring'
+                explanations['specific_reasoning'] = 'No professional summary section found'
+                explanations['penalties'] = [f'Missing summary penalty: -7 points (10 → 3)']
+            else:
+                explanations['rule_explanation'] = 'ATS Rule: Summary penalties for long content, buzzwords, pronouns, no metrics'
+                
+                penalties = []
+                current_score = 10
+                
+                # Word count penalty
+                word_count = len(summary_text.split())
+                if word_count > 100:
+                    penalties.append(f'Too long ({word_count} words): -1 point')
+                    current_score -= 1
+                    
+                # Buzzword penalty
+                vague_buzzwords = ['collaboration', 'problem-solving', 'communication', 'teamwork', 'leadership', 'detail-oriented', 'hardworking', 'motivated', 'dedicated', 'passionate', 'results-driven', 'dynamic', 'innovative', 'creative', 'analytical', 'strategic']
+                found_buzzwords = [word for word in vague_buzzwords if word in summary_text.lower()]
+                if found_buzzwords:
+                    penalties.append(f'Vague buzzwords ({len(found_buzzwords)} found): -2 points')
+                    current_score -= 2
+                    
+                # Pronoun penalty  
+                import re
+                pronouns = re.findall(r'\b(i|me|my|myself|our|we)\b', summary_text, re.IGNORECASE)
+                if pronouns:
+                    penalties.append(f'Personal pronouns ({len(pronouns)} found): -2 points')  
+                    current_score -= 2
+                    
+                # No metrics penalty
+                metrics_pattern = r'\b(\d+[%+]?|\d+k|\d+m|\d+\+)\b'
+                metrics = re.findall(metrics_pattern, summary_text, re.IGNORECASE)
+                if not metrics:
+                    penalties.append('No quantifiable metrics: -2 points')
+                    current_score -= 2
+                    
+                explanations['specific_reasoning'] = f'Summary analysis: {word_count} words, {len(found_buzzwords)} buzzwords, {len(pronouns)} pronouns, {len(metrics)} metrics'
+                explanations['penalties'] = penalties if penalties else [f'Good summary quality (score: {score}/10)']
+                
+        elif category_lower == 'dates':
+            # Run actual date analysis
+            relevant_content = extract_relevant_sections_for_dates(resume_text)
+            
+            # Check for date patterns
+            import re
+            date_patterns = [
+                (r'\b(0[1-9]|1[0-2])/(19[9-9][0-9]|20[0-3][0-9])\b', 'MM/YYYY'),
+                (r'\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(19[9-9][0-9]|20[0-3][0-9])\b', 'Month YYYY'),
+                (r'\b(19[9-9][0-9]|20[0-3][0-9])\s*[-–]\s*(Present|Ongoing|Current)\b', 'YYYY-Present')
+            ]
+            
+            all_dates = []
+            format_types = []
+            
+            for pattern, format_name in date_patterns:
+                matches = re.findall(pattern, relevant_content, re.IGNORECASE)
+                if matches:
+                    all_dates.extend(matches)
+                    format_types.extend([format_name] * len(matches))
+                    
+            explanations['rule_explanation'] = 'ATS Rule: Consistent date formatting required across all work/education entries'
+            
+            if len(set(format_types)) <= 1 and len(all_dates) > 0:
+                explanations['specific_reasoning'] = f'Good date consistency: Found {len(all_dates)} dates in consistent format'
+                explanations['penalties'] = [f'No date formatting penalties (score: {score}/10)']
+            elif len(all_dates) == 0:
+                explanations['specific_reasoning'] = f'No employment or education dates found in resume'
+                explanations['penalties'] = [f'Missing dates penalty: -{10-score} points (10 → {score})']
+            else:
+                explanations['specific_reasoning'] = f'Date inconsistency: Found {len(set(format_types))} different formats: {", ".join(set(format_types))}'
+                penalty = len(set(format_types)) * 2  # Penalty per format inconsistency
+                explanations['penalties'] = [f'Format inconsistency penalty: -{penalty} points']
+                
+        else:
+            # Generic explanation for other categories
+            explanations['rule_explanation'] = f'ATS scoring rules applied to {category_name}'
+            explanations['specific_reasoning'] = f'Category scored {score}/10 based on content analysis'
+            explanations['penalties'] = [f'Deductions applied: -{10-score} points (10 → {score})']
+            
+    except Exception as e:
+        # Fallback explanation if analysis fails
+        explanations['rule_explanation'] = f'ATS Rule: {category_name} impacts resume parseability and professional presentation'
+        explanations['specific_reasoning'] = f'Analysis resulted in {score}/10 score'
+        explanations['penalties'] = [f'Total deductions: -{10-score} points']
+        
+    return explanations
+
 def generate_comprehensive_issues_report(analysis_result: Dict[str, Any]) -> str:
     """
     Generate comprehensive TXT report of all ATS issues with specific examples from resume
@@ -8343,6 +8536,8 @@ def generate_comprehensive_issues_report(analysis_result: Dict[str, Any]) -> str
                                                     analysis_result.get('ats_score', 0)))
         # Try both camelCase and snake_case for detailed analysis
         detailed_analysis = analysis_result.get('detailedAnalysis', {}) or analysis_result.get('detailed_analysis', {})
+        # Extract resume content for scoring analysis
+        content = analysis_result.get('content', '')
         
         # Extract specific issues with examples from the resume
         specific_issues = extract_specific_issues_with_examples(analysis_result)
@@ -8421,12 +8616,26 @@ def generate_comprehensive_issues_report(analysis_result: Dict[str, Any]) -> str
                 fix_instructions = issue.get('fix_instructions', 'No fix instructions available')
                 impact = issue.get('impact', description)
                 
+                # Get detailed score explanation using frontend logic
+                score_explanation = explain_score_with_frontend_logic(category, score, content)
+                
                 report_lines.extend([
                     f"{i}. {category.upper()}: {title}",
                     f"   Current Score: {score}/10 | Time to Fix: {time_to_fix}",
                     f"   Problem: {impact}",
-                    ""
+                    "",
+                    f"   💡 SCORING BREAKDOWN:",
+                    f"   {score_explanation['rule_explanation']}",
+                    f"   Analysis: {score_explanation['specific_reasoning']}"
                 ])
+                
+                # Add penalty breakdown
+                if score_explanation['penalties']:
+                    report_lines.append("   Penalties Applied:")
+                    for penalty in score_explanation['penalties']:
+                        report_lines.append(f"   • {penalty}")
+                
+                report_lines.append("")
                 
                 # Add specific examples if available
                 if examples:
@@ -8479,12 +8688,26 @@ def generate_comprehensive_issues_report(analysis_result: Dict[str, Any]) -> str
                 fix_instructions = issue.get('fix_instructions', 'No fix instructions available')
                 impact = issue.get('impact', description)
                 
+                # Get detailed score explanation using frontend logic
+                score_explanation = explain_score_with_frontend_logic(category, score, content)
+                
                 report_lines.extend([
                     f"{i}. {category.upper()}: {title}",
                     f"   Current Score: {score}/10 | Time to Fix: {time_to_fix}",
                     f"   Problem: {impact}",
-                    ""
+                    "",
+                    f"   💡 SCORING BREAKDOWN:",
+                    f"   {score_explanation['rule_explanation']}",
+                    f"   Analysis: {score_explanation['specific_reasoning']}"
                 ])
+                
+                # Add penalty breakdown
+                if score_explanation['penalties']:
+                    report_lines.append("   Penalties Applied:")
+                    for penalty in score_explanation['penalties']:
+                        report_lines.append(f"   • {penalty}")
+                
+                report_lines.append("")
                 
                 # Add specific examples if available
                 if examples:
