@@ -2,7 +2,7 @@
 ATS SPECIFIC ISSUES REPORT WITH RESUME EXAMPLES
 ================================================================================
 Current ATS Score: 64.46/100
-Report Generated: 2025-08-25 08:12:07
+Report Generated: 2025-08-25 15:40:35
 
 EXECUTIVE DASHBOARD
 ----------------------------------------
@@ -56,7 +56,7 @@ EXECUTIVE DASHBOARD
    Completely rewrite repetitive phrases with varied vocabulary
 
    💡 EXAMPLE REPLACEMENT:
-   Replace "product" with "accomplished" for variety
+   "Senior Product Manager | Snapdeal | Nov 2023 – present  | Gurgaon, India" → "Replace "product" with "accomplished" for variety"
 
 --------------------------------------------------
 
@@ -66,7 +66,7 @@ EXECUTIVE DASHBOARD
 
    💡 SCORING BREAKDOWN:
    ATS Rule: Consistent date formatting required across all work/education entries
-   Analysis: Date inconsistency: Found 2 different formats: YYYY-Present, Month YYYY
+   Analysis: Date inconsistency: Found 2 different formats: Month YYYY, YYYY-Present
    Penalties Applied:
    • Format inconsistency penalty: -4 points
 
@@ -80,7 +80,7 @@ EXECUTIVE DASHBOARD
    Add missing employment and education dates immediately
 
    💡 EXAMPLE REPLACEMENT:
-   "Nov" → Convert to "Jan 2020 - Dec 2022" format
+   "Senior Product Manager | Snapdeal | Nov 2023 – present  | Gurgaon, India" → ""Nov" → Convert to "Jan 2020 - Dec 2022" format"
 
 --------------------------------------------------
 
@@ -101,7 +101,7 @@ EXECUTIVE DASHBOARD
    Rewrite entire summary removing all personal pronouns
 
    💡 EXAMPLE REPLACEMENT:
-   "PROFESSIONAL SUMMARY" → "Experienced PROFESSIONAL SUMMARY"
+   "PROFESSIONAL SUMMARY" → ""PROFESSIONAL SUMMARY" → "Experienced PROFESSIONAL SUMMARY""
 
 --------------------------------------------------
 
@@ -137,7 +137,7 @@ EXECUTIVE DASHBOARD
    Obtain fundamental industry certifications immediately
 
    💡 EXAMPLE REPLACEMENT:
-   "CERTIFICATIONS" → Include date and organization (e.g., "AWS Certified Developer - 2023")
+   "CERTIFICATIONS" → ""CERTIFICATIONS" → Include date and organization (e.g., "AWS Certified Developer - 2023")"
 
 --------------------------------------------------
 
@@ -181,6 +181,9 @@ EXECUTIVE DASHBOARD
    ✅ QUICK FIX:
    Better showcase collaborative experiences
 
+   💡 EXAMPLE REPLACEMENT:
+   Include projects where you worked with other departments/teams
+
 --------------------------------------------------
 
 3. ANALYTICAL: Analytical Improvements
@@ -193,8 +196,14 @@ EXECUTIVE DASHBOARD
    Penalties Applied:
    • Deductions applied: -5 points (10 → 5)
 
+   📍 FOUND IN YOUR RESUME (Line 15):
+   "•Reduced Customer acquisition cost by 19% through implementation of referral program and optimized marketing campaigns"
+
    ✅ QUICK FIX:
    Quantify analytical impact with percentages and metrics
+
+   💡 EXAMPLE REPLACEMENT:
+   Consider adding methodology: how did you analyze/measure this?
 
 --------------------------------------------------
 

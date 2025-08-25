@@ -1962,23 +1962,125 @@ def analyze_llm_spelling_frontend(resume_text: str) -> int:
     else:
         return 5
 
+def extract_work_experience_sections(lines: List[str]) -> List[str]:
+    """Extract individual work experience sections from resume lines"""
+    sections = []
+    current_section = []
+    in_experience = False
+    
+    for line in lines:
+        line_lower = line.lower().strip()
+        
+        # Skip if line is too short or just whitespace
+        if not line_lower or len(line_lower) < 3:
+            continue
+            
+        # Look for work experience indicators
+        if any(keyword in line_lower for keyword in ['experience', 'employment', 'work history']):
+            in_experience = True
+            continue
+        
+        # Look for other section headers that end work experience
+        elif any(keyword in line_lower for keyword in ['education', 'skills', 'certifications', 'projects', 'awards']):
+            if current_section:
+                sections.append('\n'.join(current_section))
+                current_section = []
+            in_experience = False
+            continue
+        
+        if in_experience:
+            # Check if this looks like a new job entry (has company/title pattern)
+            if (('|' in line and any(char.isdigit() for char in line)) or 
+                (any(keyword in line_lower for keyword in ['manager', 'engineer', 'analyst', 'developer', 'lead', 'director']))):
+                
+                # Save previous section if it exists
+                if current_section:
+                    sections.append('\n'.join(current_section))
+                    current_section = []
+                
+                current_section.append(line)
+            else:
+                current_section.append(line)
+    
+    # Add final section if exists
+    if current_section:
+        sections.append('\n'.join(current_section))
+    
+    return sections
+
+def is_current_position(work_section: str) -> bool:
+    """Determine if a work experience section represents current employment"""
+    section_lower = work_section.lower()
+    
+    # Check for current position indicators
+    current_indicators = ['present', 'current', 'ongoing', 'now']
+    
+    if any(indicator in section_lower for indicator in current_indicators):
+        return True
+    
+    # Check for recent dates (2024, 2023 without end date)
+    import re
+    from datetime import datetime
+    
+    current_year = datetime.now().year
+    
+    # Look for date patterns like "2024 -" or "Jan 2024 -" (no end date)
+    recent_ongoing_pattern = rf'({current_year}|{current_year-1})\s*[-–—]\s*$'
+    if re.search(recent_ongoing_pattern, section_lower, re.MULTILINE):
+        return True
+    
+    return False
+
 def analyze_verb_tenses_frontend(resume_text: str) -> int:
-    """Copied exactly from frontend analyzeVerbTenses"""
-    # Check for consistent verb tenses
-    past_tense_verbs = ['developed', 'created', 'managed', 'led', 'implemented']
-    present_tense_verbs = ['develop', 'create', 'manage', 'lead', 'implement']
+    """Enhanced context-aware verb tense analysis"""
+    import re
     
-    text_lower = resume_text.lower()
-    past_count = sum(1 for verb in past_tense_verbs if verb in text_lower)
-    present_count = sum(1 for verb in present_tense_verbs if verb in text_lower)
+    # Split resume into work experience sections
+    lines = resume_text.split('\n')
+    work_sections = extract_work_experience_sections(lines)
     
-    # Prefer past tense for work experience
-    if past_count > present_count:
-        return 8
-    elif past_count == present_count:
-        return 6
+    # Verb patterns for different tenses
+    past_tense_verbs = ['developed', 'created', 'managed', 'led', 'implemented', 'achieved', 'improved', 
+                       'increased', 'reduced', 'delivered', 'executed', 'organized', 'coordinated']
+    present_tense_verbs = ['develop', 'create', 'manage', 'lead', 'implement', 'achieve', 'improve',
+                          'increase', 'reduce', 'deliver', 'execute', 'organize', 'coordinate']
+    
+    total_violations = 0
+    total_verbs = 0
+    
+    for section in work_sections:
+        is_current_role = is_current_position(section)
+        
+        # Count verb occurrences in this section
+        section_lower = section.lower()
+        past_verbs_found = sum(1 for verb in past_tense_verbs if verb in section_lower)
+        present_verbs_found = sum(1 for verb in present_tense_verbs if verb in section_lower)
+        
+        total_verbs += past_verbs_found + present_verbs_found
+        
+        if is_current_role:
+            # Current role: present tense is preferred, past tense is penalized
+            total_violations += past_verbs_found
+        else:
+            # Previous role: past tense is preferred, present tense is penalized
+            total_violations += present_verbs_found
+    
+    # Calculate score based on violation rate
+    if total_verbs == 0:
+        return 8  # No verbs found, assume neutral
+    
+    violation_rate = total_violations / total_verbs
+    
+    if violation_rate == 0:
+        return 10  # Perfect tense usage
+    elif violation_rate <= 0.2:
+        return 8   # Minor issues
+    elif violation_rate <= 0.4:
+        return 6   # Some issues
+    elif violation_rate <= 0.6:
+        return 4   # Significant issues
     else:
-        return 4
+        return 2   # Major tense problems
 
 def analyze_personal_pronouns_frontend(resume_text: str) -> int:
     """Analyzes personal pronouns with improved word boundary detection"""
@@ -8212,15 +8314,156 @@ def improve_summary_line(line: str) -> str:
     
     return improved
 
-# Placeholder functions for remaining categories (can be implemented later)
+def get_section_lines(lines: List[str], sections: Dict[str, List[int]], section_name: str) -> List[str]:
+    """Get lines from a specific resume section"""
+    section_lines = []
+    
+    # Find the matching section (case insensitive)
+    for section_key, line_indices in sections.items():
+        if section_name.lower() in section_key.lower():
+            for idx in line_indices:
+                if 0 <= idx < len(lines):
+                    section_lines.append(lines[idx])
+            break
+    
+    # If no specific section found, return work experience area (typical location)
+    if not section_lines:
+        in_experience = False
+        for line in lines:
+            line_lower = line.lower().strip()
+            if any(keyword in line_lower for keyword in ['experience', 'employment', 'work history']):
+                in_experience = True
+                continue
+            elif any(keyword in line_lower for keyword in ['education', 'skills', 'certifications']):
+                if in_experience:
+                    break
+            elif in_experience and line.strip():
+                section_lines.append(line)
+    
+    return section_lines
+
+# Enhanced category-specific functions to eliminate cross-contamination
 def extract_teamwork_issues(lines: List[str], sections: Dict[str, List[int]]) -> List[Dict[str, Any]]:
-    return extract_generic_relevant_examples('teamwork', lines, sections)
+    """Extract specific teamwork-related content from work experience"""
+    examples = []
+    
+    # Focus on work experience section only
+    experience_lines = get_section_lines(lines, sections, 'experience')
+    
+    # Specific teamwork indicators
+    teamwork_keywords = [
+        'collaborate', 'collaboration', 'cross-functional', 'team', 'partnership', 
+        'coordinated', 'worked with', 'alongside', 'joint', 'cooperative'
+    ]
+    
+    for i, line in enumerate(experience_lines):
+        line_lower = line.strip().lower()
+        if len(line_lower) < 20:  # Skip short lines
+            continue
+            
+        # Look for teamwork-specific content
+        teamwork_indicators = [kw for kw in teamwork_keywords if kw in line_lower]
+        
+        if teamwork_indicators and 'email' not in line_lower and '@' not in line_lower:
+            examples.append({
+                'line_number': i + 1,
+                'original_text': line.strip(),
+                'problematic_text': line.strip(),
+                'issue_type': 'Teamwork demonstration opportunity',
+                'teamwork_keywords_found': teamwork_indicators,
+                'suggestion': 'Enhance collaborative impact with specific outcomes',
+                'fix_suggestion': f'Add measurable results from this teamwork: "{line.strip()[:50]}..."',
+                'context': 'ATS values collaborative achievements with quantified results'
+            })
+            
+            if len(examples) >= 2:
+                break
+                
+    # If no teamwork content found, suggest adding it
+    if not examples:
+        examples.append({
+            'line_number': 0,
+            'original_text': 'No clear teamwork examples found',
+            'problematic_text': '',
+            'issue_type': 'Missing teamwork demonstration',
+            'suggestion': 'Add examples of cross-functional collaboration',
+            'fix_suggestion': 'Include projects where you worked with other departments/teams',
+            'context': 'Teamwork skills are highly valued by employers and ATS systems'
+        })
+    
+    return examples
 
 def extract_leadership_issues(lines: List[str], sections: Dict[str, List[int]]) -> List[Dict[str, Any]]:
     return extract_generic_relevant_examples('leadership', lines, sections)
 
 def extract_analytical_issues(lines: List[str], sections: Dict[str, List[int]]) -> List[Dict[str, Any]]:
-    return extract_generic_relevant_examples('analytical', lines, sections)
+    """Extract analytical skills from quantified achievements and data-driven results"""
+    examples = []
+    
+    # Focus on work experience section
+    experience_lines = get_section_lines(lines, sections, 'experience')
+    
+    # Analytical indicators - focus on data/metrics/analysis
+    analytical_keywords = [
+        'analyze', 'analysis', 'data', 'metrics', 'insights', 'research', 'evaluated',
+        'assessed', 'measured', 'tracked', 'monitored', 'identified', 'optimized'
+    ]
+    
+    # Look for lines with both analytical keywords AND numbers/percentages
+    for i, line in enumerate(experience_lines):
+        line_lower = line.strip().lower()
+        if len(line_lower) < 20:
+            continue
+            
+        analytical_found = [kw for kw in analytical_keywords if kw in line_lower]
+        has_numbers = any(char.isdigit() for char in line) or '%' in line
+        
+        # Only count as analytical if it has both keywords AND quantified results
+        if analytical_found and has_numbers and 'email' not in line_lower and '@' not in line_lower:
+            examples.append({
+                'line_number': i + 1,
+                'original_text': line.strip(),
+                'problematic_text': line.strip(),
+                'issue_type': 'Strong analytical example found',
+                'analytical_keywords_found': analytical_found,
+                'has_quantification': has_numbers,
+                'suggestion': 'Excellent analytical achievement - could be enhanced further',
+                'fix_suggestion': f'Consider adding methodology: how did you analyze/measure this?',
+                'context': 'ATS rewards analytical skills demonstrated through quantified results'
+            })
+            
+            if len(examples) >= 2:
+                break
+                
+    # If no strong analytical examples found, suggest improvement
+    if not examples:
+        # Look for lines with numbers but missing analytical context
+        for i, line in enumerate(experience_lines):
+            if any(char.isdigit() for char in line) or '%' in line:
+                examples.append({
+                    'line_number': i + 1,
+                    'original_text': line.strip(),
+                    'problematic_text': line.strip(),
+                    'issue_type': 'Quantified result missing analytical context',
+                    'suggestion': 'Add how you analyzed/researched/identified this opportunity',
+                    'fix_suggestion': f'Prefix with analytical action: "Analyzed market data to..." or "Researched customer behavior to..."',
+                    'context': 'Show the analytical thinking behind quantified achievements'
+                })
+                break
+        
+        # If still no examples, suggest adding analytical achievements
+        if not examples:
+            examples.append({
+                'line_number': 0,
+                'original_text': 'No analytical achievements found',
+                'problematic_text': '',
+                'issue_type': 'Missing analytical skills demonstration',
+                'suggestion': 'Add examples of data analysis, research, or problem-solving',
+                'fix_suggestion': 'Include metrics you tracked, insights you discovered, or analysis you performed',
+                'context': 'Analytical skills are crucial for most professional roles'
+            })
+    
+    return examples
 
 def extract_action_verb_issues(lines: List[str], sections: Dict[str, List[int]]) -> List[Dict[str, Any]]:
     return extract_generic_relevant_examples('action_verbs', lines, sections)
@@ -8229,7 +8472,66 @@ def extract_quantifiable_issues(lines: List[str], sections: Dict[str, List[int]]
     return extract_generic_relevant_examples('quantifiable', lines, sections)
 
 def extract_contact_issues(lines: List[str], sections: Dict[str, List[int]]) -> List[Dict[str, Any]]:
-    return extract_generic_relevant_examples('contact', lines, sections)
+    """Extract contact information issues from header section only"""
+    examples = []
+    
+    # Focus on first 10 lines (header area)
+    header_lines = lines[:10]
+    
+    has_email = False
+    has_phone = False
+    has_linkedin = False
+    
+    for i, line in enumerate(header_lines):
+        line_lower = line.strip().lower()
+        
+        # Check for email
+        if '@' in line and '.' in line:
+            has_email = True
+            
+        # Check for phone patterns
+        if any(pattern in line for pattern in ['+91', '+1', '(', ')', '-']) and any(c.isdigit() for c in line):
+            has_phone = True
+            
+        # Check for LinkedIn
+        if 'linkedin' in line_lower:
+            has_linkedin = True
+    
+    # Report missing elements
+    if not has_email:
+        examples.append({
+            'line_number': 0,
+            'original_text': 'Email address missing from header',
+            'problematic_text': '',
+            'issue_type': 'Missing professional email address',
+            'suggestion': 'Add professional email in header section',
+            'fix_suggestion': 'Include email like: name@domain.com',
+            'context': 'Email is essential for ATS contact information parsing'
+        })
+    
+    if not has_phone:
+        examples.append({
+            'line_number': 0,
+            'original_text': 'Phone number missing from header', 
+            'problematic_text': '',
+            'issue_type': 'Missing phone number',
+            'suggestion': 'Add phone number in header section',
+            'fix_suggestion': 'Include phone like: +1 (555) 123-4567',
+            'context': 'Phone number improves recruiter accessibility'
+        })
+    
+    if not has_linkedin:
+        examples.append({
+            'line_number': 0,
+            'original_text': 'LinkedIn profile missing from header',
+            'problematic_text': '',
+            'issue_type': 'Missing LinkedIn profile URL',
+            'suggestion': 'Add LinkedIn profile URL',
+            'fix_suggestion': 'Include: linkedin.com/in/yourprofile',
+            'context': 'LinkedIn profile significantly boosts ATS scores'
+        })
+    
+    return examples[:2]  # Limit to top 2 most important
 
 def extract_skills_issues(lines: List[str], sections: Dict[str, List[int]]) -> List[Dict[str, Any]]:
     return extract_generic_relevant_examples('skills', lines, sections)
@@ -8259,36 +8561,92 @@ def find_personal_pronouns(lines: List[str]) -> Dict[str, Any]:
     }
 
 def find_verb_tense_issues(lines: List[str]) -> Dict[str, Any]:
-    """Find verb tense inconsistencies in resume"""
-    past_tense_indicators = ['ed ', 'was ', 'were ', 'had ', 'did ']
-    present_tense_indicators = ['ing ', 'is ', 'are ', 'have ', 'do ']
+    """Find context-aware verb tense inconsistencies in resume"""
     examples = []
     
-    past_found = False
-    present_found = False
+    # Get work experience sections with context
+    resume_text = '\n'.join(lines)
+    work_sections = extract_work_experience_sections(lines)
     
-    for i, line in enumerate(lines):
-        line_lower = line.lower()
-        has_past = any(indicator in line_lower for indicator in past_tense_indicators)
-        has_present = any(indicator in line_lower for indicator in present_tense_indicators)
+    # Enhanced verb patterns for better detection
+    past_tense_verbs = ['developed', 'created', 'managed', 'led', 'implemented', 'achieved', 'improved', 
+                       'increased', 'reduced', 'delivered', 'executed', 'organized', 'coordinated']
+    present_tense_verbs = ['develop', 'create', 'manage', 'lead', 'implement', 'achieve', 'improve',
+                          'increase', 'reduce', 'deliver', 'execute', 'organize', 'coordinate']
+    
+    # Track violations by job section
+    violations_found = []
+    
+    for section in work_sections:
+        is_current_role = is_current_position(section)
+        section_lines = section.split('\n')
         
-        if has_past:
-            past_found = True
-        if has_present:
-            present_found = True
+        for line_idx, line in enumerate(section_lines):
+            line_lower = line.lower()
             
-        if (has_past or has_present) and len(examples) < 3:
-            examples.append({
-                'line_number': i + 1,
-                'problematic_text': line.strip(),
-                'tense_type': 'past' if has_past else 'present',
-                'fix_suggestion': 'Use past tense for previous roles, present for current role'
-            })
+            # Find specific verb tense violations
+            past_verbs_in_line = [verb for verb in past_tense_verbs if verb in line_lower]
+            present_verbs_in_line = [verb for verb in present_tense_verbs if verb in line_lower]
+            
+            violation_type = None
+            problematic_verbs = []
+            
+            if is_current_role and past_verbs_in_line:
+                # Current role using past tense - potential violation
+                violation_type = 'current_role_past_tense'
+                problematic_verbs = past_verbs_in_line
+                
+            elif not is_current_role and present_verbs_in_line:
+                # Previous role using present tense - definite violation
+                violation_type = 'previous_role_present_tense'
+                problematic_verbs = present_verbs_in_line
+            
+            if violation_type and problematic_verbs and len(examples) < 3:
+                # Create contextual fix suggestion
+                if violation_type == 'current_role_past_tense':
+                    suggestion = f'Change "{problematic_verbs[0]}" to "{present_tense_verbs[past_tense_verbs.index(problematic_verbs[0])]}" for current role'
+                    rule_context = 'ATS Rule: Use present tense for current position to show ongoing responsibilities'
+                else:
+                    suggestion = f'Change "{problematic_verbs[0]}" to "{past_tense_verbs[present_tense_verbs.index(problematic_verbs[0])]}" for previous role'
+                    rule_context = 'ATS Rule: Use past tense for completed roles to show accomplished results'
+                
+                # Generate before/after example
+                improved_line = line
+                for verb in problematic_verbs:
+                    if violation_type == 'current_role_past_tense' and verb in past_tense_verbs:
+                        present_form = present_tense_verbs[past_tense_verbs.index(verb)]
+                        improved_line = improved_line.replace(verb, present_form)
+                    elif violation_type == 'previous_role_present_tense' and verb in present_tense_verbs:
+                        past_form = past_tense_verbs[present_tense_verbs.index(verb)]
+                        improved_line = improved_line.replace(verb, past_form)
+                
+                examples.append({
+                    'line_number': sum(len(prev_section.split('\n')) for prev_section in work_sections[:work_sections.index(section)]) + line_idx + 1,
+                    'problematic_text': line.strip(),
+                    'violation_type': violation_type,
+                    'problematic_verbs': problematic_verbs,
+                    'role_context': 'Current Position' if is_current_role else 'Previous Position',
+                    'rule_explanation': rule_context,
+                    'fix_suggestion': suggestion,
+                    'improved_version': improved_line.strip()
+                })
+                
+                violations_found.append(violation_type)
+    
+    # Create comprehensive fix instructions
+    if violations_found:
+        fix_instructions = 'Context-Aware Verb Tense Rules:\n'
+        fix_instructions += '• Previous roles: Use past tense (developed, managed, achieved)\n'
+        fix_instructions += '• Current role: Use present tense (develop, manage, achieve)\n'
+        fix_instructions += '• This shows career progression and ongoing responsibilities'
+    else:
+        fix_instructions = 'Verb tense usage appears consistent with role timing'
     
     return {
         'examples': examples,
-        'fix_instructions': 'Use past tense for previous positions, present tense only for current role',
-        'inconsistency_found': past_found and present_found
+        'fix_instructions': fix_instructions,
+        'violations_found': len(violations_found) > 0,
+        'violation_types': list(set(violations_found))
     }
 
 def find_summary_issues(lines: List[str]) -> Dict[str, Any]:
@@ -8657,13 +9015,24 @@ def generate_comprehensive_issues_report(analysis_result: Dict[str, Any]) -> str
                         ""
                     ])
                     
-                    # Add specific example fix if available
-                    if examples and examples[0].get('fix_suggestion'):
-                        report_lines.extend([
-                            f"   💡 EXAMPLE REPLACEMENT:",
-                            f"   {examples[0]['fix_suggestion']}",
-                            ""
-                        ])
+                    # Add specific example fix with before/after format
+                    if examples:
+                        example = examples[0]
+                        original = example.get('problematic_text', '')
+                        improved = example.get('improved_version', example.get('fix_suggestion', ''))
+                        
+                        if original and improved and original != improved:
+                            report_lines.extend([
+                                f"   💡 EXAMPLE REPLACEMENT:",
+                                f"   \"{original}\" → \"{improved}\"",
+                                ""
+                            ])
+                        elif example.get('fix_suggestion'):
+                            report_lines.extend([
+                                f"   💡 EXAMPLE REPLACEMENT:",
+                                f"   {example['fix_suggestion']}",
+                                ""
+                            ])
                 
                 report_lines.append("-" * 50)
                 report_lines.append("")
