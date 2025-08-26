@@ -541,13 +541,17 @@ def create_order():
         return response
     
     try:
-        # Import orders handler
+        # Import orders handler - ensure proper path resolution
         import sys
-        orders_path = os.path.join(os.path.dirname(__file__), 'api', 'orders')
-        if orders_path not in sys.path:
-            sys.path.append(orders_path)
+        import os
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        api_path = os.path.join(current_dir, 'api')
         
-        from index import create_order_in_database, extract_contact_info_from_resume, generate_order_id
+        if api_path not in sys.path:
+            sys.path.insert(0, api_path)
+        
+        # Import required functions from orders module
+        from orders.index import create_order_in_database, extract_contact_info_from_resume, generate_order_id
         
         data = request.get_json()
         if not data:
@@ -589,6 +593,14 @@ def create_order():
         response.headers.add('Access-Control-Allow-Origin', '*')
         return response
         
+    except ImportError as e:
+        print(f"❌ Import error in create order: {str(e)}")
+        print(f"   Current working directory: {os.getcwd()}")
+        print(f"   API path: {api_path}")
+        print(f"   API path exists: {os.path.exists(api_path)}")
+        error_response = jsonify({'error': f'Order service unavailable: {str(e)}'})
+        error_response.headers.add('Access-Control-Allow-Origin', '*')
+        return error_response, 500
     except Exception as e:
         print(f"❌ Create order error: {str(e)}")
         error_response = jsonify({'error': f'Order creation failed: {str(e)}'})
@@ -606,8 +618,16 @@ def initiate_payment():
         return response
     
     try:
-        # Import orders handler
-        from index import prepare_payu_payment_data
+        # Import orders handler - ensure proper path resolution
+        import sys
+        import os
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        api_path = os.path.join(current_dir, 'api')
+        
+        if api_path not in sys.path:
+            sys.path.insert(0, api_path)
+        
+        from orders.index import prepare_payu_payment_data
         
         data = request.get_json()
         if not data:
@@ -641,6 +661,11 @@ def initiate_payment():
         response.headers.add('Access-Control-Allow-Origin', '*')
         return response
         
+    except ImportError as e:
+        print(f"❌ Import error in payment initiation: {str(e)}")
+        error_response = jsonify({'error': f'Payment service unavailable: {str(e)}'})
+        error_response.headers.add('Access-Control-Allow-Origin', '*')
+        return error_response, 500
     except Exception as e:
         print(f"❌ Payment initiation error: {str(e)}")
         error_response = jsonify({'error': f'Payment initiation failed: {str(e)}'})
