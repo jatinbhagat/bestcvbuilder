@@ -29,9 +29,7 @@ except ImportError:
 # API configuration - following cv-rewrite pattern
 ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://bestcvbuilder.onrender.com",
-    "https://bestcvbuilder-sooty.vercel.app",
-    "https://bestcvbuilder-gnktl1mxh-bestcvbuilder.vercel.app"
+    "https://bestcvbuilder-frontend.onrender.com"
 ]
 
 def cors_headers():

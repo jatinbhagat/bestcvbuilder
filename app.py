@@ -530,6 +530,123 @@ def cv_rewrite():
     error_response.headers.add('Access-Control-Allow-Origin', '*')
     return error_response, 501
 
+@app.route('/api/orders/create-order', methods=['POST', 'OPTIONS'])
+def create_order():
+    """Create Order API endpoint"""
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        return response
+    
+    try:
+        # Import orders handler
+        import sys
+        orders_path = os.path.join(os.path.dirname(__file__), 'api', 'orders')
+        if orders_path not in sys.path:
+            sys.path.append(orders_path)
+        
+        from index import create_order_in_database, extract_contact_info_from_resume, generate_order_id
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No JSON data provided"}), 400
+        
+        # Validate required fields
+        if 'analysis_data' not in data:
+            return jsonify({'error': 'Analysis data is required'}), 400
+        
+        # Extract contact information from resume
+        analysis_data = data['analysis_data']
+        contact_info = extract_contact_info_from_resume(analysis_data)
+        
+        # Generate order ID
+        order_id = generate_order_id()
+        
+        # Create order data
+        order_data = {
+            'order_id': order_id,
+            'email': data.get('email', contact_info['primary_email']),
+            'phone': data.get('phone', contact_info['primary_phone']),
+            'analysis_data': analysis_data,
+            'user_id': data.get('user_id')
+        }
+        
+        # Create order in database
+        created_order = create_order_in_database(order_data)
+        
+        # Prepare response
+        response_data = {
+            'success': True,
+            'order': created_order,
+            'contact_info': contact_info,
+            'amount': 99.00,  # Default amount
+            'currency': 'INR'
+        }
+        
+        response = jsonify(response_data)
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
+        
+    except Exception as e:
+        print(f"❌ Create order error: {str(e)}")
+        error_response = jsonify({'error': f'Order creation failed: {str(e)}'})
+        error_response.headers.add('Access-Control-Allow-Origin', '*')
+        return error_response, 500
+
+@app.route('/api/orders/initiate-payment', methods=['POST', 'OPTIONS'])
+def initiate_payment():
+    """Initiate Payment API endpoint"""
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        return response
+    
+    try:
+        # Import orders handler
+        from index import prepare_payu_payment_data
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No JSON data provided"}), 400
+        
+        # Validate required fields
+        required_fields = ['order_id', 'email', 'phone']
+        for field in required_fields:
+            if field not in data or not data[field]:
+                return jsonify({'error': f'{field} is required'}), 400
+        
+        # Prepare order data for PayU
+        order_data = {
+            'order_id': data['order_id'],
+            'order_email': data['email'],
+            'order_mobile': data['phone']
+        }
+        
+        # Generate PayU payment data
+        payment_data = prepare_payu_payment_data(order_data)
+        
+        # Prepare response
+        response_data = {
+            'success': True,
+            'payment_data': payment_data,
+            'payu_url': 'https://test.payu.in/_payment',  # Test URL
+            'order_id': data['order_id']
+        }
+        
+        response = jsonify(response_data)
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
+        
+    except Exception as e:
+        print(f"❌ Payment initiation error: {str(e)}")
+        error_response = jsonify({'error': f'Payment initiation failed: {str(e)}'})
+        error_response.headers.add('Access-Control-Allow-Origin', '*')
+        return error_response, 500
+
 @app.route('/api/resume-fix', methods=['POST', 'OPTIONS'])
 def resume_fix():
     """Resume Fix API endpoint with Gemini AI integration"""

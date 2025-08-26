@@ -215,8 +215,8 @@ def generate_payu_hash(data: Dict[str, str]) -> str:
 def prepare_payu_payment_data(order: Dict[str, Any]) -> Dict[str, str]:
     """Prepare payment data for PayU"""
     try:
-        # Get base URL from request (you'll need to pass this)
-        base_url = 'https://bestcvbuilder.vercel.app'  # Update with actual domain
+        # Get base URL for PayU callback URLs
+        base_url = 'https://bestcvbuilder-frontend.onrender.com'
         
         payment_data = {
             'key': PAYU_CONFIG['merchant_id'],

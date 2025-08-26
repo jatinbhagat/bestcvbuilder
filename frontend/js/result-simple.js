@@ -1322,8 +1322,11 @@ async function createOrder(customerInfo) {
             hasAnalysisData: !!requestData.analysis_data 
         });
 
-        // Make API request to create order
-        const response = await fetch('/api/orders/create-order', {
+        // Make API request to create order (use correct API base URL)
+        const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+        const API_BASE_URL = isProduction ? 'https://bestcvbuilder-api.onrender.com/api' : '/api';
+        
+        const response = await fetch(`${API_BASE_URL}/orders/create-order`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

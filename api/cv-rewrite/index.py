@@ -347,7 +347,7 @@ def handler(event, context):
                         'payment_required': True
                     })
                 }
-            # In production, you would validate the payment_id with Stripe here
+            # In production, you would validate the payment_id with PayU here
             logger.info(f"Payment validated: {payment_id}")
         else:
             logger.info("🚀 Payment bypassed - processing free CV rewrite")

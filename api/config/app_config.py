@@ -14,7 +14,7 @@ PAYMENT_CONFIG = {
     'free_rewrite_limit': None,  # None means unlimited, or set to a number like 3
     
     # Payment mode settings  
-    'stripe_enabled': not True,  # Inverse of bypass_payment for clarity
+    'payu_enabled': not True,  # Inverse of bypass_payment for clarity
     'payment_required_for_rewrite': not True
 }
 

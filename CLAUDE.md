@@ -2,143 +2,260 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-# Important
-Keep the keep very simple, easy to manage. 
-Keep the UI/UX clean, minimal and fast. 
-DON'T BE LAZY. Read complete files.
-Detail out your steps from broad perspective. 
-I am a Product Manager without coding experience. 
+# Important Guidelines
+- Keep everything simple, easy to manage
+- Keep the UI/UX clean, minimal and fast  
+- DON'T BE LAZY. Read complete files before making changes
+- Detail out your steps from a broad perspective
+- I am a Product Manager without coding experience - explain technical concepts clearly
 
 ## Project Overview
 
-BestCVBuilder is a mobile-first web application that provides ATS (Applicant Tracking System) score analysis for resumes and offers AI-powered CV rewrites. The application uses a modern serverless architecture with Supabase for backend services and Vercel for hosting.
+BestCVBuilder is a mobile-first web application that provides ATS (Applicant Tracking System) score analysis for resumes and offers AI-powered CV optimization. The application uses a modern architecture with Supabase for backend services, Render.com for hosting, and PayU for payments.
+
+## Architecture Overview
+
+### Tech Stack
+- **Frontend**: Vanilla JavaScript + Tailwind CSS (mobile-first) - hosted on Render.com
+- **Backend**: Flask Python web service on Render.com
+- **Database**: Supabase (auth, database, file storage)
+- **AI Processing**: Google Gemini API for intelligent resume optimization
+- **Payment**: PayU integration for Indian market
+- **Hosting**: Render.com for both frontend (static) and backend (web service)
+
+### Key Architecture Principles
+
+1. **Backend-First Architecture**: 
+   - All business logic, scoring calculations, and data processing happen on the backend
+   - Frontend is purely a presentation layer - NO calculations allowed
+   - Flask app (`app.py`) serves all API endpoints
+
+2. **Clear Separation of Concerns**:
+   - **Frontend** (`frontend/`): UI, user interactions, API calls, data display
+   - **Backend APIs** (`api/`): Business logic modules imported by Flask app
+   - **Database** (Supabase): Data persistence, user management, file storage
+
+3. **ATS Scoring System**:
+   - Frontend uploads resume files to Supabase storage
+   - Frontend sends file URLs to backend APIs
+   - Backend downloads, parses, analyzes, and scores documents
+   - Backend returns complete analysis results
+   - Frontend displays results only
+
+### Deployment Architecture
+
+- **Frontend Service**: Static site deployment from `frontend/` directory
+  - Domain: `bestcvbuilder-frontend.onrender.com`
+  - Serves HTML, CSS, JavaScript files
+  - Auto-deploys from GitHub main branch
+
+- **Backend Service**: Flask web service deployment from project root
+  - Domain: `bestcvbuilder-api.onrender.com`
+  - Runs `app.py` via gunicorn
+  - Imports API modules from `api/` directory
+  - Auto-deploys from GitHub main branch
+
+### File Structure
+```
+/
+├── app.py                 # Main Flask application (entry point)
+├── frontend/             # Frontend source code
+│   ├── js/              # JavaScript modules
+│   ├── css/             # Tailwind CSS files
+│   └── *.html           # HTML pages
+├── api/                 # Backend API modules
+│   ├── cv-parser/       # ATS analysis logic
+│   ├── cv-optimizer/    # AI-powered resume improvement
+│   ├── orders/          # Payment and order management
+│   └── job-analyzer/    # Job description analysis
+├── supabase/           # Database migrations and config
+├── render-*.yaml       # Render.com deployment configurations
+└── requirements*.txt   # Python dependencies
+```
 
 ## Development Commands
 
-### Frontend Development
+### Local Development
 ```bash
-# Start development server (Vite)
+# Frontend development (if using Vite for local dev)
+cd frontend
 npm run dev
 
-# Build for production
-npm run build
+# Backend development (Flask app)
+python app.py
+# or with auto-reload
+flask --app app run --debug
 
-# Preview production build
-npm run preview
-
-# Watch Tailwind CSS changes
-npm run tailwind:watch
-```
-
-### Python API Development
-```bash
 # Install Python dependencies
 pip install -r requirements.txt
 
-# Test API endpoints locally
-python api/cv-parser/index.py
-python api/cv-rewrite/index.py
+# Install frontend dependencies (for build tools)
+cd frontend && npm install
 ```
 
 ### Database Development
 ```bash
-# Start local Supabase
+# Start local Supabase (optional for local testing)
 supabase start
 
 # Create new migration
 supabase migration new migration_name
 
-# Apply migrations
+# Apply migrations to production
 supabase db push
 
-# Reset database
+# Reset local database
 supabase db reset
 ```
 
-### Deployment
+### Production Deployment
 ```bash
-# Deploy to Vercel
-vercel --prod
+# Deploy both services to Render.com
+git add .
+git commit -m "Deploy updates"
+git push origin main
+
+# Render.com will auto-deploy:
+# - Frontend service from frontend/ directory
+# - Backend service from project root using app.py
 ```
 
-## Architecture Overview
+### Testing API Endpoints
+```bash
+# Test backend health
+curl https://bestcvbuilder-api.onrender.com/health
 
-### Tech Stack
-- **Frontend**: Vanilla JavaScript + Tailwind CSS (mobile-first)
-- **Backend**: Supabase (auth, database, file storage)
-- **API**: Python serverless functions on Vercel
-- **Payment**: Stripe integration
-- **Hosting**: Vercel
-
-### Key Architecture Patterns
-
-1. **Serverless API Architecture**: Python functions in `/api/` directory are deployed as Vercel serverless functions with specific runtime configurations in `vercel.json`
-
-2. **Module-Based Frontend**: JavaScript modules in `/public/js/` handle different aspects:
-   - `main.js`: Main application logic and file upload handling
-   - `supabase.js`: Supabase client configuration
-   - `fileUpload.js`: File upload utilities
-   - `atsAnalysis.js`: ATS analysis API calls
-   - `payment.js`: Stripe payment integration
-
-3. **Multi-Page SPA Flow**: Uses session storage to pass data between pages:
-   - `index.html` → `result.html` → `payment.html` → `success.html`
-
-4. **Database Schema**: Comprehensive schema with user profiles, analysis results, payments, CV rewrites, and feedback tracking
-
-### File Upload & Processing Flow
-1. File uploaded to Supabase storage via `fileUpload.js`
-2. File URL passed to Python API (`/api/cv-parser/`) for ATS analysis
-3. Results stored in session storage and displayed on results page
-4. Payment triggers CV rewrite via `/api/cv-rewrite/` endpoint
-
-### Environment Configuration
-The application requires these environment variables:
-- `SUPABASE_URL`: Supabase project URL
-- `PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY`: Supabase publishable key
-- `STRIPE_SECRET_KEY`: Stripe secret key
-- `STRIPE_WEBHOOK_SECRET`: Stripe webhook secret
+# Test CV analysis endpoint
+curl -X POST https://bestcvbuilder-api.onrender.com/api/cv-parser \
+  -H "Content-Type: application/json" \
+  -d '{"file_url": "https://example.com/resume.pdf"}'
+```
 
 ## Key Implementation Details
 
-### Vite Configuration
-- Root directory set to `public/` 
-- Build output to `../dist`
-- Development server on port 3000
+### Flask Application Structure
+- **Entry Point**: `app.py` - main Flask application
+- **Route Handlers**: Each API endpoint imports functions from `api/` modules
+- **CORS**: Configured to allow `bestcvbuilder-frontend.onrender.com`
+- **Error Handling**: Consistent error responses with proper HTTP status codes
+- **Timeout Management**: Request timeouts to prevent resource exhaustion
 
-### Vercel Deployment Strategy
-- Static files served from `public/`
-- Python APIs with different timeout configurations (30s for parser, 60s for rewrite)
-- Route configuration handles both static content and API endpoints
+### API Endpoints
+- `GET /health` - Health check and service status
+- `POST /api/cv-parser` - Resume ATS analysis
+- `POST /api/cv-optimizer` - AI-powered resume optimization
+- `POST /api/job-analyzer` - Job description analysis
+- `POST /api/orders/create-order` - Create payment order
+- `POST /api/orders/initiate-payment` - Initialize PayU payment
+- `GET /api/config/` - Application configuration
 
-### Database Relationships
-- User profiles extend Supabase auth.users
-- Analysis results link to users and store ATS scores + analysis data
-- Payments track Stripe transactions and link to analysis results
-- CV rewrites store improved resume versions and updated scores
+### Frontend JavaScript Modules
+- `main.js` - Main application logic and file upload
+- `supabase.js` - Supabase client configuration
+- `fileUpload.js` - File upload utilities
+- `atsAnalysis.js` - API calls to backend (NO scoring logic)
+- `result-simple.js` - Results display and user interactions
+- `create-order.js` - Order creation and payment flow
+
+### Database Schema (Supabase)
+- `user_profiles` - User information and preferences
+- `analysis_results` - ATS analysis data (from backend only)
+- `orders` - PayU payment tracking
+- `cv_rewrites` - AI-optimized resume versions
+- `job_analysis` - Job description analysis results
+
+### Environment Configuration
+**Required Environment Variables:**
+- `SUPABASE_URL` - Supabase project URL
+- `PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY` - Supabase public key
+- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service key (backend only)
+- `PAYU_MERCHANT_ID` - PayU merchant ID for payments
+- `PAYU_SALT` - PayU salt for hash generation
+- `GEMINI_API_KEY` - Google Gemini API key for AI processing
+- `PORT` - Port number (provided by Render.com)
+
+### PayU Payment Integration
+- **Order Creation**: Extract contact info from resume, generate unique order ID
+- **Payment Hash**: Generate secure PayU payment hash using merchant credentials
+- **Callback URLs**: Use frontend domain for success/failure redirects
+- **Order Status**: Track payment status in database
 
 ### Security Considerations
-- CORS headers implemented in Python APIs
-- File type and size validation (PDF, DOCX, DOC max 10MB)
-- Row Level Security policies in Supabase
-- Secure file storage with access controls
+- **CORS**: Properly configured for frontend domain only
+- **File Validation**: PDF, DOCX, DOC files only, max 10MB
+- **Input Sanitization**: All user inputs validated and sanitized
+- **Environment Variables**: Sensitive credentials stored securely
+- **Rate Limiting**: Timeout controls to prevent resource abuse
+- **Row Level Security**: Supabase RLS policies for data protection
 
 ## Development Guidelines
 
-### Working with the Frontend
-- All JavaScript uses ES6 modules
-- Tailwind CSS classes follow mobile-first responsive design
-- Error handling with user-friendly notifications
-- Session storage used for cross-page data flow
+### Working with Frontend Code
+- **Pure Presentation Layer**: No business logic or calculations
+- **ES6 Modules**: All JavaScript uses modern module syntax
+- **Mobile-First**: Tailwind CSS with responsive design
+- **Session Storage**: For passing data between pages
+- **Error Handling**: User-friendly error messages
+- **API Integration**: Only makes calls to backend, displays results
 
-### Working with Python APIs
-- Follow existing error handling patterns with try/catch and proper HTTP status codes
-- Use CORS headers for all API responses
-- Log important events for debugging
-- Validate input parameters and file types
+### Working with Backend APIs
+- **Business Logic Only**: All calculations and processing on backend
+- **Flask Integration**: API modules imported by `app.py`
+- **CORS Headers**: Include proper CORS for frontend domain
+- **Error Handling**: Consistent error response format
+- **Input Validation**: Validate all parameters and file types
+- **Logging**: Comprehensive logging for debugging
+- **Memory Management**: Garbage collection for large file processing
 
-### Database Migrations
-- Use descriptive migration names
-- Include rollback statements where applicable
-- Test migrations locally before deployment
-- Document schema changes in migration comments`
+### Database Development
+- **Migrations**: Use descriptive names and include rollback statements
+- **RLS Policies**: Implement proper row-level security
+- **Indexing**: Add indexes for frequently queried columns
+- **Data Validation**: Use database constraints where appropriate
+
+### Testing Guidelines
+- **API Testing**: Use curl or Postman for endpoint testing
+- **Local Development**: Test with local Flask server
+- **Error Scenarios**: Test error handling and edge cases
+- **Performance**: Monitor response times and memory usage
+
+## Deployment Process
+
+### Render.com Configuration
+1. **Frontend Service** (`render-frontend.yaml`):
+   - Static site deployment
+   - Serves files from `frontend/` directory
+   - Auto-deploy from GitHub
+
+2. **Backend Service** (`render-api.yaml`):
+   - Web service deployment
+   - Runs Flask app with gunicorn
+   - Auto-deploy from GitHub
+
+### Deployment Checklist
+- [ ] Environment variables configured in Render.com dashboard
+- [ ] Database migrations applied to production Supabase
+- [ ] Frontend build artifacts updated
+- [ ] Backend dependencies specified in requirements.txt
+- [ ] CORS origins updated for production domains
+- [ ] PayU credentials configured for production
+
+## Common Issues & Solutions
+
+### API Connection Issues
+- **Problem**: Frontend can't connect to backend APIs
+- **Solution**: Check CORS configuration, verify API URLs use correct domain
+
+### Payment Integration Issues
+- **Problem**: PayU payment failures
+- **Solution**: Verify merchant credentials, check hash generation, validate callback URLs
+
+### File Upload Issues
+- **Problem**: Resume uploads failing
+- **Solution**: Check Supabase storage policies, verify file size limits, validate file types
+
+### Performance Issues
+- **Problem**: Slow API responses
+- **Solution**: Monitor memory usage, implement timeouts, optimize document processing
+
+Remember: This is a **backend-first architecture** where all business logic happens on the backend APIs, and the frontend is purely for presentation and user interaction.

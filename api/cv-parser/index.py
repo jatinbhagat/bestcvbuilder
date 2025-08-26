@@ -255,7 +255,7 @@ available_methods = log_dependency_status()
 ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:3002", 
-    "https://bestcvbuilder-gnktl1mxh-bestcvbuilder.vercel.app"
+    "https://bestcvbuilder-frontend.onrender.com"
 ]
 
 # Configuration-driven data - loaded from config files

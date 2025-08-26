@@ -45,7 +45,11 @@ async function createOrderWithContactExtraction() {
     try {
         console.log('🔍 Creating order with contact extraction...');
         
-        const response = await fetch('/api/orders/create-order', {
+        // Use correct API base URL for Render.com
+        const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+        const API_BASE_URL = isProduction ? 'https://bestcvbuilder-api.onrender.com/api' : '/api';
+        
+        const response = await fetch(`${API_BASE_URL}/orders/create-order`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -292,7 +296,11 @@ async function initiatePayment(orderData) {
     try {
         console.log('💳 Initiating PayU payment...');
         
-        const response = await fetch('/api/orders/initiate-payment', {
+        // Use correct API base URL for Render.com
+        const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+        const API_BASE_URL = isProduction ? 'https://bestcvbuilder-api.onrender.com/api' : '/api';
+        
+        const response = await fetch(`${API_BASE_URL}/orders/initiate-payment`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
