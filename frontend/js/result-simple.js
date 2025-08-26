@@ -882,14 +882,28 @@ function extractContactInfoFromAnalysis() {
     
     // Check if backend already extracted personal information
     const personalInfo = analysisData.personal_information || analysisData.personalInfo || {};
+    
+    console.log('🔍 DEBUG: Name extraction process starting...');
+    console.log('📊 Analysis data keys:', Object.keys(analysisData));
+    console.log('👤 Personal info object:', personalInfo);
+    console.log('👤 Personal info keys:', Object.keys(personalInfo));
+    
     if (personalInfo.email) {
         extractedEmail = personalInfo.email;
+        console.log('📧 Email found in backend data:', extractedEmail);
     }
     if (personalInfo.phone || personalInfo.mobile) {
         extractedMobile = personalInfo.phone || personalInfo.mobile;
+        console.log('📞 Phone found in backend data:', extractedMobile);
     }
     if (personalInfo.full_name || personalInfo.name) {
         extractedName = personalInfo.full_name || personalInfo.name;
+        console.log('✅ Name found in backend data:', extractedName);
+    } else {
+        console.log('❌ No name found in backend personal_information:');
+        console.log('  - full_name:', personalInfo.full_name);
+        console.log('  - name:', personalInfo.name);
+        console.log('  - Available fields:', Object.keys(personalInfo));
     }
     
     // If not found in personal info, extract from resume content
@@ -981,33 +995,95 @@ function extractContactInfoFromAnalysis() {
     }
     
     if (!extractedName && content) {
+        console.log('🔍 Frontend name extraction - backend didn\'t provide name, trying manual extraction...');
+        
         // Extract name from the first few lines (usually header)
         const lines = content.split('\n');
-        const headerLines = lines.slice(0, 5);
+        const headerLines = lines.slice(0, 8); // Check more lines
+        
+        console.log('📝 Checking first lines for name:', headerLines.map((line, i) => `Line ${i}: "${line.trim()}"`));
         
         for (const line of headerLines) {
             const trimmedLine = line.trim();
+            
+            // Enhanced filtering - avoid common resume headers
+            const skipPatterns = [
+                /@/,                    // Email addresses
+                /http/,                 // URLs
+                /\d{3,}/,              // Long numbers (phone, dates)
+                /resume|cv/i,           // Resume/CV headers
+                /curriculum|vitae/i,    // Curriculum Vitae
+                /profile|about/i,       // Profile sections
+                /contact|address/i,     // Contact sections
+                /\+\d+/,               // Phone numbers with +
+                /\d{4}-\d{4}/,         // Year ranges
+                /\d+\s*(years?|months?)/i, // Experience indicators
+                /[.]{2,}/,             // Multiple dots (table of contents)
+                /_{3,}|-{3,}/,         // Multiple underscores or dashes
+            ];
+            
             // Look for lines that could be names (2-4 words, reasonable length)
             if (trimmedLine && 
                 trimmedLine.length > 3 && 
-                trimmedLine.length < 50 && 
-                !trimmedLine.includes('@') && 
-                !trimmedLine.includes('http') &&
-                !/\d{3,}/.test(trimmedLine)) { // Avoid lines with long numbers
+                trimmedLine.length < 60 && 
+                !skipPatterns.some(pattern => pattern.test(trimmedLine))) {
                 
                 const words = trimmedLine.split(/\s+/);
-                if (words.length >= 2 && words.length <= 4) {
-                    // Check if it looks like a name (starts with capital letters)
-                    const looksLikeName = words.every(word => 
-                        word.charAt(0).toUpperCase() === word.charAt(0) &&
-                        word.length > 1
-                    );
-                    if (looksLikeName) {
+                if (words.length >= 2 && words.length <= 5) { // Allow up to 5 words for longer names
+                    
+                    // Enhanced name validation
+                    const nameValidation = {
+                        allTitleCase: words.every(word => 
+                            word.charAt(0).toUpperCase() === word.charAt(0) && 
+                            word.length > 1 &&
+                            /^[A-Za-zÀ-ÿ'.-]+$/.test(word) // Allow Unicode, apostrophes, hyphens
+                        ),
+                        reasonableLength: words.every(word => word.length >= 2 && word.length <= 20),
+                        noNumbers: !trimmedLine.match(/\d/),
+                        noSpecialChars: !trimmedLine.match(/[#$%&*+=<>{}|\\]/),
+                        hasVowels: words.some(word => /[aeiouAEIOU]/.test(word))
+                    };
+                    
+                    console.log(`📝 Evaluating "${trimmedLine}":`, nameValidation);
+                    
+                    if (nameValidation.allTitleCase && 
+                        nameValidation.reasonableLength && 
+                        nameValidation.noNumbers && 
+                        nameValidation.noSpecialChars &&
+                        nameValidation.hasVowels) {
+                        
                         extractedName = trimmedLine;
+                        console.log(`✅ Found name: "${extractedName}"`);
                         break;
+                    } else {
+                        console.log(`❌ Rejected "${trimmedLine}" - failed validation`);
                     }
                 }
+            } else {
+                if (trimmedLine) {
+                    const skipReason = trimmedLine.length <= 3 ? 'too short' :
+                                      trimmedLine.length >= 60 ? 'too long' :
+                                      'matched skip pattern';
+                    console.log(`❌ Skipped "${trimmedLine}" - ${skipReason}`);
+                }
             }
+        }
+        
+        // Fallback: Try to extract from email prefix if no name found
+        if (!extractedName && extractedEmail) {
+            const emailPrefix = extractedEmail.split('@')[0];
+            const nameParts = emailPrefix.split(/[._-]/);
+            if (nameParts.length >= 2 && nameParts.every(part => part.length >= 2)) {
+                const nameFromEmail = nameParts
+                    .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+                    .join(' ');
+                extractedName = nameFromEmail;
+                console.log(`💡 Extracted name from email: "${nameFromEmail}"`);
+            }
+        }
+        
+        if (!extractedName) {
+            console.log('❌ No name could be extracted from resume content');
         }
     }
     
@@ -1028,26 +1104,41 @@ function extractContactInfoFromAnalysis() {
  * Validate extracted contact information
  */
 function validateExtractedContact(contact) {
+    console.log('🔍 CONTACT VALIDATION DEBUG:');
+    console.log('  - Input contact:', contact);
+    
     const validated = { ...contact };
     
     // Validate email
     if (validated.email && (!validated.email.includes('@') || validated.email.length < 5)) {
+        console.log(`❌ Email rejected: "${validated.email}" (invalid format or too short)`);
         validated.email = '';
+    } else if (validated.email) {
+        console.log(`✅ Email validated: "${validated.email}"`);
     }
     
     // Validate mobile (must be at least 10 digits)
     if (validated.mobile) {
         const digits = validated.mobile.replace(/[^\d]/g, '');
         if (digits.length < 10) {
+            console.log(`❌ Mobile rejected: "${validated.mobile}" (${digits.length} digits, need 10+)`);
             validated.mobile = '';
+        } else {
+            console.log(`✅ Mobile validated: "${validated.mobile}" (${digits.length} digits)`);
         }
     }
     
     // Validate name (reasonable length)
     if (validated.name && (validated.name.length < 2 || validated.name.length > 50)) {
+        console.log(`❌ Name rejected: "${validated.name}" (length: ${validated.name.length}, need 2-50)`);
         validated.name = '';
+    } else if (validated.name) {
+        console.log(`✅ Name validated: "${validated.name}" (length: ${validated.name.length})`);
+    } else {
+        console.log('❌ No name provided for validation');
     }
     
+    console.log('  - Output validated:', validated);
     return validated;
 }
 
@@ -1063,19 +1154,82 @@ function showCustomerInfoModal() {
         const extractedContact = extractContactInfoFromAnalysis();
         const validatedContact = validateExtractedContact(extractedContact);
         
+        console.log('🎯 MODAL PREFILL DEBUG:');
+        console.log('  - Raw extracted:', extractedContact);
+        console.log('  - After validation:', validatedContact);
+        
         // Prefill form with extracted data
         const nameInput = document.getElementById('customerName');
         const emailInput = document.getElementById('customerEmail');
         const mobileInput = document.getElementById('customerMobile');
         
+        console.log('📝 Form inputs found:');
+        console.log('  - nameInput:', !!nameInput);
+        console.log('  - emailInput:', !!emailInput);
+        console.log('  - mobileInput:', !!mobileInput);
+        
+        let prefilledFields = [];
+        
         if (nameInput && validatedContact.name) {
             nameInput.value = validatedContact.name;
+            prefilledFields.push('name');
+            console.log(`✅ Name prefilled: "${validatedContact.name}"`);
+        } else {
+            console.log('❌ Name NOT prefilled:');
+            console.log('  - nameInput exists:', !!nameInput);
+            console.log('  - validatedContact.name:', validatedContact.name);
         }
+        
         if (emailInput && validatedContact.email) {
             emailInput.value = validatedContact.email;
+            prefilledFields.push('email');
+            console.log(`✅ Email prefilled: "${validatedContact.email}"`);
+        } else {
+            console.log('❌ Email NOT prefilled:');
+            console.log('  - emailInput exists:', !!emailInput);
+            console.log('  - validatedContact.email:', validatedContact.email);
         }
+        
         if (mobileInput && validatedContact.mobile) {
             mobileInput.value = validatedContact.mobile;
+            prefilledFields.push('phone');
+            console.log(`✅ Mobile prefilled: "${validatedContact.mobile}"`);
+        } else {
+            console.log('❌ Mobile NOT prefilled:');
+            console.log('  - mobileInput exists:', !!mobileInput);
+            console.log('  - validatedContact.mobile:', validatedContact.mobile);
+        }
+        
+        // Show auto-fill notification if any fields were prefilled
+        if (prefilledFields.length > 0) {
+            const notification = document.getElementById('autoFillNotification');
+            const message = document.getElementById('autoFillMessage');
+            
+            if (notification && message) {
+                const fieldNames = {
+                    name: 'name',
+                    email: 'email',
+                    phone: 'phone number'
+                };
+                
+                const filledFieldNames = prefilledFields.map(field => fieldNames[field]).join(', ');
+                message.textContent = `${filledFieldNames} automatically extracted from your resume`;
+                notification.classList.remove('hidden');
+                console.log(`📝 Auto-fill notification shown for: ${filledFieldNames}`);
+                
+                // Add a subtle highlight to prefilled fields
+                setTimeout(() => {
+                    if (prefilledFields.includes('name') && nameInput) {
+                        nameInput.classList.add('border-green-300', 'bg-green-50');
+                    }
+                    if (prefilledFields.includes('email') && emailInput) {
+                        emailInput.classList.add('border-green-300', 'bg-green-50');
+                    }
+                    if (prefilledFields.includes('phone') && mobileInput) {
+                        mobileInput.classList.add('border-green-300', 'bg-green-50');
+                    }
+                }, 100);
+            }
         }
         
         // Clear any validation errors
