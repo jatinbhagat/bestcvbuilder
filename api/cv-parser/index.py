@@ -5800,30 +5800,225 @@ def extract_name(content: str) -> Optional[str]:
     return None
 
 def extract_address(content: str) -> Dict[str, Optional[str]]:
-    """Extract address components from CV content"""
+    """
+    Extract address components from CV content with smart location detection.
+    Prioritizes contact header section to avoid picking up locations from 
+    experience, education, or summary sections.
+    """
     address_data = {
         'address': None,
         'city': None,
         'state': None
     }
     
-    # Try to find full address
-    for pattern in ADDRESS_PATTERNS:
-        match = re.search(pattern, content, re.IGNORECASE | re.MULTILINE)
-        if match:
-            address_data['address'] = match.group(1).strip()
-            break
+    # Step 1: Try to extract from header section first (most accurate)
+    header_location = extract_address_from_header(content)
+    if header_location['city'] or header_location['state']:
+        logger.info(f"🏠 Found location in header: {header_location['city']}, {header_location['state']}")
+        return header_location
     
-    # Try to extract city and state
-    for pattern in CITY_STATE_PATTERNS:
-        match = re.search(pattern, content, re.MULTILINE)
-        if match:
-            address_data['city'] = match.group(1).strip()
-            if len(match.groups()) >= 2:
-                address_data['state'] = match.group(2).strip()
-            break
+    # Step 2: If no location in header, try structured contact section
+    contact_location = extract_address_from_contact_section(content)
+    if contact_location['city'] or contact_location['state']:
+        logger.info(f"📞 Found location in contact section: {contact_location['city']}, {contact_location['state']}")
+        return contact_location
+    
+    # Step 3: Fallback to careful full content search (avoid summary/experience sections)
+    fallback_location = extract_address_careful_fallback(content)
+    if fallback_location['city'] or fallback_location['state']:
+        logger.info(f"🔍 Found location via careful search: {fallback_location['city']}, {fallback_location['state']}")
+        return fallback_location
+    
+    logger.warning("⚠️ No location information found in resume")
+    return address_data
+
+def extract_address_from_header(content: str) -> Dict[str, Optional[str]]:
+    """Extract location from the top header section (first 15% of content)"""
+    address_data = {
+        'address': None,
+        'city': None,
+        'state': None
+    }
+    
+    lines = content.split('\n')
+    header_lines = lines[:max(5, len(lines) // 7)]  # First ~15% of content or minimum 5 lines
+    header_content = '\n'.join(header_lines)
+    
+    # Look for location near contact info (name, email, phone)
+    contact_proximity_patterns = [
+        # Location after name/email/phone on same or next line
+        r'(?:' + '|'.join([r'[a-zA-Z\s]+ [a-zA-Z\s]+@[a-zA-Z\s]+\.[a-zA-Z]+', r'\+?[\d\s\-\(\)]+', r'^[A-Z][a-z]+ [A-Z][a-z]+']) + r').*?([A-Za-z\s]+),\s*([A-Z]{2})\s*(\d{5})?',
+        # Standalone city, state in header
+        r'^([A-Za-z\s]{3,25}),\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)?$',
+        # Location with zip code
+        r'([A-Za-z\s]{3,25}),\s*([A-Za-z\s]{2,25})\s+(\d{5})',
+    ]
+    
+    for pattern in contact_proximity_patterns:
+        match = re.search(pattern, header_content, re.MULTILINE | re.IGNORECASE)
+        if match and len(match.groups()) >= 2:
+            city = match.group(1).strip()
+            state = match.group(2).strip()
+            
+            # Validate that this looks like a real location (not job titles, skills, etc.)
+            if is_valid_location(city, state):
+                address_data['city'] = city
+                address_data['state'] = state
+                if len(match.groups()) >= 3 and match.group(3):
+                    address_data['address'] = f"{city}, {state} {match.group(3)}"
+                break
     
     return address_data
+
+def extract_address_from_contact_section(content: str) -> Dict[str, Optional[str]]:
+    """Extract location from explicit contact information sections"""
+    address_data = {
+        'address': None,
+        'city': None,
+        'state': None
+    }
+    
+    # Look for explicit contact/address sections
+    contact_section_patterns = [
+        r'(?:CONTACT|ADDRESS|PERSONAL\s+INFO|CONTACT\s+INFO)[\s:]*\n(.*?)(?:\n\n|\n[A-Z]{2,}|\Z)',
+        r'Address[\s:]+([^\n]+(?:\n[^\n]*)*?)(?:\n\n|\nEmail|\nPhone|\n[A-Z]{2,}|\Z)',
+    ]
+    
+    for pattern in contact_section_patterns:
+        match = re.search(pattern, content, re.IGNORECASE | re.DOTALL)
+        if match:
+            contact_text = match.group(1).strip()
+            
+            # Extract city/state from contact section
+            for city_pattern in CITY_STATE_PATTERNS:
+                city_match = re.search(city_pattern, contact_text, re.MULTILINE)
+                if city_match and len(city_match.groups()) >= 2:
+                    city = city_match.group(1).strip()
+                    state = city_match.group(2).strip()
+                    
+                    if is_valid_location(city, state):
+                        address_data['city'] = city
+                        address_data['state'] = state
+                        address_data['address'] = contact_text.replace('\n', ' ').strip()
+                        return address_data
+    
+    return address_data
+
+def extract_address_careful_fallback(content: str) -> Dict[str, Optional[str]]:
+    """
+    Carefully extract location from full content, avoiding sections that 
+    commonly contain irrelevant location mentions (experience, education, summary)
+    """
+    address_data = {
+        'address': None,
+        'city': None,
+        'state': None
+    }
+    
+    # Split content into sections and exclude problematic ones
+    excluded_section_patterns = [
+        r'(?:SUMMARY|PROFILE|OBJECTIVE|ABOUT)[\s:]*\n?(.*?)(?:\n\n|\n[A-Z]{2,}|\Z)',
+        r'(?:EXPERIENCE|EMPLOYMENT|WORK\s+HISTORY)[\s:]*\n?(.*?)(?:\n\n|\n[A-Z]{2,}|\Z)',
+        r'(?:EDUCATION|ACADEMIC|QUALIFICATIONS?)[\s:]*\n?(.*?)(?:\n\n|\n[A-Z]{2,}|\Z)',
+        r'(?:PROJECTS?|ACHIEVEMENTS?)[\s:]*\n?(.*?)(?:\n\n|\n[A-Z]{2,}|\Z)',
+    ]
+    
+    # Remove problematic sections temporarily
+    cleaned_content = content
+    for pattern in excluded_section_patterns:
+        cleaned_content = re.sub(pattern, '', cleaned_content, flags=re.IGNORECASE | re.DOTALL)
+    
+    # Now search in the cleaned content
+    for pattern in CITY_STATE_PATTERNS:
+        match = re.search(pattern, cleaned_content, re.MULTILINE)
+        if match and len(match.groups()) >= 2:
+            city = match.group(1).strip()
+            state = match.group(2).strip()
+            
+            if is_valid_location(city, state):
+                address_data['city'] = city
+                address_data['state'] = state
+                break
+    
+    return address_data
+
+def is_valid_location(city: str, state: str) -> bool:
+    """
+    Validate that extracted city/state looks like a real location
+    and not job titles, skills, or other content
+    """
+    if not city or not state:
+        return False
+    
+    city = city.strip()
+    state = state.strip()
+    
+    # Check length constraints
+    if len(city) < 3 or len(city) > 30:
+        return False
+    if len(state) < 2 or len(state) > 20:
+        return False
+    
+    # Common false positives to exclude
+    false_positives = [
+        # Job titles/roles that might appear as "city, state" format
+        'project', 'manager', 'development', 'consultant', 'analyst', 'engineer',
+        'director', 'senior', 'junior', 'lead', 'team', 'product', 'marketing',
+        'sales', 'operations', 'technical', 'business', 'software', 'data',
+        
+        # Skills/technologies
+        'python', 'javascript', 'java', 'react', 'angular', 'node', 'sql',
+        'mysql', 'mongodb', 'aws', 'azure', 'docker', 'kubernetes',
+        
+        # Education terms  
+        'university', 'college', 'degree', 'bachelor', 'master', 'phd', 'mba',
+        
+        # Common resume words
+        'experience', 'responsible', 'managed', 'developed', 'implemented',
+        'collaborated', 'achieved', 'successful', 'expertise', 'proficient'
+    ]
+    
+    city_lower = city.lower()
+    state_lower = state.lower()
+    
+    for false_positive in false_positives:
+        if false_positive in city_lower or false_positive in state_lower:
+            return False
+    
+    # State should be either 2-letter code or valid state name
+    valid_state_codes = {
+        'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+        'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+        'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+        'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+        'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
+    }
+    
+    valid_state_names = {
+        'alabama', 'alaska', 'arizona', 'arkansas', 'california', 'colorado',
+        'connecticut', 'delaware', 'florida', 'georgia', 'hawaii', 'idaho',
+        'illinois', 'indiana', 'iowa', 'kansas', 'kentucky', 'louisiana',
+        'maine', 'maryland', 'massachusetts', 'michigan', 'minnesota',
+        'mississippi', 'missouri', 'montana', 'nebraska', 'nevada',
+        'new hampshire', 'new jersey', 'new mexico', 'new york',
+        'north carolina', 'north dakota', 'ohio', 'oklahoma', 'oregon',
+        'pennsylvania', 'rhode island', 'south carolina', 'south dakota',
+        'tennessee', 'texas', 'utah', 'vermont', 'virginia', 'washington',
+        'west virginia', 'wisconsin', 'wyoming'
+    }
+    
+    if len(state) == 2:
+        if state.upper() not in valid_state_codes:
+            return False
+    else:
+        if state_lower not in valid_state_names:
+            return False
+    
+    # Additional validation: city should look like a city name
+    if not re.match(r'^[A-Za-z\s\-\.\']+$', city):
+        return False
+    
+    return True
 
 def extract_summary(content: str) -> Optional[str]:
     """Extract professional summary from CV content"""

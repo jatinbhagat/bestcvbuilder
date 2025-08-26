@@ -28,9 +28,21 @@ def cors_headers():
         'Access-Control-Max-Age': '86400'
     }
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+    logger.info("✅ Environment variables loaded from .env file")
+except ImportError:
+    logger.warning("⚠️ python-dotenv not available, relying on system environment variables")
+
 # Supabase Configuration
 SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
 SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '')
+
+# Log configuration status
+logger.info(f"🔗 SUPABASE_URL configured: {bool(SUPABASE_URL)}")
+logger.info(f"🔑 SUPABASE_SERVICE_KEY configured: {bool(SUPABASE_SERVICE_KEY)}")
 
 # Import configs
 try:
@@ -145,8 +157,21 @@ def create_order_in_database(order_data: Dict[str, Any]) -> Dict[str, Any]:
     try:
         import requests
         
-        if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
-            raise Exception("Supabase configuration missing")
+        # Enhanced logging for debugging
+        logger.info(f"🚀 Starting order creation for: {order_data['order_id']}")
+        logger.info(f"📧 Email: {order_data['email']}")
+        logger.info(f"📱 Phone: {order_data['phone']}")
+        
+        # Check Supabase configuration with detailed logging
+        if not SUPABASE_URL:
+            logger.error("❌ SUPABASE_URL environment variable is missing")
+            raise Exception("SUPABASE_URL environment variable is missing")
+        if not SUPABASE_SERVICE_KEY:
+            logger.error("❌ SUPABASE_SERVICE_ROLE_KEY environment variable is missing")
+            raise Exception("SUPABASE_SERVICE_ROLE_KEY environment variable is missing")
+            
+        logger.info(f"🔗 Supabase URL: {SUPABASE_URL}")
+        logger.info(f"🔑 Service key available: {len(SUPABASE_SERVICE_KEY) > 10}")
         
         # Prepare order data
         db_order = {
@@ -160,39 +185,85 @@ def create_order_in_database(order_data: Dict[str, Any]) -> Dict[str, Any]:
             'user_id': order_data.get('user_id'),  # Will be null for anonymous users
         }
         
-        # Insert into Supabase
+        logger.info(f"📦 Order data prepared: {len(db_order)} fields")
+        logger.info(f"💰 Amount: {db_order['order_amount']} {db_order['order_currency']}")
+        
+        # Test Supabase connection first
+        test_url = f"{SUPABASE_URL}/rest/v1/"
+        test_headers = {
+            'Authorization': f'Bearer {SUPABASE_SERVICE_KEY}',
+            'apikey': SUPABASE_SERVICE_KEY,
+        }
+        
+        try:
+            test_response = requests.get(test_url, headers=test_headers, timeout=5)
+            logger.info(f"🧪 Supabase connection test: {test_response.status_code}")
+            if test_response.status_code not in [200, 404]:  # 404 is ok for root endpoint
+                logger.warning(f"⚠️ Unexpected test response: {test_response.text[:200]}")
+        except Exception as conn_e:
+            logger.error(f"❌ Supabase connection test failed: {str(conn_e)}")
+            raise Exception(f"Supabase connection failed: {str(conn_e)}")
+        
+        # Insert into Supabase orders table
+        insert_url = f"{SUPABASE_URL}/rest/v1/orders"
+        headers = {
+            'Authorization': f'Bearer {SUPABASE_SERVICE_KEY}',
+            'apikey': SUPABASE_SERVICE_KEY,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+        }
+        
+        logger.info(f"📤 Sending POST to: {insert_url}")
+        
         response = requests.post(
-            f"{SUPABASE_URL}/rest/v1/orders",
+            insert_url,
             json=db_order,
-            headers={
-                'Authorization': f'Bearer {SUPABASE_SERVICE_KEY}',
-                'apikey': SUPABASE_SERVICE_KEY,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
-            },
-            timeout=10
+            headers=headers,
+            timeout=15  # Increased timeout
         )
         
+        logger.info(f"📨 Database response: {response.status_code}")
+        logger.info(f"📋 Response headers: {dict(response.headers)}")
+        
         if response.status_code == 201:
-            created_order = response.json()[0] if response.json() else {}
-            logger.info(f"✅ Order created in database: {order_data['order_id']}")
-            return created_order
+            response_data = response.json()
+            if response_data and len(response_data) > 0:
+                created_order = response_data[0]
+                logger.info(f"✅ Order successfully created in database!")
+                logger.info(f"🆔 Database ID: {created_order.get('id', 'Unknown')}")
+                logger.info(f"📅 Created at: {created_order.get('created_at', 'Unknown')}")
+                return created_order
+            else:
+                logger.error(f"❌ Empty response from database")
+                raise Exception("Empty response from database")
         else:
-            logger.error(f"Failed to create order: {response.status_code} - {response.text}")
-            raise Exception(f"Database error: {response.status_code}")
+            error_text = response.text
+            logger.error(f"❌ Database insert failed: {response.status_code}")
+            logger.error(f"❌ Error response: {error_text}")
+            logger.error(f"❌ Request URL: {insert_url}")
+            logger.error(f"❌ Request headers: {headers}")
+            logger.error(f"❌ Request data: {db_order}")
+            raise Exception(f"Database error {response.status_code}: {error_text}")
             
     except Exception as e:
-        logger.error(f"Error creating order in database: {str(e)}")
-        # For development, create a mock order
-        return {
-            'id': str(uuid.uuid4()),
+        logger.error(f"💥 CRITICAL: Order creation failed completely: {str(e)}")
+        logger.error(f"🚨 THIS IS A MOCK ORDER - NOT SAVED TO DATABASE!")
+        
+        # Return mock order with clear indication it's not real
+        mock_order = {
+            'id': f"MOCK_{uuid.uuid4().hex[:8].upper()}",
             'order_id': order_data['order_id'],
             'order_email': order_data['email'],
             'order_mobile': order_data['phone'],
             'order_amount': PAYU_CONFIG['amount'],
             'order_status': 'PENDING',
-            'created_at': datetime.now(timezone.utc).isoformat()
+            'created_at': datetime.now(timezone.utc).isoformat(),
+            'is_mock_order': True,  # Flag to identify mock orders
+            'error_reason': str(e)
         }
+        
+        logger.warning(f"🎭 Returning mock order: {mock_order['id']}")
+        return mock_order
 
 def generate_payu_hash(data: Dict[str, str]) -> str:
     """Generate PayU payment hash"""
