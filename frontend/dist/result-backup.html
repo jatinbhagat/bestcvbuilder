@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your ATS Score - BestCVBuilder</title>
+    <meta name="description" content="See your resume ATS analysis results and get instant fixes">
+    
+    <!-- Tailwind CSS -->
+    <link href="./css/output.css" rel="stylesheet">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="./favicon.ico">
+    
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            --success-gradient: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            --warning-gradient: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+            --danger-gradient: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+        }
+        
+        .score-circle {
+            background: conic-gradient(from 0deg, #ef4444 0deg, #ef4444 234deg, #e2e8f0 234deg 360deg);
+            position: relative;
+        }
+        
+        .score-circle::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 150px;
+            height: 150px;
+            background: white;
+            border-radius: 50%;
+        }
+        
+        @keyframes scoreReveal {
+            0% { transform: scale(0.8) rotate(-90deg); opacity: 0; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        /* Removed pulse animation for more sober design */
+        
+        .card-premium {
+            background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+        }
+        
+        .btn-premium {
+            background: var(--primary-gradient);
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+            transform: translateY(0);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .btn-premium:hover {
+            box-shadow: 0 12px 40px rgba(102, 126, 234, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        .issue-card {
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+        }
+        
+        .issue-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .gradient-text {
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .floating-element {
+            animation: floating 3s ease-in-out infinite;
+        }
+        
+        @keyframes floating {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .mobile-first {
+            padding: 1rem;
+        }
+        
+        @media (min-width: 768px) {
+            .mobile-first {
+                padding: 2rem;
+            }
+        }
+        
+        .sticky-cta {
+            background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.15);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(20px);
+        }
+        
+        /* Score-specific styling */
+        .score-excellent { --score-color: #10b981; --score-angle: calc(var(--score) * 3.6deg); }  
+        .score-good { --score-color: #3b82f6; --score-angle: calc(var(--score) * 3.6deg); }  
+        .score-fair { --score-color: #f59e0b; --score-angle: calc(var(--score) * 3.6deg); }  
+        .score-poor { --score-color: #ef4444; --score-angle: calc(var(--score) * 3.6deg); }  
+        
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background: #f59e0b;
+            animation: confetti-fall 3s linear infinite;
+            z-index: 1000;
+        }
+        
+        @keyframes confetti-fall {
+            0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <!-- Header -->
+    <header class="bg-white/90 backdrop-blur-sm border-b border-gray-200/50 sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a href="./index.html" class="text-xl font-bold gradient-text">BestCVBuilder</a>
+                </div>
+                <button id="newAnalysisBtn" class="text-sm text-gray-600 hover:text-gray-900 transition-colors px-4 py-2 rounded-lg hover:bg-gray-100">
+                    📄 Analyze Another Resume
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto mobile-first pb-32">
+        <!-- Hero Section -->
+        <section class="text-center py-8 mb-8">
+            <div class="floating-element mb-4">
+                <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-3">
+                    Your <span class="gradient-text">ATS Analysis</span> is Complete! 🎉
+                </h1>
+                <p class="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto" id="mainDescription">
+                    Here's exactly what's blocking your interviews and how to fix it in minutes
+                </p>
+            </div>
+            
+            <!-- Urgency Alert -->
+            <div id="urgencyAlert" class="bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-2xl p-4 mb-6 max-w-md mx-auto">
+                <div class="flex items-center justify-center">
+                    <span class="text-2xl mr-2">⚠️</span>
+                    <span class="font-bold text-sm">
+                        <span id="criticalCount">Multiple</span> critical issues found - Fix now!
+                    </span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Score & Impact Card -->
+        <section class="mb-8">
+            <div class="card-premium rounded-3xl p-6 md:p-8">
+                <div class="grid lg:grid-cols-2 gap-8 items-center">
+                    <!-- Score Circle -->
+                    <div class="text-center">
+                        <div class="relative mx-auto mb-6">
+                            <div class="score-circle w-48 h-48 rounded-full flex items-center justify-center relative" id="scoreCircle">
+                                <div class="relative z-10 flex flex-col items-center justify-center">
+                                    <span class="text-4xl font-black text-gray-900" id="atsScore">65</span>
+                                    <span class="text-lg text-gray-500">/100</span>
+                                    <div class="text-sm font-bold text-gray-600 mt-1" id="scoreLetter">Fair</div>
+                                </div>
+                            </div>
+                        </div>
+                        <h2 class="text-2xl font-bold text-red-600 mb-2" id="scoreTitle">Your ATS Score: Fair</h2>
+                        <p class="text-red-700 font-semibold bg-red-50 px-4 py-2 rounded-lg border border-red-200" id="scoreDescription">⚠️ Your resume needs optimization to pass ATS screening</p>
+                    </div>
+                    
+                    <!-- Impact Stats -->
+                    <div class="space-y-6">
+                        <!-- Interview Rate Comparison -->
+                        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6">
+                            <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                                📊 Interview Impact Analysis
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-700 font-medium">Current interview rate:</span>
+                                    <span class="text-2xl font-black text-red-500" id="currentRate">3%</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-700 font-medium">Potential interview rate:</span>
+                                    <span class="text-2xl font-black text-green-500" id="potentialRate">15%</span>
+                                </div>
+                                <div class="bg-gradient-to-r from-green-400 to-blue-500 text-white rounded-xl p-3 text-center">
+                                    <span class="text-lg font-bold" id="impactText">That's 5x more interviews possible!</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Quick Stats Grid -->
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl p-4 text-center">
+                                <div class="text-2xl font-black text-blue-700" id="quickWinsCount">3</div>
+                                <div class="text-xs text-blue-600 font-medium">Quick Fixes</div>
+                            </div>
+                            <div class="bg-gradient-to-br from-red-100 to-red-200 rounded-xl p-4 text-center">
+                                <div class="text-2xl font-black text-red-700" id="criticalIssuesCount">5</div>
+                                <div class="text-xs text-red-600 font-medium">Critical Issues</div>
+                            </div>
+                            <div class="bg-gradient-to-br from-green-100 to-green-200 rounded-xl p-4 text-center">
+                                <div class="text-2xl font-black text-green-700" id="scoreBoost">+25</div>
+                                <div class="text-xs text-green-600 font-medium">Score Boost</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main CTA Section -->
+        <section class="mb-8" id="mainCTA">
+            <div class="card-premium rounded-3xl overflow-hidden">
+                <!-- Urgency Header -->
+                <div class="bg-gradient-to-r from-orange-400 via-red-400 to-pink-400 px-6 py-4">
+                    <div class="flex items-center justify-center text-center">
+                        <span class="text-2xl mr-3">🚀</span>
+                        <span class="text-white font-bold text-lg">LIMITED TIME: Fix All Issues Automatically</span>
+                        <span class="text-2xl ml-3">⚡</span>
+                    </div>
+                </div>
+                
+                <div class="p-6 md:p-8">
+                    <div class="text-center mb-8">
+                        <h2 class="text-3xl md:text-4xl font-black text-gray-900 mb-4">
+                            Get Your <span class="gradient-text">Interview-Ready</span> Resume
+                        </h2>
+                        <p class="text-xl text-gray-700 mb-2">
+                            Our AI will fix all <span id="totalIssuesCount" class="font-black text-red-600">8</span> issues and boost your score to 
+                            <span id="targetScore" class="font-black text-green-600">90+</span> in minutes
+                        </p>
+                        <p class="text-gray-500">
+                            ⏱️ <span id="estimatedTime">5 minutes</span> to complete • 
+                            💾 Instant download • 
+                            👥 Join 25,000+ users
+                        </p>
+                    </div>
+
+                    <!-- Value Proposition Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div class="text-center p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl">
+                            <div class="text-4xl mb-3">📈</div>
+                            <div class="text-3xl font-black text-green-600 mb-1" id="scoreImprovement">+25</div>
+                            <div class="text-sm text-gray-600 font-medium">ATS Score Boost</div>
+                        </div>
+                        <div class="text-center p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl">
+                            <div class="text-4xl mb-3">💼</div>
+                            <div class="text-3xl font-black text-blue-600 mb-1">5x</div>
+                            <div class="text-sm text-gray-600 font-medium">More Interviews</div>
+                        </div>
+                        <div class="text-center p-6 bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl">
+                            <div class="text-4xl mb-3">⏰</div>
+                            <div class="text-3xl font-black text-purple-600 mb-1">20h</div>
+                            <div class="text-sm text-gray-600 font-medium">Time Saved</div>
+                        </div>
+                    </div>
+
+                    <!-- Pricing & CTA -->
+                    <div class="text-center">
+                        <div class="mb-6">
+                            <div class="flex items-center justify-center mb-2">
+                                <span class="text-4xl font-black text-gray-900">$29</span>
+                                <span class="text-xl text-gray-500 ml-3">one-time payment</span>
+                            </div>
+                            <div class="flex items-center justify-center space-x-4 text-sm">
+                                <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">💰 Save $300+ vs. hiring a writer</span>
+                                <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">⚡ 95% faster than manual editing</span>
+                            </div>
+                        </div>
+                        
+                        <button 
+                            id="upgradeBtn"
+                            class="btn-premium text-white font-black py-6 px-12 rounded-2xl text-xl mb-6 w-full md:w-auto min-w-[300px] transform transition-all hover:scale-105"
+                        >
+                            🚀 Fix My Resume Now - $29
+                        </button>
+                        
+                        <!-- Trust Signals -->
+                        <div class="flex flex-wrap items-center justify-center gap-6 text-sm text-gray-500">
+                            <div class="flex items-center">
+                                <span class="text-lg mr-2">🔒</span>
+                                <span class="font-medium">SSL Secure Payment</span>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="text-lg mr-2">💯</span>
+                                <span class="font-medium">30-Day Money Back</span>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="text-lg mr-2">⚡</span>
+                                <span class="font-medium">Instant Access</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Issues Breakdown -->
+        <section class="mb-8">
+            <div class="card-premium rounded-3xl p-6 md:p-8">
+                <h3 class="text-2xl font-bold text-gray-900 mb-6 text-center">
+                    🎯 Issues Blocking Your Success
+                </h3>
+                
+                <!-- Quick Wins -->
+                <div class="mb-8">
+                    <div class="flex items-center mb-4">
+                        <div class="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl flex items-center justify-center mr-4">
+                            <span class="text-white text-lg">⚡</span>
+                        </div>
+                        <h4 class="text-xl font-bold text-gray-900">Quick Wins (2 Minutes Each)</h4>
+                    </div>
+                    <div id="quickWinsList" class="grid gap-4 md:grid-cols-2">
+                        <!-- Quick wins will be populated here -->
+                        <div class="issue-card bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border-l-4 border-blue-400">
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-800 font-medium">Add LinkedIn profile URL</span>
+                                <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-bold">+3pts</span>
+                            </div>
+                        </div>
+                        <div class="issue-card bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border-l-4 border-blue-400">
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-800 font-medium">Optimize bullet point formatting</span>
+                                <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-bold">+4pts</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Critical Issues -->
+                <div class="mb-8">
+                    <div class="flex items-center mb-4">
+                        <div class="w-10 h-10 bg-gradient-to-br from-red-400 to-red-600 rounded-xl flex items-center justify-center mr-4">
+                            <span class="text-white text-lg">🚨</span>
+                        </div>
+                        <h4 class="text-xl font-bold text-gray-900">Critical Issues</h4>
+                    </div>
+                    <div id="criticalIssuesList" class="grid gap-4">
+                        <!-- Critical issues will be populated here -->
+                        <div class="issue-card bg-gradient-to-r from-red-50 to-pink-50 rounded-xl p-4 border-l-4 border-red-400">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-gray-800 font-medium">Missing professional summary section</span>
+                                <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-bold">+12pts</span>
+                            </div>
+                            <p class="text-sm text-gray-600">ATS systems look for a summary to understand your profile</p>
+                        </div>
+                        <div class="issue-card bg-gradient-to-r from-red-50 to-pink-50 rounded-xl p-4 border-l-4 border-red-400">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-gray-800 font-medium">Poor keyword optimization for your industry</span>
+                                <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-bold">+15pts</span>
+                            </div>
+                            <p class="text-sm text-gray-600">Missing key terms that recruiters search for</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Show More Button -->
+                <div class="text-center">
+                    <button 
+                        id="showMoreBtn" 
+                        class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-6 rounded-xl transition-colors"
+                        onclick="toggleDetailedAnalysis()"
+                    >
+                        <span id="showMoreText">Show All Issues & Detailed Analysis</span>
+                        <span class="ml-2">📋</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Detailed Analysis (Collapsible) -->
+        <section id="detailedAnalysis" class="hidden mb-8">
+            <!-- Before/After Comparison -->
+            <div class="card-premium rounded-3xl p-6 md:p-8 mb-8">
+                <h3 class="text-2xl font-bold text-gray-900 mb-6 text-center">
+                    ✨ Your Resume Transformation Preview
+                </h3>
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-6">
+                        <h4 class="text-lg font-bold text-red-800 mb-4 flex items-center">
+                            <span class="mr-2">❌</span>
+                            Current Resume
+                        </h4>
+                        <ul class="space-y-3" id="beforeList">
+                            <li class="flex items-center text-red-700">
+                                <span class="mr-3">•</span>
+                                ATS Score: 65/100
+                            </li>
+                            <li class="flex items-center text-red-700">
+                                <span class="mr-3">•</span>
+                                3% interview rate
+                            </li>
+                            <li class="flex items-center text-red-700">
+                                <span class="mr-3">•</span>
+                                Missing key sections
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-6">
+                        <h4 class="text-lg font-bold text-green-800 mb-4 flex items-center">
+                            <span class="mr-2">✅</span>
+                            After AI Optimization
+                        </h4>
+                        <ul class="space-y-3" id="afterList">
+                            <li class="flex items-center text-green-700">
+                                <span class="mr-3">•</span>
+                                ATS Score: 97/100
+                            </li>
+                            <li class="flex items-center text-green-700">
+                                <span class="mr-3">•</span>
+                                15% interview rate
+                            </li>
+                            <li class="flex items-center text-green-700">
+                                <span class="mr-3">•</span>
+                                Fully optimized structure
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Component Breakdown -->
+            <div class="card-premium rounded-3xl p-6 md:p-8">
+                <h3 class="text-2xl font-bold text-gray-900 mb-6 text-center">
+                    📊 Score Breakdown by Component
+                </h3>
+                <div id="componentScores" class="space-y-6">
+                    <!-- Component scores will be populated here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Detailed Report Section (Hidden by default) -->
+        <section id="detailedReportSection" class="hidden mb-8">
+            <div class="card-premium rounded-3xl p-6 md:p-8">
+                <h3 class="text-2xl font-bold text-gray-900 mb-6 text-center">
+                    📊 Complete ATS Analysis Report
+                </h3>
+                
+                <!-- Component Breakdown -->
+                <div class="mb-8">
+                    <h4 class="text-xl font-bold text-gray-900 mb-4">Score Breakdown by Component</h4>
+                    <div id="componentScores" class="space-y-4">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- Detailed Issues -->
+                <div class="mb-8">
+                    <h4 class="text-xl font-bold text-gray-900 mb-4">All Issues Identified</h4>
+                    <div id="allIssuesList" class="space-y-3">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- Recommendations -->
+                <div class="mb-8">
+                    <h4 class="text-xl font-bold text-gray-900 mb-4">Detailed Recommendations</h4>
+                    <div id="detailedRecommendations" class="space-y-4">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- Fix CTA -->
+                <div class="text-center p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl">
+                    <h4 class="text-xl font-bold text-gray-900 mb-3">Ready to Fix These Issues?</h4>
+                    <p class="text-gray-600 mb-4">Our AI will automatically fix all these issues and boost your ATS score in just 2 minutes</p>
+                    <button 
+                        id="fixIssuesBtn"
+                        class="bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 px-8 rounded-xl font-bold hover:from-blue-700 hover:to-blue-800 transition-colors transform hover:scale-105"
+                    >
+                        🚀 Fix These Issues in 2 Minutes - $29
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Secondary Actions -->
+        <section class="text-center mb-8">
+            <button 
+                id="viewDetailedReportBtn"
+                class="bg-gray-100 border-2 border-gray-300 text-gray-700 py-4 px-8 rounded-xl font-bold hover:bg-gray-50 transition-colors mb-4 w-full md:w-auto"
+            >
+                📊 View Detailed Report
+            </button>
+        </section>
+    </main>
+
+    <!-- Sticky Mobile CTA -->
+    <div id="stickyCTA" class="sticky-cta fixed bottom-0 left-0 right-0 p-4 z-50 md:hidden">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="font-bold text-gray-900 text-lg">$29 one-time</div>
+                <div class="text-sm text-gray-500">Fix all issues instantly</div>
+            </div>
+            <button 
+                onclick="document.getElementById('upgradeBtn').click()"
+                class="btn-premium text-white font-bold py-4 px-6 rounded-xl"
+            >
+                🚀 Fix Now
+            </button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Sample data for demo - in production this would come from the analysis
+        const sampleData = {
+            score: 65,
+            scoreCategory: 'fair',
+            quickWins: [
+                { title: 'Add LinkedIn profile URL', points: 3 },
+                { title: 'Optimize bullet point formatting', points: 4 },
+                { title: 'Add missing contact information', points: 5 }
+            ],
+            criticalIssues: [
+                { 
+                    title: 'Missing professional summary section', 
+                    points: 12, 
+                    description: 'ATS systems look for a summary to understand your profile' 
+                },
+                { 
+                    title: 'Poor keyword optimization for your industry', 
+                    points: 15, 
+                    description: 'Missing key terms that recruiters search for' 
+                },
+                { 
+                    title: 'Inconsistent date formatting', 
+                    points: 8, 
+                    description: 'Mixed date formats confuse ATS parsing' 
+                }
+            ],
+            componentScores: {
+                structure: { score: 15, maxScore: 25 },
+                keywords: { score: 8, maxScore: 20 },
+                contact: { score: 12, maxScore: 15 },
+                formatting: { score: 14, maxScore: 20 },
+                achievements: { score: 6, maxScore: 10 },
+                readability: { score: 7, maxScore: 10 }
+            }
+        };
+
+        // Initialize page
+        function init() {
+            loadAnalysisData();
+            setupEventListeners();
+            updateScoreCircle();
+        }
+
+        function loadAnalysisData() {
+            // Try to load from session storage, fallback to sample data
+            let data = sampleData;
+            
+            try {
+                const stored = sessionStorage.getItem('atsAnalysis');
+                if (stored) {
+                    const parsedData = JSON.parse(stored);
+                    // Use stored data but ensure it has the structure we need
+                    data = {
+                        score: parsedData.score || parsedData.ats_score || 65,
+                        scoreCategory: parsedData.scoreCategory || parsedData.category || 'fair',
+                        quickWins: parsedData.quickWins || parsedData.quick_wins || sampleData.quickWins,
+                        criticalIssues: parsedData.criticalIssues || parsedData.critical_issues || sampleData.criticalIssues,
+                        componentScores: parsedData.componentScores || parsedData.component_scores || sampleData.componentScores
+                    };
+                }
+            } catch (error) {
+                console.error('Error loading analysis data:', error);
+            }
+
+            displayResults(data);
+        }
+
+        function displayResults(data) {
+            // Update main score display
+            document.getElementById('atsScore').textContent = data.score;
+            document.getElementById('scoreLetter').textContent = getScoreLetter(data.score);
+            document.getElementById('scoreTitle').textContent = `Your ATS Score: ${getScoreLabel(data.scoreCategory)}`;
+            document.getElementById('scoreDescription').textContent = getScoreDescription(data.scoreCategory);
+            
+            // Update impact metrics
+            const currentRate = getInterviewRate(data.score);
+            const potentialRate = getInterviewRate(Math.min(data.score + 25, 90));
+            const multiplier = Math.round(potentialRate / currentRate);
+            
+            document.getElementById('currentRate').textContent = currentRate + '%';
+            document.getElementById('potentialRate').textContent = potentialRate + '%';
+            document.getElementById('impactText').textContent = `That's ${multiplier}x more interviews possible!`;
+            
+            // Update counts
+            document.getElementById('quickWinsCount').textContent = data.quickWins.length;
+            document.getElementById('criticalIssuesCount').textContent = data.criticalIssues.length;
+            document.getElementById('criticalCount').textContent = data.criticalIssues.length;
+            
+            const totalIssues = data.quickWins.length + data.criticalIssues.length;
+            const scoreBoost = Math.min(25, 90 - data.score);
+            
+            document.getElementById('totalIssuesCount').textContent = totalIssues;
+            document.getElementById('targetScore').textContent = Math.min(data.score + scoreBoost, 90);
+            document.getElementById('scoreBoost').textContent = '+' + scoreBoost;
+            document.getElementById('scoreImprovement').textContent = '+' + scoreBoost;
+            
+            // Update time estimate
+            const timeEstimate = totalIssues <= 3 ? '3 minutes' : totalIssues <= 6 ? '5 minutes' : '8 minutes';
+            document.getElementById('estimatedTime').textContent = timeEstimate;
+            
+            // Update score circle
+            updateScoreCircle(data.score, data.scoreCategory);
+            
+            // Update issues lists (keeping sample data for now)
+            updateQuickWins(data.quickWins);
+            updateCriticalIssues(data.criticalIssues);
+            
+            // Update component scores
+            if (data.componentScores) {
+                updateComponentScores(data.componentScores);
+            }
+        }
+
+        function updateScoreCircle(score = 65, category = 'fair') {
+            const circle = document.getElementById('scoreCircle');
+            circle.style.setProperty('--score', score);
+            
+            // Remove existing classes
+            circle.classList.remove('score-excellent', 'score-good', 'score-fair', 'score-poor');
+            
+            // Add appropriate class
+            if (score >= 85) circle.classList.add('score-excellent');
+            else if (score >= 70) circle.classList.add('score-good');
+            else if (score >= 55) circle.classList.add('score-fair');
+            else circle.classList.add('score-poor');
+        }
+
+        function updateQuickWins(wins) {
+            const container = document.getElementById('quickWinsList');
+            container.innerHTML = '';
+            
+            wins.slice(0, 3).forEach(win => {
+                const div = document.createElement('div');
+                div.className = 'issue-card bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border-l-4 border-blue-400';
+                div.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-800 font-medium">${win.title}</span>
+                        <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-bold">+${win.points}pts</span>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function updateCriticalIssues(issues) {
+            const container = document.getElementById('criticalIssuesList');
+            container.innerHTML = '';
+            
+            issues.slice(0, 3).forEach(issue => {
+                const div = document.createElement('div');
+                div.className = 'issue-card bg-gradient-to-r from-red-50 to-pink-50 rounded-xl p-4 border-l-4 border-red-400';
+                div.innerHTML = `
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-gray-800 font-medium">${issue.title}</span>
+                        <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-bold">+${issue.points}pts</span>
+                    </div>
+                    ${issue.description ? `<p class="text-sm text-gray-600">${issue.description}</p>` : ''}
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function updateComponentScores(scores) {
+            const container = document.getElementById('componentScores');
+            container.innerHTML = '';
+            
+            Object.entries(scores).forEach(([component, data]) => {
+                const percentage = Math.round((data.score / data.maxScore) * 100);
+                const div = document.createElement('div');
+                div.className = 'bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-6';
+                div.innerHTML = `
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="text-lg font-bold text-gray-900">${formatComponentName(component)}</h4>
+                        <div class="text-right">
+                            <span class="text-2xl font-bold ${getScoreColor(percentage)}">${data.score}</span>
+                            <span class="text-gray-500">/${data.maxScore}</span>
+                            <div class="text-sm text-gray-500">${percentage}%</div>
+                        </div>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-4">
+                        <div class="${getProgressColor(percentage)} h-4 rounded-full transition-all duration-1000" style="width: ${percentage}%"></div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function toggleDetailedAnalysis() {
+            const section = document.getElementById('detailedAnalysis');
+            const btn = document.getElementById('showMoreText');
+            
+            if (section.classList.contains('hidden')) {
+                section.classList.remove('hidden');
+                btn.textContent = 'Hide Detailed Analysis';
+            } else {
+                section.classList.add('hidden');
+                btn.textContent = 'Show All Issues & Detailed Analysis';
+            }
+        }
+
+        function toggleDetailedReport() {
+            const section = document.getElementById('detailedReportSection');
+            const btn = document.getElementById('viewDetailedReportBtn');
+            
+            if (section.classList.contains('hidden')) {
+                section.classList.remove('hidden');
+                btn.innerHTML = '📊 Hide Detailed Report';
+                // Populate detailed report
+                populateDetailedReport();
+                // Scroll to section
+                section.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                section.classList.add('hidden');
+                btn.innerHTML = '📊 View Detailed Report';
+            }
+        }
+
+        function populateDetailedReport() {
+            // This function will populate the detailed report section
+            // For now, we'll use the existing inline functionality
+            console.log('Detailed report populated');
+        }
+
+        function setupEventListeners() {
+            // Upgrade button
+            document.getElementById('upgradeBtn')?.addEventListener('click', () => {
+                console.log('Upgrade clicked');
+                // Store data and redirect to payment
+                sessionStorage.setItem('upgradeAnalysis', JSON.stringify(sampleData));
+                window.location.href = './payment.html';
+            });
+            
+            // New analysis button
+            document.getElementById('newAnalysisBtn')?.addEventListener('click', () => {
+                sessionStorage.clear();
+                window.location.href = './index.html';
+            });
+            
+            // View detailed report button
+            document.getElementById('viewDetailedReportBtn')?.addEventListener('click', () => {
+                toggleDetailedReport();
+            });
+            
+            // Fix issues button
+            document.getElementById('fixIssuesBtn')?.addEventListener('click', () => {
+                sessionStorage.setItem('upgradeAnalysis', JSON.stringify(sampleData));
+                window.location.href = './payment.html';
+            });
+        }
+
+        // Utility functions
+        function getScoreLetter(score) {
+            if (score >= 90) return 'A';
+            if (score >= 80) return 'B';
+            if (score >= 70) return 'C';
+            if (score >= 60) return 'D';
+            return 'F';
+        }
+
+        function getScoreLabel(category) {
+            const labels = {
+                excellent: 'Excellent',
+                good: 'Good', 
+                fair: 'Fair',
+                poor: 'Poor',
+                very_poor: 'Very Poor'
+            };
+            return labels[category] || 'Fair';
+        }
+
+        function getScoreDescription(category) {
+            const descriptions = {
+                excellent: 'Outstanding! Your resume is highly optimized for ATS systems.',
+                good: 'Good performance, but some improvements could boost your score.',
+                fair: 'Your resume needs optimization to pass ATS screening effectively.',
+                poor: 'Major improvements needed. Many issues are blocking ATS success.',
+                very_poor: 'Critical problems detected. Your resume likely won't pass ATS screening.'
+            };
+            return descriptions[category] || 'Your resume needs optimization to pass ATS screening effectively.';
+        }
+
+        function getInterviewRate(score) {
+            if (score >= 90) return 15;
+            if (score >= 80) return 12;
+            if (score >= 70) return 8;
+            if (score >= 60) return 5;
+            if (score >= 50) return 3;
+            return 2;
+        }
+
+        function getScoreColor(percentage) {
+            if (percentage >= 80) return 'text-green-600';
+            if (percentage >= 60) return 'text-blue-600';
+            if (percentage >= 40) return 'text-yellow-600';
+            return 'text-red-600';
+        }
+
+        function getProgressColor(percentage) {
+            if (percentage >= 80) return 'bg-gradient-to-r from-green-400 to-green-600';
+            if (percentage >= 60) return 'bg-gradient-to-r from-blue-400 to-blue-600';
+            if (percentage >= 40) return 'bg-gradient-to-r from-yellow-400 to-yellow-600';
+            return 'bg-gradient-to-r from-red-400 to-red-600';
+        }
+
+        function formatComponentName(component) {
+            const names = {
+                structure: 'Resume Structure',
+                keywords: 'Keywords & Skills',
+                contact: 'Contact Information',
+                formatting: 'Formatting & Layout',
+                achievements: 'Achievements & Impact',
+                readability: 'Readability & Grammar'
+            };
+            return names[component] || component.charAt(0).toUpperCase() + component.slice(1);
+        }
+
+        function downloadReport() {
+            const report = {
+                title: 'ATS Analysis Report',
+                timestamp: new Date().toISOString(),
+                data: sampleData
+            };
+            
+            const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ats-report-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
