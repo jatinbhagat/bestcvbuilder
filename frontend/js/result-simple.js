@@ -777,6 +777,98 @@ function hideLoadingState() {
 }
 
 /**
+ * Normalize phone number to +91XXXXXXXXXX format
+ */
+function normalizePhoneNumber(phoneStr) {
+    if (!phoneStr) return null;
+    
+    // Remove all non-digit characters except the leading +
+    const cleaned = phoneStr.replace(/[^\d+]/g, '');
+    
+    // Handle different input formats
+    if (cleaned.startsWith('+91')) {
+        // Already has +91, just clean up separators
+        const digits = cleaned.substring(3); // Remove +91
+        if (digits.length === 10 && /^[6-9]/.test(digits)) {
+            return `+91${digits}`;
+        }
+    } else if (cleaned.startsWith('91')) {
+        // Has 91 but no +
+        const digits = cleaned.substring(2); // Remove 91
+        if (digits.length === 10 && /^[6-9]/.test(digits)) {
+            return `+91${digits}`;
+        }
+    } else if (cleaned.length === 10 && /^[6-9]/.test(cleaned)) {
+        // Just the 10-digit mobile number
+        return `+91${cleaned}`;
+    } else if (cleaned.startsWith('+1') && cleaned.substring(2).length === 10) {
+        // US/Canada number
+        return cleaned;
+    } else if (cleaned.startsWith('+') && cleaned.length >= 10 && cleaned.length <= 15) {
+        // Other international numbers
+        return cleaned;
+    }
+    
+    return null;
+}
+
+/**
+ * Validate if a phone number is valid
+ */
+function isValidPhoneNumber(normalizedPhone) {
+    if (!normalizedPhone || !normalizedPhone.startsWith('+')) return false;
+    
+    if (normalizedPhone.startsWith('+91')) {
+        // Indian mobile number validation
+        const digits = normalizedPhone.substring(3);
+        return digits.length === 10 && /^[6-9]\d{9}$/.test(digits);
+    } else if (normalizedPhone.startsWith('+1')) {
+        // US/Canada validation
+        const digits = normalizedPhone.substring(2);
+        return digits.length === 10 && /^\d{10}$/.test(digits);
+    } else {
+        // General international validation
+        const digits = normalizedPhone.substring(1);
+        return digits.length >= 9 && digits.length <= 14 && /^\d+$/.test(digits);
+    }
+}
+
+/**
+ * Score phone number for priority selection (higher score = better)
+ */
+function scorePhoneNumber(normalizedPhone, originalFormat) {
+    let score = 0;
+    
+    // Prefer Indian numbers
+    if (normalizedPhone.startsWith('+91')) {
+        score += 100;
+        
+        // Extra points for valid Indian mobile prefixes
+        const digits = normalizedPhone.substring(3);
+        if (/^[6-9]/.test(digits)) {
+            score += 50;
+        }
+    }
+    
+    // Prefer numbers that had proper formatting in original
+    if (originalFormat.includes('+91')) {
+        score += 30;
+    }
+    
+    if (originalFormat.includes('-') || originalFormat.includes(' ')) {
+        score += 20; // Structured formatting indicates intentional contact info
+    }
+    
+    // Prefer longer country codes (more specific)
+    if (normalizedPhone.startsWith('+')) {
+        const countryCode = normalizedPhone.match(/^\+(\d{1,3})/)[1];
+        score += countryCode.length * 5;
+    }
+    
+    return score;
+}
+
+/**
  * Extract contact information from analysis data
  */
 function extractContactInfoFromAnalysis() {
@@ -801,7 +893,7 @@ function extractContactInfoFromAnalysis() {
     }
     
     // If not found in personal info, extract from resume content
-    const content = analysisData.content || analysisData.resume_text || '';
+    const content = analysisData.content || analysisData.resume_text || analysisData.text || analysisData.extractedText || '';
     
     if (!extractedEmail && content) {
         // Extract email using regex
@@ -820,23 +912,69 @@ function extractContactInfoFromAnalysis() {
     }
     
     if (!extractedMobile && content) {
-        // Extract phone numbers using multiple patterns
+        // Extract phone numbers using enhanced patterns - Indian priority with global compatibility
         const phonePatterns = [
+            // Indian formats with separators (priority patterns)
+            /\+91[-\s]?\d{5}[-\s]?\d{5}/g,    // +91 87250-88181, +91-87250-88181
+            /\+91[-\s]?\d{4}[-\s]?\d{6}/g,    // +91 8725-088181, +91-8725-088181
+            /\+91[-\s]?\d{3}[-\s]?\d{7}/g,    // +91 872-5088181, +91-872-5088181
+            /\+91[-\s]?\d{2}[-\s]?\d{4}[-\s]?\d{4}/g, // +91 87-2508-8181
+            
+            // Standard Indian formats
             /\+91[-.\s]?\d{10}/g,  // +91-9999999999
             /\+91\s?\d{10}/g,      // +91 9999999999
-            /\b\d{10}\b/g,         // 9999999999 (standalone)
-            /\d{3}[-.\s]\d{3}[-.\s]\d{4}/g,  // 999-999-9999
-            /\(\d{3}\)\s?\d{3}[-.\s]\d{4}/g // (999) 999-9999
+            
+            // Global formats with separators
+            /\+\d{1,3}[-\s]?\d{3,4}[-\s]?\d{3,4}[-\s]?\d{3,4}/g, // International with separators
+            /\+\d{1,3}[-.\s]?\d{10,}/g,  // Other international formats
+            
+            // Local formats
+            /\b\d{5}[-\s]?\d{5}\b/g,      // 87250-88181 (10 digits with separator)
+            /\b\d{4}[-\s]?\d{6}\b/g,      // 8725-088181
+            /\b\d{3}[-\s]?\d{7}\b/g,      // 872-5088181
+            /\b\d{10}\b/g,                // 9999999999 (standalone 10 digits)
+            /\b\d{3}[-.\s]\d{3}[-.\s]\d{4}\b/g,  // 999-999-9999
+            /\(\d{3}\)\s?\d{3}[-.\s]\d{4}/g, // (999) 999-9999
+            /\b\d{11,12}\b/g              // 11-12 digit numbers (with country code)
         ];
         
         for (const pattern of phonePatterns) {
             const phoneMatches = content.match(pattern);
             if (phoneMatches && phoneMatches.length > 0) {
-                // Pick the first valid looking phone number
-                const cleanPhone = phoneMatches[0].trim();
-                if (cleanPhone.replace(/[^\d]/g, '').length >= 10) {
-                    extractedMobile = cleanPhone;
-                    break;
+                // Pick the best looking phone number with priority scoring
+                for (const match of phoneMatches) {
+                    const cleanPhone = match.trim();
+                    const normalizedPhone = normalizePhoneNumber(cleanPhone);
+                    
+                    if (normalizedPhone && isValidPhoneNumber(normalizedPhone)) {
+                        // Score the phone number for priority
+                        const score = scorePhoneNumber(normalizedPhone, cleanPhone);
+                        if (!extractedMobile || score > scorePhoneNumber(extractedMobile, extractedMobile)) {
+                            extractedMobile = normalizedPhone;
+                        }
+                    }
+                }
+                if (extractedMobile) break;
+            }
+        }
+        
+        // If still not found, try to extract from lines that contain phone-related keywords
+        if (!extractedMobile) {
+            const lines = content.split('\n');
+            const phoneKeywords = ['phone', 'mobile', 'tel', 'cell', 'contact', 'call'];
+            
+            for (const line of lines) {
+                const lowerLine = line.toLowerCase();
+                if (phoneKeywords.some(keyword => lowerLine.includes(keyword))) {
+                    // Look for any digit sequence in this line
+                    const digitSequences = line.match(/\d{10,}/g);
+                    if (digitSequences) {
+                        const normalizedPhone = normalizePhoneNumber(digitSequences[0]);
+                        if (normalizedPhone && isValidPhoneNumber(normalizedPhone)) {
+                            extractedMobile = normalizedPhone;
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -1130,14 +1268,14 @@ async function handleCustomerInfoSubmit(event) {
             
             if (shouldBypass) {
                 console.log('✅ Payment bypass enabled, proceeding to TXT download');
-                // Store analysis data for TXT processing
-                sessionStorage.setItem('pendingAnalysis', JSON.stringify(sessionStorage.getItem('analysisResult')));
+                // Store analysis data for TXT processing - use the correct analysis data
+                sessionStorage.setItem('pendingAnalysis', JSON.stringify(analysisData));
                 // Proceed directly to TXT download
                 handleCVRewrite('customer_info');
             } else {
                 console.log('💳 Payment required, redirecting to order page');
-                // Store analysis data for order page
-                sessionStorage.setItem('pendingAnalysis', JSON.stringify(JSON.parse(sessionStorage.getItem('analysisResult'))));
+                // Store analysis data for order page - use the correct analysis data
+                sessionStorage.setItem('pendingAnalysis', JSON.stringify(analysisData));
                 // Redirect to create-order page for payment
                 window.location.href = './create-order.html';
             }
@@ -1164,9 +1302,9 @@ async function handleCustomerInfoSubmit(event) {
 async function createOrder(customerInfo) {
     try {
         // Get analysis data from session storage
-        const analysisData = JSON.parse(sessionStorage.getItem('analysisResult') || '{}');
+        const analysisData = JSON.parse(sessionStorage.getItem('atsAnalysis') || '{}');
         
-        if (!analysisData || !analysisData.content) {
+        if (!analysisData || (!analysisData.content && !analysisData.resume_text)) {
             throw new Error('Analysis data not found. Please analyze your resume again.');
         }
 
