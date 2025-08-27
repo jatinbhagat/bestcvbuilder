@@ -251,6 +251,36 @@ class GeminiOptimizer:
         response_text, _ = self._make_gemini_request(prompt, max_tokens=800)
         return response_text.strip()
     
+    def generate_fix_suggestion_with_gemini(self, category_name: str, evidence_text: str, 
+                                          score: int, why_matters: str) -> str:
+        """Generate AI-powered fix suggestion for resume categories"""
+        evidence_display = evidence_text if evidence_text and evidence_text.strip() else "None flagged"
+        
+        prompt = f"""You are an ATS resume optimization expert.
+
+TASK: Provide a specific, actionable fix for this resume issue.
+
+CATEGORY: {category_name}
+EVIDENCE: {evidence_display}
+CURRENT SCORE: {score}/10  
+WHY IT MATTERS: {why_matters}
+
+REQUIREMENTS:
+- Provide ONE clear rewrite/fix example
+- Must be different from the evidence text
+- Keep it concise (1-2 sentences max)
+- Focus on ATS compatibility
+- Be specific and actionable
+
+OUTPUT FORMAT: Just the fix suggestion, no extra text."""
+        
+        try:
+            response_text, _ = self._make_gemini_request(prompt, max_tokens=150)
+            return response_text.strip()
+        except Exception as e:
+            logger.error(f"Failed to generate fix suggestion for {category_name}: {e}")
+            return f"Improve {category_name.lower()} following ATS best practices for better compatibility."
+    
     def _parse_optimization_response(self, response_text: str) -> Optional[Dict[str, Any]]:
         """Parse JSON response from Gemini"""
         try:
