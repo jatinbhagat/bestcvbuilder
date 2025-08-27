@@ -1,14 +1,14 @@
 ================================================================================
 ATS COMPREHENSIVE ANALYSIS REPORT - ALL 25 CATEGORIES
 ================================================================================
-Current ATS Score: 62/100 – Needs Attention
+Current ATS Score: 72/100 – Needs Attention
 Report Generated: 2025-08-27 12:00:00
 
 EXECUTIVE DASHBOARD
 ----------------------------------------
 🚨 Critical Issues (0-4/10): 4
-⚡ Needs Attention (5-7/10): 11
-✅ Pass Categories (8-10/10): 7
+⚡ Needs Attention (5-7/10): 6
+✅ Pass Categories (8-10/10): 13
 📊 Total Categories Analyzed: 24
 
 🎯 PRIORITY ACTION PLAN
@@ -20,58 +20,58 @@ EXECUTIVE DASHBOARD
 
 🚨 CRITICAL ISSUES (IMMEDIATE ATTENTION REQUIRED)
 ============================================================
-1. ANALYTICAL: Analytical Analysis
-   Current Score: 3/10 – Critical
-
-   💡 SCORING BREAKDOWN:
-   ATS Rule: ATS scoring rules applied to Analytical
-   Analysis: Category scored 3/10 based on content analysis
-   Penalties Applied: Deductions applied: -7 points (10 → 3)
-
-   **Evidence**: Issues detected in content analysis
-   **Why this matters**: Quantified analytical achievements demonstrate measurable business impact to employers.
-   **Fix**: Follow ATS best practices for improvement.
-
---------------------------------------------------
-
-2. VERB TENSES: Verb Tenses Analysis
-   Current Score: 4/10 – Critical
+1. VERB TENSES: Verb Tenses Analysis
+   Current Score: 2/10 – Critical
 
    💡 SCORING BREAKDOWN:
    ATS Rule: Use past tense for previous roles, present tense only for current position
-   Analysis: Poor tense usage: Found 7 present tense vs 1 past tense verbs
+   Analysis: Poor tense usage: Found 5 present tense vs 4 past tense verbs
    Penalties Applied: Too many present tense verbs: -6 points (10 → 4)
 
-   **Evidence**: led the product & analytics within the organization....
+   **Evidence**: Developed microservices architecture serving 1M+ daily users...
    **Why this matters**: Consistent tenses (past for old roles, present for current) improve professional presentation.
    **Fix**: Follow ATS best practices for improvement.
 
 --------------------------------------------------
 
-3. PERSONAL PRONOUNS: Personal Pronouns Analysis
+2. GROWTH SIGNALS: Growth Signals Analysis
    Current Score: 4/10 – Critical
 
    💡 SCORING BREAKDOWN:
-   ATS Rule: Remove all first-person pronouns (I, me, my, we, our)
-   Analysis: Found 2 personal pronouns: I
-   Penalties Applied: Personal pronoun penalty: -2 points (10 → 8)
+   ATS Rule: ATS scoring rules applied to Growth Signals
+   Analysis: Detects career progression through promotions, expanding responsibilities, and skill development
+   Penalties Applied: Deductions applied: -6 points (10 → 4)
 
-   **Evidence**: I am a seasoned Senior Product
-   **Why this matters**: Removing 'I', 'me', 'my' makes your resume more professional and ATS-friendly.
+   **Evidence**: Highlight any promotion or role expansion you've had
+   **Why this matters**: Career progression evidence shows ambition and capability for advancement.
    **Fix**: Follow ATS best practices for improvement.
 
 --------------------------------------------------
 
-4. GROWTH SIGNALS: Growth Signals Analysis
-   Current Score: 0/10 – Critical
+3. DRIVE: Drive Analysis
+   Current Score: 3/10 – Critical
 
    💡 SCORING BREAKDOWN:
-   ATS Rule: ATS scoring rules applied to Growth Signals
-   Analysis: Category scored 0/10 based on content analysis
-   Penalties Applied: Deductions applied: -10 points (10 → 0)
+   ATS Rule: ATS scoring rules applied to Drive
+   Analysis: Backend analysis: Category scored 3/10 based on content evaluation
+   Penalties Applied: Deductions applied: -7 points (10 → 3)
 
-   **Evidence**: Issues detected in content analysis
-   **Why this matters**: Career progression evidence shows ambition and capability for advancement.
+   **Evidence**: Show initiative and self-motivation examples
+   **Why this matters**: Self-motivation examples demonstrate initiative that employers seek.
+   **Fix**: Follow ATS best practices for improvement.
+
+--------------------------------------------------
+
+4. DATES: Dates Analysis
+   Current Score: 2/10 – Critical
+
+   💡 SCORING BREAKDOWN:
+   ATS Rule: Consistent date formatting required across all work/education entries
+   Analysis: Date inconsistency: Found 2 different formats: YYYY-Present, Month YYYY
+   Penalties Applied: Format inconsistency penalty: -4 points
+
+   **Evidence**: re Engineer | TechCorp Inc. | Jan 2022 - Present | San Francisco, CA
+   **Why this matters**: Consistent date formatting helps ATS parse your work history accurately.
    **Fix**: Follow ATS best practices for improvement.
 
 --------------------------------------------------
@@ -79,156 +79,86 @@ EXECUTIVE DASHBOARD
 
 ⚡ NEEDS ATTENTION (IMPROVEMENT OPPORTUNITIES)
 ============================================================
-1. EDUCATION SECTION: Education Section Analysis
-   Current Score: 6/10 – Needs Attention
-
-   💡 SCORING BREAKDOWN:
-   ATS Rule: ATS scoring rules applied to Education Section
-   Analysis: Category scored 6/10 based on content analysis
-   Penalties Applied: Deductions applied: -4 points (10 → 6)
-
-   **Evidence**: Issues detected in content analysis
-   **Why this matters**: Education formatting affects ATS parsing and recruiter confidence in your qualifications.
-   **Fix**: Follow ATS best practices for improvement.
-
---------------------------------------------------
-
-2. SKILLS SECTION: Skills Section Analysis
+1. ANALYTICAL: Analytical Analysis
    Current Score: 5/10 – Needs Attention
 
    💡 SCORING BREAKDOWN:
-   ATS Rule: ATS scoring rules applied to Skills Section
-   Analysis: Category scored 5/10 based on content analysis
+   ATS Rule: ATS scoring rules applied to Analytical
+   Analysis: Assesses demonstration of analytical thinking, data-driven decision making, and problem-solving abilities
    Penalties Applied: Deductions applied: -5 points (10 → 5)
 
-   **Evidence**: Issues detected in content analysis
-   **Why this matters**: Properly organized skills help ATS match you to job requirements and keywords.
+   **Evidence**: Quantify analytical impact with percentages and metrics
+   **Why this matters**: Quantified analytical achievements demonstrate measurable business impact to employers.
    **Fix**: Follow ATS best practices for improvement.
 
 --------------------------------------------------
 
-3. LEADERSHIP: Leadership Analysis
+2. LEADERSHIP: Leadership Analysis
    Current Score: 7/10 – Needs Attention
 
    💡 SCORING BREAKDOWN:
    ATS Rule: ATS scoring rules applied to Leadership
-   Analysis: Category scored 7/10 based on content analysis
+   Analysis: Evaluates demonstration of leadership capabilities, team management, and influence
    Penalties Applied: Deductions applied: -3 points (10 → 7)
 
-   **Evidence**: Issues detected in content analysis
+   **Evidence**: Add specific team sizes managed and project scope
    **Why this matters**: Leadership examples show career growth potential and management capabilities.
    **Fix**: Follow ATS best practices for improvement.
 
 --------------------------------------------------
 
-4. PAGE DENSITY: Page Density Analysis
-   Current Score: 5/10 – Needs Attention
+3. PAGE DENSITY: Page Density Analysis
+   Current Score: 7/10 – Needs Attention
 
    💡 SCORING BREAKDOWN:
    ATS Rule: ATS scoring rules applied to Page Density
-   Analysis: Category scored 5/10 based on content analysis
-   Penalties Applied: Deductions applied: -5 points (10 → 5)
+   Analysis: Backend analysis: Category scored 7/10 based on content evaluation
+   Penalties Applied: Deductions applied: -3 points (10 → 7)
 
-   **Evidence**: Issues detected in content analysis
+   **Evidence**: Optimize page layout and white space usage
    **Why this matters**: Proper white space and layout improve ATS readability and human reviewer experience.
    **Fix**: Follow ATS best practices for improvement.
 
 --------------------------------------------------
 
-5. USE OF BULLETS: Use of Bullets Analysis
-   Current Score: 7/10 – Needs Attention
-
-   💡 SCORING BREAKDOWN:
-   ATS Rule: ATS scoring rules applied to Use of Bullets
-   Analysis: Category scored 7/10 based on content analysis
-   Penalties Applied: Deductions applied: -3 points (10 → 7)
-
-   **Evidence**: Issues detected in content analysis
-   **Why this matters**: Consistent bullet formatting helps ATS parse your achievements correctly.
-   **Fix**: Follow ATS best practices for improvement.
-
---------------------------------------------------
-
-6. QUANTIFIABLE ACHIEVEMENTS: Quantifiable Achievements Analysis
+4. QUANTIFIABLE ACHIEVEMENTS: Quantifiable Achievements Analysis
    Current Score: 7/10 – Needs Attention
 
    💡 SCORING BREAKDOWN:
    ATS Rule: ATS scoring rules applied to Quantifiable Achievements
-   Analysis: Category scored 7/10 based on content analysis
+   Analysis: Backend analysis: Category scored 7/10 based on content evaluation
    Penalties Applied: Deductions applied: -3 points (10 → 7)
 
-   **Evidence**: Issues detected in content analysis
+   **Evidence**: Add more quantified achievements with specific numbers
    **Why this matters**: Numbers and metrics prove your impact and help you stand out to recruiters.
    **Fix**: Follow ATS best practices for improvement.
 
 --------------------------------------------------
 
-7. ACTIVE VOICE: Active Voice Analysis
-   Current Score: 6/10 – Needs Attention
-
-   💡 SCORING BREAKDOWN:
-   ATS Rule: ATS scoring rules applied to Active Voice
-   Analysis: Category scored 6/10 based on content analysis
-   Penalties Applied: Deductions applied: -4 points (10 → 6)
-
-   **Evidence**: Issues detected in content analysis
-   **Why this matters**: Active voice makes your achievements more powerful and easier for ATS to parse.
-   **Fix**: Follow ATS best practices for improvement.
-
---------------------------------------------------
-
-8. TEAMWORK: Teamwork Analysis
-   Current Score: 5/10 – Needs Attention
+5. TEAMWORK: Teamwork Analysis
+   Current Score: 7/10 – Needs Attention
 
    💡 SCORING BREAKDOWN:
    ATS Rule: ATS scoring rules applied to Teamwork
-   Analysis: Category scored 5/10 based on content analysis
-   Penalties Applied: Deductions applied: -5 points (10 → 5)
+   Analysis: Backend analysis: Category scored 7/10 based on content evaluation
+   Penalties Applied: Deductions applied: -3 points (10 → 7)
 
-   **Evidence**: Issues detected in content analysis
+   **Evidence**: Better showcase collaborative experiences
    **Why this matters**: Collaboration examples demonstrate soft skills that employers highly value.
    **Fix**: Follow ATS best practices for improvement.
 
 --------------------------------------------------
 
-9. DRIVE: Drive Analysis
-   Current Score: 5/10 – Needs Attention
-
-   💡 SCORING BREAKDOWN:
-   ATS Rule: ATS scoring rules applied to Drive
-   Analysis: Category scored 5/10 based on content analysis
-   Penalties Applied: Deductions applied: -5 points (10 → 5)
-
-   **Evidence**: Issues detected in content analysis
-   **Why this matters**: Self-motivation examples demonstrate initiative that employers seek.
-   **Fix**: Follow ATS best practices for improvement.
-
---------------------------------------------------
-
-10. CERTIFICATIONS: Certifications Analysis
+6. REPETITION: Repetition Analysis
    Current Score: 6/10 – Needs Attention
 
    💡 SCORING BREAKDOWN:
-   ATS Rule: ATS scoring rules applied to Certifications
-   Analysis: Category scored 6/10 based on content analysis
-   Penalties Applied: Deductions applied: -4 points (10 → 6)
+   ATS Rule: Vary action verbs - deduct 2 points per repeated verb occurrence
+   Analysis: Verb repetition detected: {'Led': 2}
+   Penalties Applied: Repetition penalty: -2 points (10 → 8)
 
-   **Evidence**: Issues detected in content analysis
-   **Why this matters**: Relevant certifications validate skills and improve ATS keyword matching.
-   **Fix**: Follow ATS best practices for improvement.
-
---------------------------------------------------
-
-11. DATES: Dates Analysis
-   Current Score: 6/10 – Needs Attention
-
-   💡 SCORING BREAKDOWN:
-   ATS Rule: Consistent date formatting required across all work/education entries
-   Analysis: Date inconsistency: Found 2 different formats: Month YYYY, YYYY-Present
-   Penalties Applied: Format inconsistency penalty: -4 points
-
-   **Evidence**: Product Manager | Snapdeal | Nov 2023 – present  | Gurgaon, India
-   **Why this matters**: Consistent date formatting helps ATS parse your work history accurately.
+   **Evidence**: ftware Engineer with 5+ years developing scalable web applications. Ex
+   **Why this matters**: Varied vocabulary prevents ATS keyword stuffing penalties and shows communication skills.
    **Fix**: Follow ATS best practices for improvement.
 
 --------------------------------------------------
@@ -236,100 +166,170 @@ EXECUTIVE DASHBOARD
 
 ✅ PASS CATEGORIES (STRONG PERFORMANCE)
 ============================================================
-1. GRAMMAR: Grammar Analysis
+1. CONTACT DETAILS: Contact Details Analysis
+   Current Score: 10/10 – Pass
+
+   💡 SCORING BREAKDOWN:
+   ATS Rule: ATS scoring rules applied to Contact Details
+   Analysis: Measures completeness and professionalism of contact information for ATS systems
+   Penalties Applied: Score: 10/10 points
+
+   **Evidence**: Contact formatting optimization opportunity: All contact elements present but formatting could be en...
+   **Why this matters**: ATS systems need properly formatted contact information to reach you for interviews.
+   **Fix**: Follow ATS best practices for improvement.
+
+--------------------------------------------------
+
+2. EDUCATION SECTION: Education Section Analysis
+   Current Score: 10/10 – Pass
+
+   💡 SCORING BREAKDOWN:
+   ATS Rule: ATS scoring rules applied to Education Section
+   Analysis: Backend analysis: Category scored 10/10 based on content evaluation
+   Penalties Applied: Score: 10/10 points
+
+   **Evidence**: Optimize education section format and content
+   **Why this matters**: Education formatting affects ATS parsing and recruiter confidence in your qualifications.
+   **Fix**: Follow ATS best practices for improvement.
+
+--------------------------------------------------
+
+3. SKILLS SECTION: Skills Section Analysis
+   Current Score: 10/10 – Pass
+
+   💡 SCORING BREAKDOWN:
+   ATS Rule: ATS scoring rules applied to Skills Section
+   Analysis: Evaluates technical and soft skills presentation, relevance, and ATS keyword optimization
+   Penalties Applied: Score: 10/10 points
+
+   **Evidence**: Add specific software proficiency levels (Expert, Advanced, Intermediate)
+   **Why this matters**: Properly organized skills help ATS match you to job requirements and keywords.
+   **Fix**: Follow ATS best practices for improvement.
+
+--------------------------------------------------
+
+4. USE OF BULLETS: Use of Bullets Analysis
+   Current Score: 9/10 – Pass
+
+   💡 SCORING BREAKDOWN:
+   ATS Rule: ATS scoring rules applied to Use of Bullets
+   Analysis: Backend analysis: Category scored 9/10 based on content evaluation
+   Penalties Applied: Deductions applied: -1 points (10 → 9)
+
+   **Evidence**: Improve bullet point structure and formatting
+   **Why this matters**: Consistent bullet formatting helps ATS parse your achievements correctly.
+   **Fix**: Follow ATS best practices for improvement.
+
+--------------------------------------------------
+
+5. GRAMMAR: Grammar Analysis
    Current Score: 9/10 – Pass
 
    💡 SCORING BREAKDOWN:
    ATS Rule: ATS scoring rules applied to Grammar
-   Analysis: Category scored 9/10 based on content analysis
+   Analysis: Backend analysis: Category scored 9/10 based on content evaluation
    Penalties Applied: Deductions applied: -1 points (10 → 9)
 
-   **Evidence**: None flagged
+   **Evidence**: Fix grammar errors and improve language accuracy
    **Why this matters**: Grammar errors create negative first impressions and suggest lack of attention to detail.
    **Fix**: Follow ATS best practices for improvement.
 
 --------------------------------------------------
 
-2. SPELLING: Spelling Analysis
+6. SPELLING: Spelling Analysis
    Current Score: 10/10 – Pass
 
    💡 SCORING BREAKDOWN:
    ATS Rule: ATS scoring rules applied to Spelling
-   Analysis: Category scored 10/10 based on content analysis
-   Penalties Applied: Deductions applied: -0 points (10 → 10)
+   Analysis: Backend analysis: Category scored 10/10 based on content evaluation
+   Penalties Applied: Score: 10/10 points
 
-   **Evidence**: None flagged
+   **Evidence**: Fix spelling errors using AI-powered detection
    **Why this matters**: Spelling mistakes can cause automatic ATS rejection and harm professional credibility.
    **Fix**: Follow ATS best practices for improvement.
 
 --------------------------------------------------
 
-3. ACTION VERBS: Action Verbs Analysis
+7. PERSONAL PRONOUNS: Personal Pronouns Analysis
+   Current Score: 10/10 – Pass
+
+   💡 SCORING BREAKDOWN:
+   ATS Rule: Remove all first-person pronouns (I, me, my, we, our)
+   Analysis: Excellent: No personal pronouns found
+   Penalties Applied: No penalties (score: 10/10)
+
+   **Evidence**: None flagged
+   **Why this matters**: Removing 'I', 'me', 'my' makes your resume more professional and ATS-friendly.
+   **Fix**: Follow ATS best practices for improvement.
+
+--------------------------------------------------
+
+8. ACTION VERBS: Action Verbs Analysis
    Current Score: 9/10 – Pass
 
    💡 SCORING BREAKDOWN:
    ATS Rule: ATS scoring rules applied to Action Verbs
-   Analysis: Category scored 9/10 based on content analysis
+   Analysis: Backend analysis: Category scored 9/10 based on content evaluation
    Penalties Applied: Deductions applied: -1 points (10 → 9)
 
-   **Evidence**: None flagged
+   **Evidence**: Use more strong action verbs to start bullet points
    **Why this matters**: Strong action verbs create impact and help ATS categorize your experience correctly.
    **Fix**: Follow ATS best practices for improvement.
 
 --------------------------------------------------
 
-4. SUMMARY: Summary Analysis
+9. ACTIVE VOICE: Active Voice Analysis
    Current Score: 8/10 – Pass
 
    💡 SCORING BREAKDOWN:
-   ATS Rule: ATS scoring rules applied to Summary
-   Analysis: Category scored 8/10 based on content analysis
+   ATS Rule: ATS scoring rules applied to Active Voice
+   Analysis: Backend analysis: Category scored 8/10 based on content evaluation
    Penalties Applied: Deductions applied: -2 points (10 → 8)
 
-   **Evidence**: None flagged
-   **Why this matters**: Professional summaries without pronouns improve ATS keyword matching and readability.
+   **Evidence**: Convert passive voice to active voice for impact
+   **Why this matters**: Active voice makes your achievements more powerful and easier for ATS to parse.
    **Fix**: Follow ATS best practices for improvement.
 
 --------------------------------------------------
 
-5. VERBOSITY: Verbosity Analysis
+11. VERBOSITY: Verbosity Analysis
    Current Score: 8/10 – Pass
 
    💡 SCORING BREAKDOWN:
    ATS Rule: ATS scoring rules applied to Verbosity
-   Analysis: Category scored 8/10 based on content analysis
+   Analysis: Backend analysis: Category scored 8/10 based on content evaluation
    Penalties Applied: Deductions applied: -2 points (10 → 8)
 
-   **Evidence**: None flagged
+   **Evidence**: Reduce wordiness for better readability
    **Why this matters**: Concise language improves readability and keeps recruiters engaged.
    **Fix**: Follow ATS best practices for improvement.
 
 --------------------------------------------------
 
-6. REPETITION: Repetition Analysis
-   Current Score: 8/10 – Pass
-
-   💡 SCORING BREAKDOWN:
-   ATS Rule: Vary action verbs - deduct 2 points per repeated verb occurrence
-   Analysis: Good verb variety: No repeated action verbs found
-   Penalties Applied: No repetition penalties (score: 8/10)
-
-   **Evidence**: duct, empowering merchants to create their own online store. Onboa
-   **Why this matters**: Varied vocabulary prevents ATS keyword stuffing penalties and shows communication skills.
-   **Fix**: Follow ATS best practices for improvement.
-
---------------------------------------------------
-
-7. UNNECESSARY SECTIONS: Unnecessary Sections Analysis
+12. UNNECESSARY SECTIONS: Unnecessary Sections Analysis
    Current Score: 8/10 – Pass
 
    💡 SCORING BREAKDOWN:
    ATS Rule: ATS scoring rules applied to Unnecessary Sections
-   Analysis: Category scored 8/10 based on content analysis
+   Analysis: Backend analysis: Category scored 8/10 based on content evaluation
    Penalties Applied: Deductions applied: -2 points (10 → 8)
 
-   **Evidence**: None flagged
+   **Evidence**: Remove outdated sections like References, Objective, and high school education when you have higher ...
    **Why this matters**: Removing outdated sections focuses attention on relevant qualifications.
+   **Fix**: Follow ATS best practices for improvement.
+
+--------------------------------------------------
+
+13. CERTIFICATIONS: Certifications Analysis
+   Current Score: 8/10 – Pass
+
+   💡 SCORING BREAKDOWN:
+   ATS Rule: ATS scoring rules applied to Certifications
+   Analysis: Measures presence, relevance, and currency of professional certifications and credentials
+   Penalties Applied: Deductions applied: -2 points (10 → 8)
+
+   **Evidence**: Add renewal dates for current certifications
+   **Why this matters**: Relevant certifications validate skills and improve ATS keyword matching.
    **Fix**: Follow ATS best practices for improvement.
 
 --------------------------------------------------
@@ -337,30 +337,30 @@ EXECUTIVE DASHBOARD
 
 📊 DETAILED CATEGORY BREAKDOWN
 ============================================================
-CONTACT DETAILS - Score: 7.5/10 – Needs Attention
-EDUCATION SECTION - Score: 6/10 – Needs Attention
-SKILLS SECTION - Score: 5/10 – Needs Attention
-ANALYTICAL - Score: 3/10 – Critical
+CONTACT DETAILS - Score: 10/10 – Pass
+EDUCATION SECTION - Score: 10/10 – Pass
+SKILLS SECTION - Score: 10/10 – Pass
+ANALYTICAL - Score: 5/10 – Needs Attention
 LEADERSHIP - Score: 7/10 – Needs Attention
-PAGE DENSITY - Score: 5/10 – Needs Attention
-USE OF BULLETS - Score: 7/10 – Needs Attention
+PAGE DENSITY - Score: 7/10 – Needs Attention
+USE OF BULLETS - Score: 9/10 – Pass
 GRAMMAR - Score: 9/10 – Pass
 SPELLING - Score: 10/10 – Pass
-VERB TENSES - Score: 4/10 – Critical
-PERSONAL PRONOUNS - Score: 4/10 – Critical
+VERB TENSES - Score: 2/10 – Critical
+PERSONAL PRONOUNS - Score: 10/10 – Pass
 QUANTIFIABLE ACHIEVEMENTS - Score: 7/10 – Needs Attention
 ACTION VERBS - Score: 9/10 – Pass
-ACTIVE VOICE - Score: 6/10 – Needs Attention
+ACTIVE VOICE - Score: 8/10 – Pass
 SUMMARY - Score: 8/10 – Pass
-TEAMWORK - Score: 5/10 – Needs Attention
+TEAMWORK - Score: 7/10 – Needs Attention
 VERBOSITY - Score: 8/10 – Pass
-REPETITION - Score: 8/10 – Pass
+REPETITION - Score: 6/10 – Needs Attention
 UNNECESSARY SECTIONS - Score: 8/10 – Pass
-GROWTH SIGNALS - Score: 0/10 – Critical
-DRIVE - Score: 5/10 – Needs Attention
-CERTIFICATIONS - Score: 6/10 – Needs Attention
-DATES - Score: 6/10 – Needs Attention
-CV READABILITY SCORE - Score: 7.4/10 – Needs Attention
+GROWTH SIGNALS - Score: 4/10 – Critical
+DRIVE - Score: 3/10 – Critical
+CERTIFICATIONS - Score: 8/10 – Pass
+DATES - Score: 2/10 – Critical
+CV READABILITY SCORE - Score: 7.1/10 – Needs Attention
 
 🔥 IMMEDIATE NEXT STEPS
 ============================================================
@@ -381,3 +381,36 @@ CV READABILITY SCORE - Score: 7.4/10 – Needs Attention
 Generated by BestCVBuilder.com with Gemini AI Enhancement
 For more optimization: https://bestcvbuilder.com
 ================================================================================
+
+🔍 DATA VERIFICATION REPORT
+============================================================
+✅ Categories with real backend analysis: 8
+⚠️ Categories using fallback analysis: 16
+📊 CV content analyzed: 1898 characters
+🎯 Analysis validity: ISSUES DETECTED - Contains fallbacks
+
+Evidence Sources by Category:
+✅ Contact Details: backend_extracted
+⚠️ Education Section: generic_fallback
+✅ Skills Section: backend_extracted
+✅ Analytical: backend_extracted
+✅ Leadership: backend_extracted
+⚠️ Page Density: generic_fallback
+⚠️ Use of Bullets: generic_fallback
+⚠️ Grammar: generic_fallback
+⚠️ Spelling: generic_fallback
+⚠️ Verb Tenses: generic_fallback
+⚠️ Personal Pronouns: generic_fallback
+⚠️ Quantifiable Achievements: generic_fallback
+⚠️ Action Verbs: generic_fallback
+⚠️ Active Voice: generic_fallback
+⚠️ Summary: generic_fallback
+⚠️ Teamwork: generic_fallback
+⚠️ Verbosity: generic_fallback
+✅ Repetition: backend_extracted
+⚠️ Unnecessary Sections: generic_fallback
+✅ Growth Signals: backend_extracted
+⚠️ Drive: generic_fallback
+✅ Certifications: backend_extracted
+✅ Dates: backend_extracted
+⚠️ CV Readability Score: generic_fallback

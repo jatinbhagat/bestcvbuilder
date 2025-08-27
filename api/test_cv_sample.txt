@@ -1,0 +1,40 @@
+JOHN DOE
+Software Engineer
+Email: john.doe@email.com | Phone: +1-555-123-4567
+LinkedIn: linkedin.com/in/johndoe | Location: San Francisco, CA
+
+PROFESSIONAL SUMMARY
+Experienced Software Engineer with 5+ years developing scalable web applications. Expertise in JavaScript, Python, and cloud technologies. Led cross-functional teams to deliver high-impact products.
+
+EXPERIENCE
+
+Senior Software Engineer | TechCorp Inc. | Jan 2022 - Present | San Francisco, CA
+• Developed microservices architecture serving 1M+ daily users, improving system performance by 40%
+• Led team of 4 engineers in migrating legacy systems to AWS cloud infrastructure
+• Implemented CI/CD pipelines reducing deployment time from 2 hours to 15 minutes
+• Collaborated with product managers to define technical requirements for new features
+
+Software Engineer | StartupXYZ | Jun 2019 - Dec 2021 | Remote
+• Built responsive web applications using React and Node.js for e-commerce platform
+• Optimized database queries resulting in 25% faster page load times
+• Mentored junior developers on coding best practices and code review processes
+• Participated in agile development cycles with 2-week sprint planning
+
+Junior Developer | WebSolutions | Aug 2018 - May 2019 | New York, NY
+• Created RESTful APIs using Python Flask for client management system
+• Fixed critical bugs in production environment improving system stability
+• Wrote comprehensive unit tests achieving 85% code coverage
+
+EDUCATION
+Bachelor of Science in Computer Science | State University | 2018
+Relevant Coursework: Data Structures, Algorithms, Software Engineering, Database Systems
+
+SKILLS
+Programming Languages: JavaScript, Python, Java, SQL
+Frameworks: React, Node.js, Django, Flask
+Technologies: AWS, Docker, Kubernetes, Git, Jenkins
+Databases: PostgreSQL, MongoDB, Redis
+
+CERTIFICATIONS
+AWS Certified Developer Associate | 2023
+Certified Scrum Master | 2022
