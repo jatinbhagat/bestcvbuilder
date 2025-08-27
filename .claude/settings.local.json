@@ -31,7 +31,8 @@
       "Bash(find:*)",
       "Bash(npx tailwindcss:*)",
       "Bash(touch:*)",
-      "WebFetch(domain:bestcvbuilder-frontend.onrender.com)"
+      "WebFetch(domain:bestcvbuilder-frontend.onrender.com)",
+      "Bash(sed:*)"
     ],
     "deny": []
   }
