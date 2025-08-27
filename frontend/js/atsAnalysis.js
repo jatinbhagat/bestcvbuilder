@@ -30,15 +30,19 @@ console.log('🚨 CRITICAL: Verify this shows correct URL - should NOT be bestcv
 async function testAPIConnectivity() {
     console.log('🔍 Testing API connectivity (non-blocking)...');
     
-    // Simple connectivity test without AbortController to avoid signal abort issues
+    // Use OPTIONS instead of HEAD to test CORS properly
     try {
         const response = await fetch(CV_PARSER_ENDPOINT, {
-            method: 'HEAD',
+            method: 'OPTIONS',
             mode: 'cors',
-            cache: 'no-cache'
+            headers: {
+                'Origin': window.location.origin,
+                'Access-Control-Request-Method': 'POST',
+                'Access-Control-Request-Headers': 'Content-Type'
+            }
         });
         
-        const isOk = response.status === 200 || response.status === 405; // 405 is OK for HEAD requests
+        const isOk = response.status === 200;
         console.log(`${isOk ? '✅' : '⚠️'} API connectivity: ${response.status}`);
         return isOk;
         
@@ -77,75 +81,21 @@ export async function analyzeResume(fileUrl, userId = null) {
         console.log('🚀 Making request to:', CV_PARSER_ENDPOINT);
         console.log('📤 Request body:', requestBody);
         
-        // Try with explicit CORS settings - reduced attempts for faster response
-        let response;
-        const attempts = [
-            // Attempt 1: Standard CORS request with fast analysis
-            {
-                method: 'POST',
-                mode: 'cors',
-                cache: 'no-cache',
-                credentials: 'omit',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                },
-                body: JSON.stringify({
-                    ...requestBody,
-                    analysis_type: 'fast_ats_score' // Request faster analysis
-                })
+        // Simplified single request - no retries to avoid confusion
+        console.log('🚀 Making single POST request to backend...');
+        
+        const requestConfig = {
+            method: 'POST',
+            mode: 'cors',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
             },
-            // Attempt 2: Fallback to standard analysis
-            {
-                method: 'POST',
-                mode: 'cors',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(requestBody)
-            }
-        ];
+            body: JSON.stringify(requestBody)
+        };
         
-        let lastError;
-        for (let i = 0; i < attempts.length; i++) {
-            try {
-                console.log(`🔄 Attempt ${i + 1}/2 with configuration:`, attempts[i]);
-                
-                // Show progress update for user
-                if (i === 0) {
-                    console.log('⚡ Trying fast analysis first...');
-                } else {
-                    console.log('🔍 Trying comprehensive analysis...');
-                }
-                
-                // Add timeout to prevent infinite hanging (60 seconds - increased slightly)
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => {
-                    console.log(`⏰ Request ${i + 1} timed out after 60 seconds`);
-                    controller.abort();
-                }, 60000);
-                
-                // Add abort signal to attempt
-                const attemptWithTimeout = {
-                    ...attempts[i],
-                    signal: controller.signal
-                };
-                
-                response = await fetch(CV_PARSER_ENDPOINT, attemptWithTimeout);
-                clearTimeout(timeoutId);
-                console.log(`✅ Attempt ${i + 1} succeeded:`, response.status);
-                break;
-            } catch (error) {
-                console.log(`❌ Attempt ${i + 1} failed:`, error.message);
-                lastError = error;
-                if (i === attempts.length - 1) {
-                    throw lastError;
-                }
-                // Small delay between attempts
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-        }
-        
+        console.log('📤 Request config:', requestConfig);
+        const response = await fetch(CV_PARSER_ENDPOINT, requestConfig);
         console.log('📨 Response received:', response.status, response.statusText);
         
         if (!response.ok) {
