@@ -20,7 +20,21 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'api', 'resume-fix'))
 sys.path.append(os.path.join(os.path.dirname(__file__), 'utils'))
 
 app = Flask(__name__)
-CORS(app)
+
+# Configure CORS for production with specific origins
+CORS(app, 
+     origins=[
+         "https://bestcvbuilder-frontend.onrender.com",
+         "https://bestcvbuilder-gnktl1mxh-bestcvbuilder.vercel.app", 
+         "https://bestcvbuilder-sooty.vercel.app",
+         "https://bestcvbuilder-frontend.onrender.com",
+         "http://localhost:3000",  # For local development
+         "http://localhost:5000"   # For local development
+     ],
+     methods=['GET', 'POST', 'OPTIONS'],
+     allow_headers=['Content-Type', 'Accept', 'Authorization'],
+     supports_credentials=True,
+     max_age=86400)
 
 # Configure timeout and memory management
 app.config.update(
