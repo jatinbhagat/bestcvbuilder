@@ -38,9 +38,16 @@ BestCVBuilder is a mobile-first web application that provides ATS (Applicant Tra
 3. **ATS Scoring System**:
    - Frontend uploads resume files to Supabase storage
    - Frontend sends file URLs to backend APIs
-   - Backend downloads, parses, analyzes, and scores documents
-   - Backend returns complete analysis results
-   - Frontend displays results only
+   - Backend downloads, parses, analyzes, and scores documents (24 categories)
+   - Backend returns complete analysis results with detailed evidence
+   - Frontend displays results only (NO scoring calculations)
+   
+4. **Enhanced TXT Report System**:
+   - Comprehensive analysis reports with all 24 ATS categories
+   - Real backend integration - NO hardcoded scores or fallbacks
+   - Gemini LLM integration for Grammar/Spelling specific evidence
+   - Built-in verification system to ensure data authenticity
+   - Evidence extraction from actual CV content only
 
 ### Deployment Architecture
 
@@ -64,10 +71,12 @@ BestCVBuilder is a mobile-first web application that provides ATS (Applicant Tra
 │   ├── css/             # Tailwind CSS files
 │   └── *.html           # HTML pages
 ├── api/                 # Backend API modules
-│   ├── cv-parser/       # ATS analysis logic
-│   ├── cv-optimizer/    # AI-powered resume improvement
+│   ├── cv-parser/       # ATS analysis logic (24 categories)
+│   ├── cv-optimizer/    # AI-powered resume improvement + Gemini LLM
 │   ├── orders/          # Payment and order management
-│   └── job-analyzer/    # Job description analysis
+│   ├── job-analyzer/    # Job description analysis
+│   ├── enhanced_txt_generator.py  # Comprehensive TXT report generator
+│   └── *.txt            # Generated ATS analysis reports
 ├── supabase/           # Database migrations and config
 ├── render-*.yaml       # Render.com deployment configurations
 └── requirements*.txt   # Python dependencies
@@ -129,6 +138,9 @@ curl https://bestcvbuilder-api.onrender.com/health
 curl -X POST https://bestcvbuilder-api.onrender.com/api/cv-parser \
   -H "Content-Type: application/json" \
   -d '{"file_url": "https://example.com/resume.pdf"}'
+
+# Generate enhanced TXT report locally
+python api/enhanced_txt_generator.py path/to/resume.txt
 ```
 
 ## Key Implementation Details
@@ -148,6 +160,18 @@ curl -X POST https://bestcvbuilder-api.onrender.com/api/cv-parser \
 - `POST /api/orders/create-order` - Create payment order
 - `POST /api/orders/initiate-payment` - Initialize PayU payment
 - `GET /api/config/` - Application configuration
+
+### Enhanced TXT Report Generator
+- **Location**: `api/enhanced_txt_generator.py`
+- **Purpose**: Generate comprehensive ATS analysis reports with all 24 categories
+- **Key Features**:
+  - **Zero Hardcoded Data**: All analysis from real backend functions
+  - **Complete Backend Integration**: Uses `generate_comprehensive_ats_scores_frontend()`
+  - **Gemini LLM Enhancement**: AI-powered Grammar/Spelling evidence extraction
+  - **Verification System**: Built-in validation ensures no fallback data
+  - **Evidence Extraction**: Real CV content analysis with specific examples
+- **Usage**: `python enhanced_txt_generator.py <cv_file_path>`
+- **Output**: Detailed TXT report with Evidence/Why/Fix blocks for each category
 
 ### Frontend JavaScript Modules
 - `main.js` - Main application logic and file upload
@@ -206,6 +230,17 @@ curl -X POST https://bestcvbuilder-api.onrender.com/api/cv-parser \
 - **Input Validation**: Validate all parameters and file types
 - **Logging**: Comprehensive logging for debugging
 - **Memory Management**: Garbage collection for large file processing
+
+### Working with Enhanced TXT Generator
+- **No Hardcoded Data**: System enforces real CV input, rejects sample/fallback data
+- **Backend Function Integration**: All 24 categories use real analysis functions
+- **Evidence Verification**: Built-in system validates that evidence comes from actual CV
+- **Gemini LLM Integration**: Grammar/Spelling categories use AI for specific error detection
+- **Data Source Tracking**: Verification footer shows source type for each category:
+  - 🚀 Enhanced Backend Extracted (detailed analysis + evidence)
+  - ✅ Backend Extracted (standard backend analysis)
+  - ⚠️ Generic Fallback (should be 0 - indicates system failure)
+- **Error Handling**: Fails gracefully when backend functions unavailable (no fallbacks)
 
 ### Database Development
 - **Migrations**: Use descriptive names and include rollback statements

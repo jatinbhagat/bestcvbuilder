@@ -19,13 +19,19 @@ sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cv-par
 import importlib.util
 
 try:
-    # Import directly from cv-optimizer/gemini_client.py
-    spec = importlib.util.spec_from_file_location("gemini_client", 
-                                                  os.path.join(os.path.dirname(__file__), 'cv-optimizer', 'gemini_client.py'))
-    gemini_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(gemini_module)
-    GeminiOptimizer = gemini_module.GeminiOptimizer
+    # Add cv-optimizer to path to handle relative imports
+    cv_optimizer_path = os.path.join(os.path.dirname(__file__), 'cv-optimizer')
+    if cv_optimizer_path not in sys.path:
+        sys.path.insert(0, cv_optimizer_path)
+    
+    # Import prompt templates first
+    import prompt_templates
+    
+    # Import gemini_client
+    import gemini_client
+    GeminiOptimizer = gemini_client.GeminiOptimizer
     GEMINI_CLIENT_AVAILABLE = True
+    print("✅ Successfully imported Gemini client")
 except Exception as e:
     print(f"Warning: Could not import Gemini client: {e}")
     GEMINI_CLIENT_AVAILABLE = False
@@ -109,6 +115,7 @@ def get_backend_evidence_and_analysis(category_name: str, resume_text: str, scor
         if category_lower == 'grammar':
             # Use Gemini LLM for Grammar analysis
             if gemini_client and hasattr(gemini_client, 'model') and gemini_client.model:
+                logger.info(f"🧠 Using Gemini LLM for Grammar analysis")
                 try:
                     grammar_prompt = f"""Analyze this resume text for grammar errors. Find specific examples of grammar mistakes.
                     
@@ -140,10 +147,14 @@ If no errors found, respond with "No grammar errors detected\""""
                 except Exception as e:
                     logger.warning(f"⚠️ Gemini grammar analysis failed: {e}")
                     # Fall through to standard analysis
+            else:
+                logger.error(f"⚠️ Gemini client not available for Grammar analysis - Grammar MUST use Gemini exclusively")
+                raise ValueError(f"Grammar analysis requires Gemini LLM but client is not available")
                     
         elif category_lower == 'spelling':
             # Use Gemini LLM for Spelling analysis
             if gemini_client and hasattr(gemini_client, 'model') and gemini_client.model:
+                logger.info(f"🧠 Using Gemini LLM for Spelling analysis")
                 try:
                     spelling_prompt = f"""Check this resume text for spelling errors. Find specific spelling mistakes.
                     
@@ -174,7 +185,10 @@ If no errors found, respond with "No spelling errors detected\""""
                     }
                 except Exception as e:
                     logger.warning(f"⚠️ Gemini spelling analysis failed: {e}")
-                    # Fall through to standard analysis
+                    raise ValueError(f"Spelling analysis failed: {e}")
+            else:
+                logger.error(f"⚠️ Gemini client not available for Spelling analysis - Spelling MUST use Gemini exclusively")
+                raise ValueError(f"Spelling analysis requires Gemini LLM but client is not available")
                     
         elif category_lower == 'verb_tenses':
             # Replicate backend verb tense analysis
@@ -267,7 +281,9 @@ If no errors found, respond with "No spelling errors detected\""""
                 analysis = f'Verb repetition detected: {dict(repeated_verbs)}'
                 total_repetition = sum(count - 1 for count in repeated_verbs.values())
                 penalty = min(10, total_repetition * 2)
-                penalties = f'Repetition penalty: -{penalty} points (10 → {10-penalty})'
+                # Fix: Calculate penalty to match actual score
+                actual_penalty = 10 - score
+                penalties = f'Repetition penalty: -{actual_penalty} points (10 → {score})'
                 
             return {
                 'evidence': evidence,
@@ -450,7 +466,7 @@ def generate_comprehensive_enhanced_txt_report(resume_text: str = None) -> str:
     
     # Initialize Gemini client if available
     gemini_client = None
-    if GEMINI_AVAILABLE:
+    if GEMINI_CLIENT_AVAILABLE:
         try:
             gemini_api_key = os.getenv('GEMINI_API_KEY')
             if gemini_api_key:
@@ -460,6 +476,8 @@ def generate_comprehensive_enhanced_txt_report(resume_text: str = None) -> str:
                 logger.warning("⚠️ GEMINI_API_KEY not found, using fallback suggestions")
         except Exception as e:
             logger.warning(f"⚠️ Could not initialize Gemini client: {e}")
+    else:
+        logger.warning("⚠️ Gemini client library not available")
     
     # Get all 25 categories from backend - REQUIRED, no fallbacks
     if not CV_PARSER_AVAILABLE:
@@ -563,10 +581,22 @@ def generate_comprehensive_enhanced_txt_report(resume_text: str = None) -> str:
                     except Exception as e:
                         logger.warning(f"Failed to get Gemini suggestion for {category_name}: {e}")
                 
-                # Add category block with backend analysis details
+                # Customize content based on section type
+                if score <= 4:  # Critical Issues
+                    problem_text = "Problem: Critical ATS compatibility issue"
+                    time_text = f"Time to Fix: 10-15 minutes"
+                elif score <= 7:  # Needs Attention  
+                    problem_text = "Strength: Good foundation with room for improvement"
+                    time_text = f"Time to Fix: 5-10 minutes"
+                else:  # Pass Categories
+                    problem_text = "Strength: Excellent performance in this area"
+                    time_text = f"Minor polish: 2-5 minutes"
+                    
+                # Add category block with enhanced details
                 report_lines.extend([
                     f"{i}. {category_name.upper()}: {category_name} Analysis",
-                    f"   Current Score: {score}/10 – {score_label}",
+                    f"   Current Score: {score}/10 – {score_label} | {time_text}",
+                    f"   {problem_text}",
                     "",
                     f"   💡 SCORING BREAKDOWN:",
                     f"   ATS Rule: {backend_analysis['rule_explanation']}",
@@ -583,18 +613,7 @@ def generate_comprehensive_enhanced_txt_report(resume_text: str = None) -> str:
             
             report_lines.append("")
     
-    # Add summary section
     report_lines.extend([
-        "📊 DETAILED CATEGORY BREAKDOWN",
-        "=" * 60
-    ])
-    
-    for category in all_categories:
-        score_label = get_score_label(category['score'])
-        report_lines.append(f"{category['name'].upper()} - Score: {category['score']}/10 – {score_label}")
-    
-    report_lines.extend([
-        "",
         "🔥 IMMEDIATE NEXT STEPS",
         "=" * 60,
         "1. Print this report or keep it open while editing",
