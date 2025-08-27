@@ -37,6 +37,13 @@ try:
     cv_parser_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(cv_parser_module)
     generate_comprehensive_ats_scores_frontend = cv_parser_module.generate_comprehensive_ats_scores_frontend
+    
+    # Import specific analysis functions for detailed breakdown
+    analyze_verb_tenses_frontend = cv_parser_module.analyze_verb_tenses_frontend
+    analyze_repetition_frontend = cv_parser_module.analyze_repetition_frontend
+    analyze_personal_pronouns_frontend = cv_parser_module.analyze_personal_pronouns_frontend
+    analyze_date_formatting = cv_parser_module.analyze_date_formatting
+    
     CV_PARSER_AVAILABLE = True
 except Exception as e:
     print(f"Warning: Could not import CV parser: {e}")
@@ -68,48 +75,184 @@ Phone: (555) 123-4567
 LinkedIn Profile
 """
 
-def extract_evidence_for_category(category_name: str, resume_text: str, score: int) -> str:
-    """Extract evidence text for specific categories"""
+def get_backend_evidence_and_analysis(category_name: str, resume_text: str, score: int) -> Dict[str, str]:
+    """Get evidence and detailed analysis matching backend scoring logic"""
     
-    evidence_patterns = {
-        'Personal Pronouns': [r'\b(I|me|my|we|our)\b'],
-        'Dates': [r'\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}', r'\d{4}\s*[-–]\s*(present|Present|\d{4})'],
-        'Verb Tenses': [r'\b(led|managed|developed|created|launched|built|designed|implemented)\b'],
-        'Summary': [r'(PROFESSIONAL SUMMARY|SUMMARY|PROFILE)', r'\b(I|me|my)\b.*summary'],
-        'Repetition': [r'\b(implementing|developed|managed|led)\b'],
-        'Growth Signals': [r'\b(promoted|promotion|advanced|expanded role)\b'],
-        'Certifications': [r'(CERTIFICATIONS?|CERTIFICATES?)', r'No certifications'],
-        'Teamwork': [r'\b(team|collaborate|collaborated|cross-functional|stakeholder)\b'],
-        'Contact Details': [r'email|phone|linkedin|github', r'@\w+\.\w+', r'\(\d{3}\)\s*\d{3}'],
-        'Skills Section': [r'(SKILLS|TECHNICAL SKILLS|CORE COMPETENCIES)'],
-        'Spelling': [r'\b\w*[aeiou]{3,}\w*\b'],  # Simple spelling check pattern
-        'Grammar': [r'\b(their|there|they\'re|your|you\'re)\b'],
-        'Analytical': [r'\b(\d+%|\$\d+|increased|decreased|improved|optimized)\b'],
-        'Leadership': [r'\b(led|managed|supervised|directed|guided|mentored)\b'],
-        'Action Verbs': [r'\b(achieved|delivered|implemented|executed|developed)\b']
-    }
+    if not CV_PARSER_AVAILABLE:
+        return {
+            'evidence': 'Backend analysis unavailable',
+            'analysis': f'Category scored {score}/10 based on content analysis',
+            'penalties': f'Total deductions: -{10-score} points',
+            'rule_explanation': f'ATS rules for {category_name}'
+        }
     
-    category_patterns = evidence_patterns.get(category_name, [])
-    found_evidence = []
-    
-    for pattern in category_patterns:
-        matches = re.finditer(pattern, resume_text, re.IGNORECASE)
-        for match in matches:
-            # Get surrounding context (up to 50 chars before and after)
-            start = max(0, match.start() - 25)
-            end = min(len(resume_text), match.end() + 25)
-            context = resume_text[start:end].strip()
-            if context and len(context) > 10:
-                found_evidence.append(context)
-                break  # Only take first match per pattern
-    
-    if found_evidence:
-        # Return the first piece of evidence found
-        return found_evidence[0]
-    elif score <= 4:
-        return "Issues detected in content analysis"
-    else:
-        return "None flagged"
+    try:
+        import re
+        from collections import Counter
+        
+        category_lower = category_name.lower().replace(' ', '_')
+        
+        if category_lower == 'verb_tenses':
+            # Replicate backend verb tense analysis
+            past_tense_verbs = ['developed', 'created', 'managed', 'led', 'implemented', 'designed', 'achieved', 'delivered']
+            present_tense_verbs = ['develop', 'create', 'manage', 'lead', 'implement', 'design', 'achieve', 'deliver']
+            
+            text_lower = resume_text.lower()
+            past_count = sum(1 for verb in past_tense_verbs if verb in text_lower)
+            present_count = sum(1 for verb in present_tense_verbs if verb in text_lower)
+            
+            # Find first evidence
+            evidence = "No verbs found"
+            for verb in past_tense_verbs + present_tense_verbs:
+                match = re.search(rf'\b{verb}\b.*', resume_text, re.IGNORECASE)
+                if match:
+                    evidence = match.group(0)[:60] + "..." 
+                    break
+            
+            if present_count > past_count:
+                analysis = f'Poor tense usage: Found {present_count} present tense vs {past_count} past tense verbs'
+                penalties = f'Too many present tense verbs: -6 points (10 → 4)'
+            else:
+                analysis = f'Mixed tenses: Found {past_count} past tense and {present_count} present tense verbs'
+                penalties = f'Tense inconsistency penalty: -{10-score} points (10 → {score})'
+                
+            return {
+                'evidence': evidence,
+                'analysis': analysis,
+                'penalties': penalties,
+                'rule_explanation': 'Use past tense for previous roles, present tense only for current position'
+            }
+            
+        elif category_lower == 'personal_pronouns':
+            # Replicate backend personal pronoun analysis  
+            pronoun_patterns = [r'\bi\b', r'\bme\b', r'\bmy\b', r'\bmyself\b', r'\bour\b', r'\bwe\b']
+            
+            found_pronouns = []
+            evidence = "None flagged"
+            for pattern in pronoun_patterns:
+                matches = re.findall(pattern, resume_text, re.IGNORECASE)
+                if matches:
+                    found_pronouns.extend(matches)
+                    # Find first occurrence with context
+                    match = re.search(rf'.{{0,30}}{pattern}.{{0,30}}', resume_text, re.IGNORECASE)
+                    if match:
+                        evidence = match.group(0).strip()
+                        break
+            
+            if len(found_pronouns) == 0:
+                analysis = 'Excellent: No personal pronouns found'
+                penalties = f'No penalties (score: {score}/10)'
+            else:
+                analysis = f'Found {len(found_pronouns)} personal pronouns: {", ".join(set(found_pronouns[:3]))}'
+                penalty = min(6, len(found_pronouns))
+                penalties = f'Personal pronoun penalty: -{penalty} points (10 → {10-penalty})'
+                
+            return {
+                'evidence': evidence,
+                'analysis': analysis,
+                'penalties': penalties,
+                'rule_explanation': 'Remove all first-person pronouns (I, me, my, we, our)'
+            }
+            
+        elif category_lower == 'repetition':
+            # Replicate backend repetition analysis
+            action_verbs_patterns = [
+                r'\b(manage[ds]?|managing)\b', r'\b(develop[eds]?|developing)\b', 
+                r'\b(creat[ed]?|creating)\b', r'\b(implement[eds]?|implementing)\b',
+                r'\b(lead[s]?|leading|led)\b', r'\b(design[eds]?|designing)\b'
+            ]
+            
+            verb_matches = []
+            evidence = "None flagged"
+            for pattern in action_verbs_patterns:
+                matches = re.findall(pattern, resume_text, re.IGNORECASE)
+                if matches:
+                    verb_matches.extend([match[0] if isinstance(match, tuple) else match for match in matches])
+                    if evidence == "None flagged":
+                        match = re.search(rf'.{{0,30}}{pattern}.{{0,30}}', resume_text, re.IGNORECASE)
+                        if match:
+                            evidence = match.group(0).strip()
+            
+            verb_counts = Counter(verb_matches)
+            repeated_verbs = {verb: count for verb, count in verb_counts.items() if count > 1}
+            
+            if not repeated_verbs:
+                analysis = 'Good verb variety: No repeated action verbs found'  
+                penalties = f'No repetition penalties (score: {score}/10)'
+            else:
+                analysis = f'Verb repetition detected: {dict(repeated_verbs)}'
+                total_repetition = sum(count - 1 for count in repeated_verbs.values())
+                penalty = min(10, total_repetition * 2)
+                penalties = f'Repetition penalty: -{penalty} points (10 → {10-penalty})'
+                
+            return {
+                'evidence': evidence,
+                'analysis': analysis,
+                'penalties': penalties,
+                'rule_explanation': 'Vary action verbs - deduct 2 points per repeated verb occurrence'
+            }
+            
+        elif category_lower == 'dates':
+            # Replicate backend date analysis
+            date_patterns = [
+                (r'\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}\b', 'Month YYYY'),
+                (r'\b\d{4}\s*[-–]\s*(present|Present|\d{4})\b', 'YYYY-Present')
+            ]
+            
+            all_dates = []
+            format_types = []
+            evidence = "None flagged"
+            
+            for pattern, format_name in date_patterns:
+                matches = re.findall(pattern, resume_text, re.IGNORECASE)
+                if matches:
+                    all_dates.extend(matches)
+                    format_types.extend([format_name] * len(matches))
+                    if evidence == "None flagged":
+                        match = re.search(rf'.{{0,30}}{pattern}.{{0,30}}', resume_text, re.IGNORECASE)
+                        if match:
+                            evidence = match.group(0).strip()
+            
+            if len(set(format_types)) <= 1 and len(all_dates) > 0:
+                analysis = f'Good date consistency: Found {len(all_dates)} dates in consistent format'
+                penalties = f'No date formatting penalties (score: {score}/10)'
+            elif len(all_dates) == 0:
+                analysis = 'No employment or education dates found in resume'
+                penalties = f'Missing dates penalty: -{10-score} points (10 → {score})'
+            else:
+                analysis = f'Date inconsistency: Found {len(set(format_types))} different formats: {", ".join(set(format_types))}'
+                penalty = len(set(format_types)) * 2
+                penalties = f'Format inconsistency penalty: -{penalty} points'
+                
+            return {
+                'evidence': evidence,
+                'analysis': analysis,
+                'penalties': penalties,
+                'rule_explanation': 'Consistent date formatting required across all work/education entries'
+            }
+            
+        else:
+            # Generic analysis for other categories
+            evidence = "None flagged" if score >= 8 else "Issues detected in content analysis"
+            analysis = f'Category scored {score}/10 based on content analysis'
+            penalties = f'Deductions applied: -{10-score} points (10 → {score})'
+            rule_explanation = f'ATS scoring rules applied to {category_name}'
+            
+            return {
+                'evidence': evidence,
+                'analysis': analysis,
+                'penalties': penalties,
+                'rule_explanation': rule_explanation
+            }
+        
+    except Exception as e:
+        logger.warning(f"Failed to get backend analysis for {category_name}: {e}")
+        return {
+            'evidence': "Analysis unavailable",
+            'analysis': f'Category scored {score}/10 based on content analysis',
+            'penalties': f'Total deductions: -{10-score} points',
+            'rule_explanation': f'ATS rules for {category_name}'
+        }
 
 def get_why_matters_explanation(category_name: str, score: int) -> str:
     """Generate 'Why this matters' explanation for each category"""
@@ -237,8 +380,8 @@ def generate_comprehensive_enhanced_txt_report(resume_text: str = SAMPLE_RESUME_
                 score = category['score']
                 score_label = get_score_label(score)
                 
-                # Extract evidence
-                evidence = extract_evidence_for_category(category_name, resume_text, score)
+                # Get backend evidence and analysis
+                backend_analysis = get_backend_evidence_and_analysis(category_name, resume_text, score)
                 
                 # Get why it matters
                 why_matters = get_why_matters_explanation(category_name, score)
@@ -248,17 +391,22 @@ def generate_comprehensive_enhanced_txt_report(resume_text: str = SAMPLE_RESUME_
                 if gemini_client and gemini_client.available:
                     try:
                         fix_suggestion = gemini_client.generate_fix_suggestion_with_gemini(
-                            category_name, evidence, score, why_matters
+                            category_name, backend_analysis['evidence'], score, why_matters
                         )
                     except Exception as e:
                         logger.warning(f"Failed to get Gemini suggestion for {category_name}: {e}")
                 
-                # Add category block
+                # Add category block with backend analysis details
                 report_lines.extend([
                     f"{i}. {category_name.upper()}: {category_name} Analysis",
                     f"   Current Score: {score}/10 – {score_label}",
                     "",
-                    f"   **Evidence**: {evidence}",
+                    f"   💡 SCORING BREAKDOWN:",
+                    f"   ATS Rule: {backend_analysis['rule_explanation']}",
+                    f"   Analysis: {backend_analysis['analysis']}",
+                    f"   Penalties Applied: {backend_analysis['penalties']}",
+                    "",
+                    f"   **Evidence**: {backend_analysis['evidence']}",
                     f"   **Why this matters**: {why_matters}",
                     f"   **Fix**: {fix_suggestion}",
                     "",

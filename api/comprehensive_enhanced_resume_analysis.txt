@@ -23,8 +23,12 @@ EXECUTIVE DASHBOARD
 1. ANALYTICAL: Analytical Analysis
    Current Score: 3/10 – Critical
 
-   **Evidence**: of referral program and optimized marketing campaigns
-•Lau
+   💡 SCORING BREAKDOWN:
+   ATS Rule: ATS scoring rules applied to Analytical
+   Analysis: Category scored 3/10 based on content analysis
+   Penalties Applied: Deductions applied: -7 points (10 → 3)
+
+   **Evidence**: Issues detected in content analysis
    **Why this matters**: Quantified analytical achievements demonstrate measurable business impact to employers.
    **Fix**: Follow ATS best practices for improvement.
 
@@ -33,7 +37,12 @@ EXECUTIVE DASHBOARD
 2. VERB TENSES: Verb Tenses Analysis
    Current Score: 4/10 – Critical
 
-   **Evidence**: investment decisions. I led the product & analytics
+   💡 SCORING BREAKDOWN:
+   ATS Rule: Use past tense for previous roles, present tense only for current position
+   Analysis: Poor tense usage: Found 7 present tense vs 1 past tense verbs
+   Penalties Applied: Too many present tense verbs: -6 points (10 → 4)
+
+   **Evidence**: led the product & analytics within the organization....
    **Why this matters**: Consistent tenses (past for old roles, present for current) improve professional presentation.
    **Fix**: Follow ATS best practices for improvement.
 
@@ -42,8 +51,12 @@ EXECUTIVE DASHBOARD
 3. PERSONAL PRONOUNS: Personal Pronouns Analysis
    Current Score: 4/10 – Critical
 
-   **Evidence**: PROFESSIONAL SUMMARY
-I am a seasoned Senior Pro
+   💡 SCORING BREAKDOWN:
+   ATS Rule: Remove all first-person pronouns (I, me, my, we, our)
+   Analysis: Found 2 personal pronouns: I
+   Penalties Applied: Personal pronoun penalty: -2 points (10 → 8)
+
+   **Evidence**: I am a seasoned Senior Product
    **Why this matters**: Removing 'I', 'me', 'my' makes your resume more professional and ATS-friendly.
    **Fix**: Follow ATS best practices for improvement.
 
@@ -51,6 +64,11 @@ I am a seasoned Senior Pro
 
 4. GROWTH SIGNALS: Growth Signals Analysis
    Current Score: 0/10 – Critical
+
+   💡 SCORING BREAKDOWN:
+   ATS Rule: ATS scoring rules applied to Growth Signals
+   Analysis: Category scored 0/10 based on content analysis
+   Penalties Applied: Deductions applied: -10 points (10 → 0)
 
    **Evidence**: Issues detected in content analysis
    **Why this matters**: Career progression evidence shows ambition and capability for advancement.
@@ -64,7 +82,12 @@ I am a seasoned Senior Pro
 1. EDUCATION SECTION: Education Section Analysis
    Current Score: 6/10 – Needs Attention
 
-   **Evidence**: None flagged
+   💡 SCORING BREAKDOWN:
+   ATS Rule: ATS scoring rules applied to Education Section
+   Analysis: Category scored 6/10 based on content analysis
+   Penalties Applied: Deductions applied: -4 points (10 → 6)
+
+   **Evidence**: Issues detected in content analysis
    **Why this matters**: Education formatting affects ATS parsing and recruiter confidence in your qualifications.
    **Fix**: Follow ATS best practices for improvement.
 
@@ -73,7 +96,12 @@ I am a seasoned Senior Pro
 2. SKILLS SECTION: Skills Section Analysis
    Current Score: 5/10 – Needs Attention
 
-   **Evidence**: None flagged
+   💡 SCORING BREAKDOWN:
+   ATS Rule: ATS scoring rules applied to Skills Section
+   Analysis: Category scored 5/10 based on content analysis
+   Penalties Applied: Deductions applied: -5 points (10 → 5)
+
+   **Evidence**: Issues detected in content analysis
    **Why this matters**: Properly organized skills help ATS match you to job requirements and keywords.
    **Fix**: Follow ATS best practices for improvement.
 
@@ -82,7 +110,12 @@ I am a seasoned Senior Pro
 3. LEADERSHIP: Leadership Analysis
    Current Score: 7/10 – Needs Attention
 
-   **Evidence**: investment decisions. I led the product & analytics
+   💡 SCORING BREAKDOWN:
+   ATS Rule: ATS scoring rules applied to Leadership
+   Analysis: Category scored 7/10 based on content analysis
+   Penalties Applied: Deductions applied: -3 points (10 → 7)
+
+   **Evidence**: Issues detected in content analysis
    **Why this matters**: Leadership examples show career growth potential and management capabilities.
    **Fix**: Follow ATS best practices for improvement.
 
@@ -91,7 +124,12 @@ I am a seasoned Senior Pro
 4. PAGE DENSITY: Page Density Analysis
    Current Score: 5/10 – Needs Attention
 
-   **Evidence**: None flagged
+   💡 SCORING BREAKDOWN:
+   ATS Rule: ATS scoring rules applied to Page Density
+   Analysis: Category scored 5/10 based on content analysis
+   Penalties Applied: Deductions applied: -5 points (10 → 5)
+
+   **Evidence**: Issues detected in content analysis
    **Why this matters**: Proper white space and layout improve ATS readability and human reviewer experience.
    **Fix**: Follow ATS best practices for improvement.
 
@@ -100,7 +138,12 @@ I am a seasoned Senior Pro
 5. USE OF BULLETS: Use of Bullets Analysis
    Current Score: 7/10 – Needs Attention
 
-   **Evidence**: None flagged
+   💡 SCORING BREAKDOWN:
+   ATS Rule: ATS scoring rules applied to Use of Bullets
+   Analysis: Category scored 7/10 based on content analysis
+   Penalties Applied: Deductions applied: -3 points (10 → 7)
+
+   **Evidence**: Issues detected in content analysis
    **Why this matters**: Consistent bullet formatting helps ATS parse your achievements correctly.
    **Fix**: Follow ATS best practices for improvement.
 
@@ -109,7 +152,12 @@ I am a seasoned Senior Pro
 6. QUANTIFIABLE ACHIEVEMENTS: Quantifiable Achievements Analysis
    Current Score: 7/10 – Needs Attention
 
-   **Evidence**: None flagged
+   💡 SCORING BREAKDOWN:
+   ATS Rule: ATS scoring rules applied to Quantifiable Achievements
+   Analysis: Category scored 7/10 based on content analysis
+   Penalties Applied: Deductions applied: -3 points (10 → 7)
+
+   **Evidence**: Issues detected in content analysis
    **Why this matters**: Numbers and metrics prove your impact and help you stand out to recruiters.
    **Fix**: Follow ATS best practices for improvement.
 
@@ -118,7 +166,12 @@ I am a seasoned Senior Pro
 7. ACTIVE VOICE: Active Voice Analysis
    Current Score: 6/10 – Needs Attention
 
-   **Evidence**: None flagged
+   💡 SCORING BREAKDOWN:
+   ATS Rule: ATS scoring rules applied to Active Voice
+   Analysis: Category scored 6/10 based on content analysis
+   Penalties Applied: Deductions applied: -4 points (10 → 6)
+
+   **Evidence**: Issues detected in content analysis
    **Why this matters**: Active voice makes your achievements more powerful and easier for ATS to parse.
    **Fix**: Follow ATS best practices for improvement.
 
@@ -127,7 +180,12 @@ I am a seasoned Senior Pro
 8. TEAMWORK: Teamwork Analysis
    Current Score: 5/10 – Needs Attention
 
-   **Evidence**: by collaborating with a team of 12 developers and 2 d
+   💡 SCORING BREAKDOWN:
+   ATS Rule: ATS scoring rules applied to Teamwork
+   Analysis: Category scored 5/10 based on content analysis
+   Penalties Applied: Deductions applied: -5 points (10 → 5)
+
+   **Evidence**: Issues detected in content analysis
    **Why this matters**: Collaboration examples demonstrate soft skills that employers highly value.
    **Fix**: Follow ATS best practices for improvement.
 
@@ -136,7 +194,12 @@ I am a seasoned Senior Pro
 9. DRIVE: Drive Analysis
    Current Score: 5/10 – Needs Attention
 
-   **Evidence**: None flagged
+   💡 SCORING BREAKDOWN:
+   ATS Rule: ATS scoring rules applied to Drive
+   Analysis: Category scored 5/10 based on content analysis
+   Penalties Applied: Deductions applied: -5 points (10 → 5)
+
+   **Evidence**: Issues detected in content analysis
    **Why this matters**: Self-motivation examples demonstrate initiative that employers seek.
    **Fix**: Follow ATS best practices for improvement.
 
@@ -145,10 +208,12 @@ I am a seasoned Senior Pro
 10. CERTIFICATIONS: Certifications Analysis
    Current Score: 6/10 – Needs Attention
 
-   **Evidence**: + merchants in 6 months
+   💡 SCORING BREAKDOWN:
+   ATS Rule: ATS scoring rules applied to Certifications
+   Analysis: Category scored 6/10 based on content analysis
+   Penalties Applied: Deductions applied: -4 points (10 → 6)
 
-CERTIFICATIONS
-No certifications found
+   **Evidence**: Issues detected in content analysis
    **Why this matters**: Relevant certifications validate skills and improve ATS keyword matching.
    **Fix**: Follow ATS best practices for improvement.
 
@@ -157,7 +222,12 @@ No certifications found
 11. DATES: Dates Analysis
    Current Score: 6/10 – Needs Attention
 
-   **Evidence**: uct Manager | Snapdeal | Nov 2023 – present  | Gurgaon, In
+   💡 SCORING BREAKDOWN:
+   ATS Rule: Consistent date formatting required across all work/education entries
+   Analysis: Date inconsistency: Found 2 different formats: Month YYYY, YYYY-Present
+   Penalties Applied: Format inconsistency penalty: -4 points
+
+   **Evidence**: Product Manager | Snapdeal | Nov 2023 – present  | Gurgaon, India
    **Why this matters**: Consistent date formatting helps ATS parse your work history accurately.
    **Fix**: Follow ATS best practices for improvement.
 
@@ -169,7 +239,12 @@ No certifications found
 1. GRAMMAR: Grammar Analysis
    Current Score: 9/10 – Pass
 
-   **Evidence**: ring merchants to create their own online store. Onboar
+   💡 SCORING BREAKDOWN:
+   ATS Rule: ATS scoring rules applied to Grammar
+   Analysis: Category scored 9/10 based on content analysis
+   Penalties Applied: Deductions applied: -1 points (10 → 9)
+
+   **Evidence**: None flagged
    **Why this matters**: Grammar errors create negative first impressions and suggest lack of attention to detail.
    **Fix**: Follow ATS best practices for improvement.
 
@@ -177,6 +252,11 @@ No certifications found
 
 2. SPELLING: Spelling Analysis
    Current Score: 10/10 – Pass
+
+   💡 SCORING BREAKDOWN:
+   ATS Rule: ATS scoring rules applied to Spelling
+   Analysis: Category scored 10/10 based on content analysis
+   Penalties Applied: Deductions applied: -0 points (10 → 10)
 
    **Evidence**: None flagged
    **Why this matters**: Spelling mistakes can cause automatic ATS rejection and harm professional credibility.
@@ -187,6 +267,11 @@ No certifications found
 3. ACTION VERBS: Action Verbs Analysis
    Current Score: 9/10 – Pass
 
+   💡 SCORING BREAKDOWN:
+   ATS Rule: ATS scoring rules applied to Action Verbs
+   Analysis: Category scored 9/10 based on content analysis
+   Penalties Applied: Deductions applied: -1 points (10 → 9)
+
    **Evidence**: None flagged
    **Why this matters**: Strong action verbs create impact and help ATS categorize your experience correctly.
    **Fix**: Follow ATS best practices for improvement.
@@ -196,8 +281,12 @@ No certifications found
 4. SUMMARY: Summary Analysis
    Current Score: 8/10 – Pass
 
-   **Evidence**: PROFESSIONAL SUMMARY
-I am a seasoned Senior P
+   💡 SCORING BREAKDOWN:
+   ATS Rule: ATS scoring rules applied to Summary
+   Analysis: Category scored 8/10 based on content analysis
+   Penalties Applied: Deductions applied: -2 points (10 → 8)
+
+   **Evidence**: None flagged
    **Why this matters**: Professional summaries without pronouns improve ATS keyword matching and readability.
    **Fix**: Follow ATS best practices for improvement.
 
@@ -205,6 +294,11 @@ I am a seasoned Senior P
 
 5. VERBOSITY: Verbosity Analysis
    Current Score: 8/10 – Pass
+
+   💡 SCORING BREAKDOWN:
+   ATS Rule: ATS scoring rules applied to Verbosity
+   Analysis: Category scored 8/10 based on content analysis
+   Penalties Applied: Deductions applied: -2 points (10 → 8)
 
    **Evidence**: None flagged
    **Why this matters**: Concise language improves readability and keeps recruiters engaged.
@@ -215,7 +309,12 @@ I am a seasoned Senior P
 6. REPETITION: Repetition Analysis
    Current Score: 8/10 – Pass
 
-   **Evidence**: investment decisions. I led the product & analytics
+   💡 SCORING BREAKDOWN:
+   ATS Rule: Vary action verbs - deduct 2 points per repeated verb occurrence
+   Analysis: Good verb variety: No repeated action verbs found
+   Penalties Applied: No repetition penalties (score: 8/10)
+
+   **Evidence**: duct, empowering merchants to create their own online store. Onboa
    **Why this matters**: Varied vocabulary prevents ATS keyword stuffing penalties and shows communication skills.
    **Fix**: Follow ATS best practices for improvement.
 
@@ -223,6 +322,11 @@ I am a seasoned Senior P
 
 7. UNNECESSARY SECTIONS: Unnecessary Sections Analysis
    Current Score: 8/10 – Pass
+
+   💡 SCORING BREAKDOWN:
+   ATS Rule: ATS scoring rules applied to Unnecessary Sections
+   Analysis: Category scored 8/10 based on content analysis
+   Penalties Applied: Deductions applied: -2 points (10 → 8)
 
    **Evidence**: None flagged
    **Why this matters**: Removing outdated sections focuses attention on relevant qualifications.
