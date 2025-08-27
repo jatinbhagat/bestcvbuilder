@@ -36,8 +36,13 @@ let actionVerbsConfig = null;
 async function init() {
     console.log('🚀 DEBUG: Starting result.js initialization...');
     
+    // Show loading screen immediately
+    showLoadingScreen();
+    updateLoadingProgress(10, 'Starting results preparation...');
+    
     try {
         console.log('🔍 DEBUG: Step 1 - Loading analysis data from session storage...');
+        updateLoadingProgress(25, 'Loading analysis data...');
         
         // Load analysis data from session storage
         const storedData = sessionStorage.getItem('atsAnalysis');
@@ -61,22 +66,27 @@ async function init() {
         });
 
         console.log('🔍 DEBUG: Step 3 - Loading config files...');
+        updateLoadingProgress(40, 'Loading configuration files...');
         await loadConfigs();
         console.log('✅ DEBUG: Step 3 Complete - Config files loaded');
 
         console.log('🔍 DEBUG: Step 4 - Displaying overall score...');
+        updateLoadingProgress(60, 'Calculating ATS scores...');
         displayOverallScore(analysisData);
         console.log('✅ DEBUG: Step 4 Complete - Overall score displayed');
         
         console.log('🔍 DEBUG: Step 5 - Displaying sidebar categories...');
+        updateLoadingProgress(75, 'Organizing analysis categories...');
         const categoryData = displaySidebarCategories(analysisData);
         console.log('✅ DEBUG: Step 5 Complete - Sidebar categories displayed');
         
         console.log('🔍 DEBUG: Step 6 - Displaying main issues list...');
+        updateLoadingProgress(85, 'Preparing improvement suggestions...');
         displayMainIssuesList(analysisData, categoryData);
         console.log('✅ DEBUG: Step 6 Complete - Main issues list displayed');
         
         console.log('🔍 DEBUG: Step 7 - Displaying strengths...');
+        updateLoadingProgress(95, 'Finalizing results display...');
         displayStrengths(analysisData);
         console.log('✅ DEBUG: Step 7 Complete - Strengths displayed');
         
@@ -85,6 +95,14 @@ async function init() {
         console.log('✅ DEBUG: Step 8 Complete - Event handlers setup');
         
         console.log('🎉 DEBUG: All initialization steps completed successfully!');
+        
+        // Final progress update before showing content
+        updateLoadingProgress(100, 'Ready! Displaying your results...');
+        
+        // Small delay to show 100% completion
+        setTimeout(() => {
+            hideLoadingScreen();
+        }, 500);
 
     } catch (error) {
         console.error('❌ DEBUG: Error in initialization step:', error);
@@ -95,6 +113,8 @@ async function init() {
         });
         // DON'T redirect - just show what we can
         displayFallbackResults();
+        // Always hide loading screen, even on error
+        hideLoadingScreen();
     }
 }
 
@@ -1519,6 +1539,83 @@ function generateComprehensiveATSScores(data) {
 
 // Frontend now uses ONLY backend comprehensive_categories data
 // No more duplicate scoring logic that conflicts with backend
+
+/**
+ * Update loading progress indicator
+ */
+function updateLoadingProgress(percentage, statusText) {
+    const progressBar = document.getElementById('resultProgressBar');
+    const statusElement = document.getElementById('resultLoadingStatus');
+    
+    if (progressBar) {
+        progressBar.style.width = percentage + '%';
+    }
+    
+    if (statusElement && statusText) {
+        statusElement.innerHTML = `${statusText} <span class="font-semibold text-green-400">${percentage}%</span>`;
+    }
+    
+    console.log(`📈 Progress: ${percentage}% - ${statusText}`);
+}
+
+/**
+ * Show loading screen
+ */
+function showLoadingScreen() {
+    const loadingScreen = document.getElementById('resultLoadingScreen');
+    const mainContent = document.getElementById('mainResultContent');
+    
+    if (loadingScreen) {
+        loadingScreen.style.display = 'flex';
+        loadingScreen.style.opacity = '1';
+        console.log('📱 Loading screen shown');
+    }
+    
+    if (mainContent) {
+        mainContent.style.display = 'none';
+        mainContent.style.opacity = '0';
+        console.log('📱 Main content hidden');
+    }
+}
+
+/**
+ * Hide loading screen and show main content with smooth transition
+ */
+function hideLoadingScreen() {
+    const loadingScreen = document.getElementById('resultLoadingScreen');
+    const mainContent = document.getElementById('mainResultContent');
+    
+    if (loadingScreen && mainContent) {
+        // Start fade out of loading screen
+        loadingScreen.style.opacity = '0';
+        
+        setTimeout(() => {
+            // Hide loading screen and show main content
+            loadingScreen.style.display = 'none';
+            mainContent.style.display = 'block';
+            
+            // Trigger fade in of main content after a short delay
+            setTimeout(() => {
+                mainContent.style.opacity = '1';
+                console.log('📱 Main content shown with smooth transition');
+            }, 50);
+            
+            console.log('📱 Loading screen hidden');
+        }, 500); // Wait for fade out transition
+    } else {
+        // Fallback for missing elements
+        if (loadingScreen) {
+            loadingScreen.style.display = 'none';
+            console.log('📱 Loading screen hidden (fallback)');
+        }
+        
+        if (mainContent) {
+            mainContent.style.display = 'block';
+            mainContent.style.opacity = '1';
+            console.log('📱 Main content shown (fallback)');
+        }
+    }
+}
 
 // Export for debugging
 window.debugResults = {

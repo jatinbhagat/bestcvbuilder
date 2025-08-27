@@ -706,6 +706,39 @@
     </style>
 </head>
 <body>
+    <!-- Loading Screen for Result Page -->
+    <div id="resultLoadingScreen" class="fixed inset-0 bg-gray-900 bg-opacity-96 z-50 flex items-center justify-center transition-all duration-500 ease-out">
+        <div class="max-w-md mx-auto px-6 text-center">
+            <!-- Header -->
+            <div class="mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-500 to-blue-600 rounded-full mb-4">
+                    <svg class="w-8 h-8 text-white animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-white mb-2">Preparing Your Results</h2>
+                <p class="text-white text-lg font-medium">Loading your personalized ATS analysis...</p>
+            </div>
+
+            <!-- Progress indicator -->
+            <div class="mb-6">
+                <div class="w-full bg-gray-700 rounded-full h-2">
+                    <div id="resultProgressBar" class="bg-gradient-to-r from-green-500 to-blue-600 h-2 rounded-full transition-all duration-1000 ease-out animate-pulse" style="width: 85%"></div>
+                </div>
+            </div>
+
+            <!-- Status text -->
+            <div class="text-center">
+                <p class="text-white text-lg font-medium" id="resultLoadingStatus">
+                    Almost ready... <span class="font-semibold text-green-400">finalizing!</span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content (hidden initially) -->
+    <div id="mainResultContent" style="display: none;" class="transition-all duration-500 ease-out">
+    
     <!-- Header -->
     <header class="bg-white border-b border-gray-200 px-6 py-4">
         <div class="flex items-center justify-between">
