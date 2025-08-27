@@ -16,7 +16,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="./assets/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="./favicon.ico">
     
     <style>
         :root {
@@ -131,6 +131,7 @@
                 <nav class="hidden md:flex space-x-6 text-sm">
                     <a href="#features" class="text-gray-600 hover:text-gray-900 transition-colors">✨ Features</a>
                     <a href="#stats" class="text-gray-600 hover:text-gray-900 transition-colors">📊 Success Stats</a>
+                    <a href="#testimonials" class="text-gray-600 hover:text-gray-900 transition-colors">⭐ Reviews</a>
                 </nav>
             </div>
         </div>
@@ -138,39 +139,54 @@
 
     <!-- Main Content -->
     <main class="max-w-6xl mx-auto px-4 sm:px-6 py-12">
-        <!-- Hero Section - Mobile-First CTA Optimized -->
-        <section class="text-center mb-12">
-            <!-- Compressed Hero Header -->
-            <div class="mb-6">
-                <h2 class="text-3xl md:text-5xl font-black text-gray-900 mb-4">
+        <!-- Hero Section -->
+        <section class="text-center mb-16">
+            <div class="floating-element mb-8">
+                <h2 class="text-4xl md:text-6xl font-black text-gray-900 mb-6">
                     Get Your <span class="gradient-text">ATS Score</span> in 30 Seconds 🚀
                 </h2>
-                <p class="text-lg md:text-xl text-gray-600 mb-4 max-w-2xl mx-auto">
-                    Upload your resume → Get instant ATS analysis → Boost interview rate by <strong>5x</strong>!
+                <p class="text-lg md:text-xl text-gray-600 mb-6 max-w-3xl mx-auto">
+                    Upload your resume and get an instant ATS analysis. Then fix all issues automatically with AI to boost your interview rate by <strong>5x</strong>!
                 </p>
+                
+                <!-- Trust Indicators -->
+                <div class="flex flex-wrap items-center justify-center gap-6 text-sm text-gray-500 mb-8">
+                    <div class="flex items-center">
+                        <span class="text-lg mr-2">👥</span>
+                        <span class="font-medium">25,000+ users trust us</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="text-lg mr-2">⚡</span>
+                        <span class="font-medium">30-second analysis</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="text-lg mr-2">🔒</span>
+                        <span class="font-medium">100% secure & private</span>
+                    </div>
+                </div>
             </div>
 
-            <!-- MAIN CTA - Above the Fold -->
-            <div class="max-w-lg mx-auto mb-8">
-                <div class="card-premium rounded-3xl p-6 md:p-8 upload-zone border-2 border-blue-200 shadow-xl">
+            <!-- Upload Form -->
+            <div class="max-w-lg mx-auto mb-12">
+                <div class="card-premium rounded-3xl p-8 upload-zone">
                     <form id="uploadForm" class="space-y-6">
-                        <div class="text-center mb-4">
-                            <div class="w-16 h-16 md:w-20 md:h-20 mx-auto mb-3 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl flex items-center justify-center">
-                                <svg class="w-8 h-8 md:w-10 md:h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 48 48">
+                        <div class="text-center mb-6">
+                            <div class="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl flex items-center justify-center">
+                                <svg class="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 48 48">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" />
                                 </svg>
                             </div>
-                            <h3 class="text-xl md:text-2xl font-bold text-gray-900 mb-2">📄 Upload Your Resume</h3>
-                            <p class="text-sm md:text-base text-gray-600 mb-2">Drag & drop your resume or tap to browse</p>
-                            <p class="text-xs text-gray-500">PDF, DOC, DOCX • Max 10MB • 100% Private</p>
+                            <h3 class="text-2xl font-bold text-gray-900 mb-2">📄 Upload Your Resume</h3>
+                            <p class="text-gray-600 mb-4">Drag & drop your resume or click to browse</p>
+                            <p class="text-xs text-gray-500">Supports PDF, DOC, DOCX • Max 10MB • 100% Private</p>
                         </div>
 
-                        <!-- Mobile-Optimized File Upload Area -->
-                        <div class="border-2 border-dashed border-blue-300 rounded-2xl p-6 md:p-8 text-center cursor-pointer hover:border-blue-500 transition-all hover:bg-blue-50/50 bg-gradient-to-br from-blue-25 to-indigo-25" id="uploadArea">
+                        <!-- File Upload Area -->
+                        <div class="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center cursor-pointer hover:border-blue-400 transition-all hover:bg-blue-50/50" id="uploadArea">
                             <input type="file" id="fileInput" class="hidden" accept=".pdf,.doc,.docx" required>
                             <div class="space-y-2">
-                                <p class="text-lg md:text-xl font-bold text-blue-700">📁 Tap Here to Upload Resume</p>
-                                <p class="text-sm md:text-base text-blue-600 font-medium">Get your ATS score in 30 seconds!</p>
+                                <p class="text-lg font-medium text-gray-700">📁 Click here or drag your resume</p>
+                                <p class="text-sm text-gray-500">We'll analyze it in 30 seconds!</p>
                             </div>
                         </div>
 
@@ -184,14 +200,14 @@
                             </div>
                         </div>
 
-                        <!-- Mobile-Optimized Submit Button -->
+                        <!-- Submit Button -->
                         <button 
                             type="submit" 
                             id="analyzeBtn"
-                            class="w-full btn-premium text-white py-4 md:py-5 px-6 rounded-2xl font-bold text-lg md:text-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105 shadow-xl"
+                            class="w-full btn-premium text-white py-4 px-6 rounded-2xl font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105"
                             disabled
                         >
-                            <span id="buttonText">🚀 Get My FREE ATS Score Now</span>
+                            <span id="buttonText">🚀 Get My ATS Score - FREE</span>
                             <span id="loadingText" class="hidden flex items-center justify-center">
                                 <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -202,33 +218,17 @@
                         </button>
                     </form>
                     
-                    <!-- Compact Trust Elements -->
-                    <div class="mt-4 pt-4 border-t border-gray-100">
-                        <p class="text-center text-xs text-gray-500 mb-2">🔐 100% Secure • Never Stored • GDPR Compliant</p>
-                        <div class="flex items-center justify-center space-x-3 text-xs text-gray-400">
-                            <span>✅ 25,000+ Users</span>
+                    <!-- Additional Trust Elements -->
+                    <div class="mt-6 pt-6 border-t border-gray-100">
+                        <p class="text-center text-xs text-gray-500 mb-3">🔐 Your resume is processed securely and never stored</p>
+                        <div class="flex items-center justify-center space-x-4 text-xs text-gray-400">
+                            <span>✅ GDPR Compliant</span>
                             <span>•</span>
-                            <span>⚡ 30-Second Analysis</span>
+                            <span>🔒 SSL Encrypted</span>
                             <span>•</span>
-                            <span>🚀 5x More Interviews</span>
+                            <span>🗑️ Auto-deleted</span>
                         </div>
                     </div>
-                </div>
-            </div>
-            
-            <!-- Trust Indicators - Moved Below CTA -->
-            <div class="flex flex-wrap items-center justify-center gap-4 md:gap-6 text-sm text-gray-500 mb-6">
-                <div class="flex items-center bg-white/70 rounded-full px-3 py-2 shadow-sm">
-                    <span class="text-base mr-2">👥</span>
-                    <span class="font-medium text-xs md:text-sm">25,000+ users</span>
-                </div>
-                <div class="flex items-center bg-white/70 rounded-full px-3 py-2 shadow-sm">
-                    <span class="text-base mr-2">⚡</span>
-                    <span class="font-medium text-xs md:text-sm">30-sec analysis</span>
-                </div>
-                <div class="flex items-center bg-white/70 rounded-full px-3 py-2 shadow-sm">
-                    <span class="text-base mr-2">🔒</span>
-                    <span class="font-medium text-xs md:text-sm">100% secure</span>
                 </div>
             </div>
         </section>
@@ -417,17 +417,8 @@
         </section>
     </main>
     
-    <!-- Mobile Sticky CTA - Only visible on mobile -->
-    <div id="mobileStickyBar" class="md:hidden fixed bottom-0 left-0 right-0 bg-gradient-to-r from-blue-600 to-purple-600 p-4 shadow-2xl z-40 border-t-2 border-white/20">
-        <button onclick="document.getElementById('uploadArea').scrollIntoView({behavior: 'smooth'}); document.getElementById('uploadArea').click();" 
-                class="w-full bg-white text-blue-600 font-bold py-3 px-6 rounded-xl text-lg shadow-lg transform transition-all hover:scale-105 active:scale-95">
-            🚀 Upload Resume - Get FREE ATS Score
-        </button>
-        <p class="text-center text-xs text-white/80 mt-2">⚡ 30 seconds • 🔒 100% secure • 🚀 5x more interviews</p>
-    </div>
-    
     <!-- Footer -->
-    <footer class="bg-gray-900 text-white py-8 mt-16 mb-20 md:mb-0">
+    <footer class="bg-gray-900 text-white py-8 mt-16">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 text-center">
             <p class="text-gray-400">&copy; 2024 BestCVBuilder. All rights reserved. Made with ❤️ for job seekers. | Updated: Aug 13, 2025 - 23:15 IST</p>
             
