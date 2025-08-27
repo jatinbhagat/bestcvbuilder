@@ -21,19 +21,12 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'utils'))
 
 app = Flask(__name__)
 
-# Configure CORS for production with specific origins
+# Configure CORS for production - allow all origins for now to fix connectivity
 CORS(app, 
-     origins=[
-         "https://bestcvbuilder-frontend.onrender.com",
-         "https://bestcvbuilder-gnktl1mxh-bestcvbuilder.vercel.app", 
-         "https://bestcvbuilder-sooty.vercel.app",
-         "https://bestcvbuilder-frontend.onrender.com",
-         "http://localhost:3000",  # For local development
-         "http://localhost:5000"   # For local development
-     ],
-     methods=['GET', 'POST', 'OPTIONS'],
-     allow_headers=['Content-Type', 'Accept', 'Authorization'],
-     supports_credentials=True,
+     origins="*",  # Allow all origins
+     methods=['GET', 'POST', 'OPTIONS', 'HEAD'],
+     allow_headers=['Content-Type', 'Accept', 'Authorization', 'X-Requested-With'],
+     supports_credentials=False,  # Must be False when origins="*"
      max_age=86400)
 
 # Configure timeout and memory management
@@ -126,9 +119,7 @@ def debug_version():
             'timestamp': int(time.time())
         }
         
-        response = jsonify(debug_info)
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        return response
+        return jsonify(debug_info)
         
     except Exception as e:
         error_info = {
@@ -136,9 +127,7 @@ def debug_version():
             'error': str(e),
             'timestamp': int(time.time())
         }
-        response = jsonify(error_info)
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        return response
+        return jsonify(error_info)
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -164,7 +153,7 @@ def health_check():
     # Check if we have comprehensive report functionality  
     has_comprehensive = True  # Simplified check
     
-    response = jsonify({
+    return jsonify({
         "status": "healthy",
         "service": "bestcvbuilder-api",
         "version": "COMPREHENSIVE_REPORT_FIXED",
@@ -180,19 +169,12 @@ def health_check():
             "supabase_key": bool(os.environ.get('PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY'))
         }
     })
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    return response
 
 @app.route('/api/test-connectivity', methods=['GET', 'POST', 'OPTIONS'])
 def test_connectivity():
     """Simple connectivity test endpoint for debugging CORS issues"""
     if request.method == 'OPTIONS':
-        response = jsonify({'status': 'ok'})
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Accept, Authorization')
-        response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        response.headers.add('Access-Control-Max-Age', '86400')
-        return response
+        return jsonify({'status': 'ok'})
     
     test_info = {
         'status': 'success',
@@ -204,22 +186,13 @@ def test_connectivity():
         'message': 'API connectivity test successful'
     }
     
-    response = jsonify(test_info)
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Accept, Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-    return response
+    return jsonify(test_info)
 
 @app.route('/api/config/', methods=['GET', 'OPTIONS'])
 def app_config():
     """Application configuration endpoint for payment bypass settings"""
     if request.method == 'OPTIONS':
-        response = jsonify({'status': 'ok'})
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Accept, Authorization')
-        response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
-        response.headers.add('Access-Control-Max-Age', '86400')
-        return response
+        return jsonify({'status': 'ok'})
     
     # Configuration settings
     config_info = {
@@ -235,21 +208,13 @@ def app_config():
         'timestamp': int(time.time())
     }
     
-    response = jsonify(config_info)
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Accept, Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
-    return response
+    return jsonify(config_info)
 
 @app.route('/api/cv-parser', methods=['POST', 'OPTIONS'])
 def cv_parser():
     """CV Parser API endpoint with timeout and memory management"""
     if request.method == 'OPTIONS':
-        response = jsonify({'status': 'ok'})
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
-        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
-        return response
+        return jsonify({'status': 'ok'})
     
     if not cv_parser_available:
         return jsonify({"error": "CV parser not available"}), 500
@@ -386,34 +351,23 @@ def cv_parser():
             print(f"❌ FLASK FINAL CHECK: comprehensive_issues_report MISSING from final result!")
             print(f"🔍 FLASK FINAL CHECK: Final result keys ({len(result)}): {list(result.keys())}")
         
-        # Return results with CORS headers
-        response = jsonify(result)
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
-        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
-        
-        return response
+        # Return results
+        return jsonify(result)
         
     except TimeoutError:
         print(f"⏱️ CV analysis timeout - request took too long")
-        error_response = jsonify({"error": "Analysis timeout - please try with a smaller resume file or different format"})
-        error_response.headers.add('Access-Control-Allow-Origin', '*')
-        return error_response, 408  # Request Timeout
+        return jsonify({"error": "Analysis timeout - please try with a smaller resume file or different format"}), 408  # Request Timeout
         
     except ATSAnalysisError as e:
         print(f"❌ ATS Analysis Error: {e}")
-        error_response = jsonify({"error": f"Analysis failed: {str(e)}"})
-        error_response.headers.add('Access-Control-Allow-Origin', '*')
-        return error_response, 400
+        return jsonify({"error": f"Analysis failed: {str(e)}"}), 400
         
     except Exception as e:
         print(f"❌ Unexpected error in cv_parser: {e}")
         import traceback
         traceback.print_exc()
         
-        error_response = jsonify({"error": f"Internal server error: {str(e)}"})
-        error_response.headers.add('Access-Control-Allow-Origin', '*')
-        return error_response, 500
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
     
     finally:
         # Always clear the alarm and force garbage collection
@@ -425,9 +379,6 @@ def job_analyzer():
     """Job Analyzer API endpoint with timeout and memory management"""
     if request.method == 'OPTIONS':
         response = jsonify({'status': 'ok'})
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
-        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
         return response
     
     if not job_analyzer_available:
@@ -497,32 +448,23 @@ def job_analyzer():
         
         # Return results with CORS headers
         response = jsonify(result)
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
-        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
         
         return response
         
     except TimeoutError:
         print(f"⏱️ Job analysis timeout - request took too long")
-        error_response = jsonify({"error": "Analysis timeout - please try with a shorter job description"})
-        error_response.headers.add('Access-Control-Allow-Origin', '*')
-        return error_response, 408  # Request Timeout
+        return jsonify({"error": "Analysis timeout - please try with a shorter job description"}), 408  # Request Timeout
         
     except JobAnalysisError as e:
         print(f"❌ Job Analysis Error: {e}")
-        error_response = jsonify({"error": f"Analysis failed: {str(e)}"})
-        error_response.headers.add('Access-Control-Allow-Origin', '*')
-        return error_response, 400
+        return jsonify({"error": f"Analysis failed: {str(e)}"}), 400
         
     except Exception as e:
         print(f"❌ Unexpected error in job_analyzer: {e}")
         import traceback
         traceback.print_exc()
         
-        error_response = jsonify({"error": f"Internal server error: {str(e)}"})
-        error_response.headers.add('Access-Control-Allow-Origin', '*')
-        return error_response, 500
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
     
     finally:
         # Always clear the alarm and force garbage collection
@@ -534,24 +476,16 @@ def cv_rewrite():
     """CV Rewrite API endpoint (placeholder)"""
     if request.method == 'OPTIONS':
         response = jsonify({'status': 'ok'})
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
-        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
         return response
     
     # Placeholder for future implementation
-    error_response = jsonify({"error": "CV rewrite not implemented yet"})
-    error_response.headers.add('Access-Control-Allow-Origin', '*')
-    return error_response, 501
+    return jsonify({"error": "CV rewrite not implemented yet"}), 501
 
 @app.route('/api/orders/create-order', methods=['POST', 'OPTIONS'])
 def create_order():
     """Create Order API endpoint"""
     if request.method == 'OPTIONS':
         response = jsonify({'status': 'ok'})
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
-        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
         return response
     
     try:
@@ -604,7 +538,6 @@ def create_order():
         }
         
         response = jsonify(response_data)
-        response.headers.add('Access-Control-Allow-Origin', '*')
         return response
         
     except ImportError as e:
@@ -613,12 +546,10 @@ def create_order():
         print(f"   API path: {api_path}")
         print(f"   API path exists: {os.path.exists(api_path)}")
         error_response = jsonify({'error': f'Order service unavailable: {str(e)}'})
-        error_response.headers.add('Access-Control-Allow-Origin', '*')
         return error_response, 500
     except Exception as e:
         print(f"❌ Create order error: {str(e)}")
         error_response = jsonify({'error': f'Order creation failed: {str(e)}'})
-        error_response.headers.add('Access-Control-Allow-Origin', '*')
         return error_response, 500
 
 @app.route('/api/orders/initiate-payment', methods=['POST', 'OPTIONS'])
@@ -626,9 +557,6 @@ def initiate_payment():
     """Initiate Payment API endpoint"""
     if request.method == 'OPTIONS':
         response = jsonify({'status': 'ok'})
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
-        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
         return response
     
     try:
@@ -672,18 +600,15 @@ def initiate_payment():
         }
         
         response = jsonify(response_data)
-        response.headers.add('Access-Control-Allow-Origin', '*')
         return response
         
     except ImportError as e:
         print(f"❌ Import error in payment initiation: {str(e)}")
         error_response = jsonify({'error': f'Payment service unavailable: {str(e)}'})
-        error_response.headers.add('Access-Control-Allow-Origin', '*')
         return error_response, 500
     except Exception as e:
         print(f"❌ Payment initiation error: {str(e)}")
         error_response = jsonify({'error': f'Payment initiation failed: {str(e)}'})
-        error_response.headers.add('Access-Control-Allow-Origin', '*')
         return error_response, 500
 
 @app.route('/api/resume-fix', methods=['POST', 'OPTIONS'])
@@ -691,9 +616,6 @@ def resume_fix():
     """Resume Fix API endpoint with Gemini AI integration"""
     if request.method == 'OPTIONS':
         response = jsonify({'status': 'ok'})
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
-        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
         return response
     
     try:
@@ -740,9 +662,7 @@ def resume_fix():
         data = request.get_json()
         if not data:
             print(f"❌ RESUME-FIX: No JSON data provided in request")
-            error_response = jsonify({"error": "No JSON data provided"})
-            error_response.headers.add('Access-Control-Allow-Origin', '*')
-            return error_response, 400
+            return jsonify({"error": "No JSON data provided"}), 400
         
         print(f"📊 RESUME-FIX: Request data received - keys: {list(data.keys())}")
         
@@ -792,7 +712,6 @@ def resume_fix():
         
         # Return success response
         response = jsonify(result)
-        response.headers.add('Access-Control-Allow-Origin', '*')
         print(f"🎯 RESUME-FIX: Sending response back to client")
         return response
         
@@ -802,7 +721,6 @@ def resume_fix():
         print(f"❌ RESUME-FIX: Full traceback: {traceback.format_exc()}")
         
         error_response = jsonify({"error": f"Resume fix failed: {str(e)}"})
-        error_response.headers.add('Access-Control-Allow-Origin', '*')
         return error_response, 500
 
 @app.errorhandler(404)
