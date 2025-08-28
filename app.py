@@ -21,13 +21,16 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'utils'))
 
 app = Flask(__name__)
 
-# Configure CORS for production - allow all origins for now to fix connectivity
+# Configure CORS with explicit headers for better compatibility
 CORS(app, 
      origins="*",  # Allow all origins
-     methods=['GET', 'POST', 'OPTIONS', 'HEAD'],
-     allow_headers=['Content-Type', 'Accept', 'Authorization', 'X-Requested-With'],
+     methods=['GET', 'POST', 'OPTIONS', 'HEAD', 'PUT', 'DELETE'],
+     allow_headers=['Content-Type', 'Accept', 'Authorization', 'X-Requested-With', 'Origin'],
+     expose_headers=['Content-Type', 'Authorization'], 
      supports_credentials=False,  # Must be False when origins="*"
-     max_age=86400)
+     max_age=86400,
+     send_wildcard=True,
+     automatic_options=True)
 
 # Configure timeout and memory management
 app.config.update(
@@ -44,6 +47,15 @@ def timeout_handler(signum, frame):
     raise TimeoutError("Request timeout - operation took too long")
 
 signal.signal(signal.SIGALRM, timeout_handler)
+
+# Backup CORS headers function
+def add_cors_headers(response):
+    """Add CORS headers as backup in case flask_cors doesn't work properly"""
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS, HEAD, PUT, DELETE'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept, Authorization, X-Requested-With, Origin'
+    response.headers['Access-Control-Max-Age'] = '86400'
+    return response
 
 # Import the CV parser functions directly with cache clearing
 try:
@@ -174,7 +186,11 @@ def health_check():
 def test_connectivity():
     """Simple connectivity test endpoint for debugging CORS issues"""
     if request.method == 'OPTIONS':
-        return jsonify({'status': 'ok'})
+        # Log the preflight request details
+        print(f"🔍 CORS PREFLIGHT: Origin: {request.headers.get('Origin')}")
+        print(f"🔍 CORS PREFLIGHT: Access-Control-Request-Method: {request.headers.get('Access-Control-Request-Method')}")
+        print(f"🔍 CORS PREFLIGHT: Access-Control-Request-Headers: {request.headers.get('Access-Control-Request-Headers')}")
+        return jsonify({'status': 'options_ok'})
     
     test_info = {
         'status': 'success',
@@ -214,7 +230,11 @@ def app_config():
 def cv_parser():
     """CV Parser API endpoint with timeout and memory management"""
     if request.method == 'OPTIONS':
-        return jsonify({'status': 'ok'})
+        print(f"🔍 CV-PARSER PREFLIGHT: Origin: {request.headers.get('Origin', 'No origin')}")
+        print(f"🔍 CV-PARSER PREFLIGHT: Method: {request.headers.get('Access-Control-Request-Method', 'No method')}")
+        print(f"🔍 CV-PARSER PREFLIGHT: Headers: {request.headers.get('Access-Control-Request-Headers', 'No headers')}")
+        response = jsonify({'status': 'preflight_ok'})
+        return add_cors_headers(response)
     
     if not cv_parser_available:
         return jsonify({"error": "CV parser not available"}), 500
@@ -351,23 +371,27 @@ def cv_parser():
             print(f"❌ FLASK FINAL CHECK: comprehensive_issues_report MISSING from final result!")
             print(f"🔍 FLASK FINAL CHECK: Final result keys ({len(result)}): {list(result.keys())}")
         
-        # Return results
-        return jsonify(result)
+        # Return results with backup CORS headers
+        response = jsonify(result)
+        return add_cors_headers(response)
         
     except TimeoutError:
         print(f"⏱️ CV analysis timeout - request took too long")
-        return jsonify({"error": "Analysis timeout - please try with a smaller resume file or different format"}), 408  # Request Timeout
+        response = jsonify({"error": "Analysis timeout - please try with a smaller resume file or different format"})
+        return add_cors_headers(response), 408  # Request Timeout
         
     except ATSAnalysisError as e:
         print(f"❌ ATS Analysis Error: {e}")
-        return jsonify({"error": f"Analysis failed: {str(e)}"}), 400
+        response = jsonify({"error": f"Analysis failed: {str(e)}"})
+        return add_cors_headers(response), 400
         
     except Exception as e:
         print(f"❌ Unexpected error in cv_parser: {e}")
         import traceback
         traceback.print_exc()
         
-        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
+        response = jsonify({"error": f"Internal server error: {str(e)}"})
+        return add_cors_headers(response), 500
     
     finally:
         # Always clear the alarm and force garbage collection
