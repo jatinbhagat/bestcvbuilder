@@ -118,7 +118,10 @@ The application requires these environment variables:
 - **Domain Configuration**: 
   - Frontend: `bestcvbuilder-frontend.onrender.com`
   - Backend APIs: `bestcvbuilder-api.onrender.com`
-- **Cross-Origin Setup**: CORS configured to allow frontend domain to access backend APIs
+- **CORS Implementation**: Comprehensive double-protection strategy:
+  - flask_cors with wildcard origins and automatic OPTIONS handling
+  - Manual CORS headers as backup on all API responses
+  - Explicit preflight request handling with debug logging
 
 ### Database Relationships
 - User profiles extend Supabase auth.users
@@ -128,7 +131,8 @@ The application requires these environment variables:
 - All scoring data originates from backend Python APIs, never calculated on frontend
 
 ### Security Considerations
-- CORS headers implemented in Python APIs
+- **Comprehensive CORS Implementation**: Double-protection strategy using both flask_cors and manual headers
+- **CORS Configuration**: Wildcard origin support with automatic OPTIONS handling
 - File type and size validation (PDF, DOCX, DOC max 10MB)
 - Row Level Security policies in Supabase
 - Secure file storage with access controls
@@ -145,14 +149,69 @@ The application requires these environment variables:
 
 ### Working with Python APIs
 - Follow existing error handling patterns with try/catch and proper HTTP status codes
-- Use CORS headers for all API responses (include `bestcvbuilder-frontend.onrender.com`)
-- Log important events for debugging
+- **CORS Requirements**: All API responses automatically include CORS headers via flask_cors + manual backup
+- Log important events for debugging (CORS preflight requests are logged automatically)
 - Validate input parameters and file types
 - **CRITICAL**: All business logic and scoring calculations must happen on backend APIs
 - APIs deployed on Render.com at `bestcvbuilder-api.onrender.com`
+- Use `add_cors_headers()` function for manual CORS header application if needed
 
 ### Database Migrations
 - Use descriptive migration names
 - Include rollback statements where applicable
 - Test migrations locally before deployment
-- Document schema changes in migration comments`
+- Document schema changes in migration comments
+
+## CORS Implementation & Troubleshooting
+
+### Current CORS Strategy
+The application uses a **double-protection CORS implementation** to ensure reliable cross-origin communication:
+
+1. **Flask-CORS Configuration** (`app.py:25-33`):
+   ```python
+   CORS(app, 
+        origins="*",  # Allow all origins
+        methods=['GET', 'POST', 'OPTIONS', 'HEAD', 'PUT', 'DELETE'],
+        allow_headers=['Content-Type', 'Accept', 'Authorization', 'X-Requested-With', 'Origin'],
+        supports_credentials=False,
+        automatic_options=True,
+        send_wildcard=True)
+   ```
+
+2. **Manual CORS Headers Backup** (`app.py:52-58`):
+   ```python
+   def add_cors_headers(response):
+       response.headers['Access-Control-Allow-Origin'] = '*'
+       response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS, HEAD, PUT, DELETE'
+       response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept, Authorization, X-Requested-With, Origin'
+       return response
+   ```
+
+### CORS Debugging
+If CORS issues occur, check these locations:
+
+1. **Server Logs**: Preflight requests are logged with `🔍 CV-PARSER PREFLIGHT:` prefix
+2. **Browser DevTools**: Look for specific CORS error messages in Console
+3. **Network Tab**: Check if OPTIONS preflight requests are succeeding (200 status)
+
+### Testing CORS Locally
+```bash
+# Test OPTIONS preflight request
+curl -X OPTIONS -H "Origin: http://localhost:3000" \
+     -H "Access-Control-Request-Method: POST" \
+     -H "Access-Control-Request-Headers: Content-Type" \
+     -v http://localhost:5000/api/cv-parser
+
+# Test actual POST request
+curl -X POST -H "Content-Type: application/json" \
+     -H "Origin: http://localhost:3000" \
+     -d '{"file_url":"test"}' \
+     -v http://localhost:5000/api/cv-parser
+```
+
+### CORS Best Practices
+- **Always use both flask_cors AND manual headers** for production reliability
+- **Test preflight requests** separately from actual API calls
+- **Monitor server logs** for CORS-related issues during debugging
+- **Never remove the double-protection** - Render.com can have inconsistent CORS behavior
+- **Update both configurations** when adding new endpoints or changing requirements`
